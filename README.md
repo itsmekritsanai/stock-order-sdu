@@ -5,9 +5,10 @@
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![CSS3](https://img.shields.io/badge/CSS3-Vanilla-1572B6?style=flat&logo=css3&logoColor=white)](https://www.w3.org/Style/CSS/)
+[![SweetAlert2](https://img.shields.io/badge/SweetAlert2-v11-b02a37?style=flat)](https://sweetalert2.github.io/)
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
 
-เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย พร้อมระบบลงนามรับของดิจิทัล (E-Signature) และพิมพ์ใบเบิกทางการ (Official PDF)
+เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย พร้อมระบบลงนามรับของดิจิทัล (E-Signature) พิมพ์ใบเบิกทางการ (Official PDF) และระบบป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
 
 ---
 
@@ -21,12 +22,13 @@ graph TD
         REQ["ผู้ขอเบิก (อาจารย์ / บุคลากร)"] --> FORM["ค้นหาคณะ/หน่วยงาน (90+ รายการ)<br/>ระบุชื่อและเบอร์โทรศัพท์"]
         FORM --> CAT["ค้นหาพัสดุ (No SKU Search)<br/>คำนวณหน่วยนับ กล่อง/ชิ้น"]
         CAT --> CART["ตะกร้าพัสดุ & ระบุวัตถุประสงค์"]
-        CART --> SUBMIT["ส่งคำขอเบิก (รับรหัส REQ-XXXX)"]
-        SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking)"]
+        CART --> SUBMIT["ส่งคำขอเบิก (SweetAlert2 Popup)"]
+        SUBMIT --> MYREQS["📋 รายการคำขอของฉัน (ดูสถานะ & คัดลอกรหัส)"]
+        SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking Timeline)"]
     end
 
-    subgraph "Shared Data Synchronization (localStorage)"
-        DB[("inventory_items<br/>inventory_requisitions")]
+    subgraph "Shared Data Synchronization (localStorage & Real-time Sync)"
+        DB[("inventory_items<br/>inventory_requisitions<br/>(Cross-Tab Storage Sync)")]
     end
 
     subgraph "Private Staff Portal (staff.html)"
@@ -40,9 +42,10 @@ graph TD
     end
 
     SUBMIT -->|"บันทึกคำขอใหม่"| DB
-    DB -->|"แสดงผลในคิวอนุมัติ"| DASH
+    DB -->|"แจ้งเตือนคิวอนุมัติ Real-time"| DASH
     ESIG -->|"อัปเดตสถานะและยอดคงเหลือ"| DB
-    DB -->|"อัปเดตยอดพร้อมเบิกและสถานะ"| CAT
+    DB -->|"อัปเดตยอดพร้อมเบิกและ Badge"| CAT
+    DB -->|"แสดงประวัติคำขอและไทม์ไลน์"| MYREQS
     DB -->|"ตรวจสอบสถานะคำขอ"| TRACK
 ```
 
@@ -57,6 +60,11 @@ graph TD
 * **ระบบคำนวณหลายหน่วยนับ (Multi-Unit Conversion):** สามารถเลือกเบิกเป็น "กล่อง" หรือ "ชิ้น/ซอง/แผ่น" ได้ โดยระบบจะคำนวณยอดรวมและตัดสต๊อกให้อัตโนมัติ
 * **แสดงสต๊อกคงเหลือจริง (Available Stock):** แสดงยอดสต๊อกที่เบิกได้จริงตามสูตร `Available = On-Hand - Reserved` ป้องกันการเบิกชนกัน
 * **ตะกร้าขอเบิกและสร้างเอกสาร:** เพิ่มรายการใส่ตะกร้า ระบุวัตถุประสงค์ และสร้างเลขที่คำขอ `REQ-256910-XXXX`
+* **ปุ่ม "📋 รายการคำขอของฉัน" (My Requisitions):**
+  * ปุ่มบนเมนูด้านบนพร้อม **ตัวเลขนับจำนวนคำขอ (Count Badge)** แสดงยอดคำขอแบบเรียลไทม์
+  * หน้าต่างป๊อปอัปดูรายการคำขอทั้งหมด พร้อมช่องค้นหาเอกสาร/ผู้เบิก/พัสดุ
+  * แท็บคัดกรองสถานะ: ทั้งหมด, รออนุมัติ (Pending), อนุมัติแล้ว (Approved), รับมอบสำเร็จ (Completed), ไม่อนุมัติ (Rejected)
+  * ปุ่มคัดลอกเลขที่เอกสารในคลิกเดียว พร้อมปุ่มทางลัดเปิดดูไทม์ไลน์สถานะทันที
 * **ระบบติดตามสถานะคำขอ (Self-Service Tracking):** ผู้เบิกสามารถนำเลขที่เอกสารมาตรวจสอบสถานะคำขอได้ด้วยตัวเองตลอด 24 ชั่วโมง
 * **ความปลอดภัยสูง:** ตัดแท็บและสิทธิ์การเข้าถึงของเจ้าหน้าที่พัสดุออกทั้งหมด ผู้เบิกไม่สามารถเข้ามาอนุมัติหรือปรับแก้สต๊อกได้
 
@@ -78,10 +86,12 @@ graph TD
   * ตรวจสอบยอดสต๊อก 3 สถานะ: คงเหลือจริง (On-Hand) | ติดจอง (Reserved) | พร้อมเบิก (Available)
   * ฟังก์ชันรับพัสดุเข้าคลัง (+) และการแจ้งเตือนพัสดุต่ำกว่าเกณฑ์
 
-### 3. มาตรฐานการออกแบบ (Design & Aesthetics)
+### 3. มาตรฐานการออกแบบและประสบการณ์ผู้ใช้ (Design & UX)
+* **SweetAlert2 Modern Dialogs:** ป๊อปอัปแจ้งเตือนและหน้าต่างยืนยันทั้งหมดใช้ SweetAlert2 ตกแต่งในธีมสีน้ำเงิน มสด. (`#1e40af`) และเขียวมรกต (`#059669`)
+* **Offline Asset Support:** ดาวน์โหลดไฟล์ `sweetalert2.all.min.js` เก็บไว้ใน `assets/js/` เพื่อให้ระบบทำงานได้เสถียร 100% แม้ไม่มีอินเทอร์เน็ตภายนอก พร้อมระบบ CDN Fallback อัตโนมัติ
 * **100% Vector SVG Icons:** ปราศจาก Emoji โดยเปลี่ยนมาใช้ไอคอนเวกเตอร์เส้น Stroke คุณภาพสูงทั้งหมด
 * **Typography:** ใช้ฟอนต์ Google Fonts `Prompt` สำหรับหน้าจอการใช้งานทั่วไป และ `Sarabun` สำหรับแบบฟอร์มเอกสารทางการ
-* **Modern Color Palette:** โทนสีน้ำเงินกรมท่า มสด. (`#1e40af`) ผสมผสานสีเขียวมรกต (`#059669`) และสีเทาสะอาดตา
+* **Real-time Cross-Tab Synchronization:** ระบบตรวจจับการเปลี่ยนแปลงข้อมูลข้ามแท็บเบราว์เซอร์อัตโนมัติ ไม่ต้องกด Refresh หน้าเว็บ
 
 ---
 
@@ -94,6 +104,8 @@ stock-order-sdu/
 ├── staff.html                           # หน้าเว็บสำหรับเจ้าหน้าที่พัสดุ (Private Staff Portal)
 │
 ├── assets/                              # ทรัพยากรของโครงการ
+│   ├── js/                              # ไลบรารี JavaScript ออฟไลน์
+│   │   └── sweetalert2.all.min.js       # SweetAlert2 Local Asset สำหรับการทำงานออฟไลน์
 │   └── images/                          # รูปภาพพัสดุจริงสกัดจากไฟล์สต๊อก (58 รายการ)
 │       ├── image1.jpeg ~ image58.jpeg
 │
@@ -101,6 +113,7 @@ stock-order-sdu/
 ├── คณะและหน่วยงาน.txt                     # ข้อมูลดิบรายชื่อหน่วยงาน มหาวิทยาลัยสวนดุสิต
 ├── ยอดสต๊อก ตค.xlsx                       # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel
 ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
+├── TODO.md                              # รายการสิ่งที่ต้องทำและแผนการเชื่อมต่อ Google Sheets Database
 │
 ├── generate_separated_portals.py        # สคริปต์ Python สำหรับสร้างและคอมไพล์โค้ด HTML ทั้งสองพอร์ทัล
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
@@ -133,23 +146,24 @@ stock-order-sdu/
 
 ## ฐานข้อมูลและการจัดเก็บข้อมูล (Data Persistence)
 
-ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`**:
-* **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
-* **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
+* **ปัจจุบัน (Local Mode):** ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event):
+  * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
+  * **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
+* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TODO.md](TODO.md))
 
 ---
 
 ## แผนการพัฒนาและสิ่งที่ต้องทำ (Roadmap & To-Do List)
 
 ติดตามความคืบหน้าของโครงการและแผนการเชื่อมต่อ **Google Sheets Database** สำหรับ GitHub Pages ได้ที่:
-* [แผนการดำเนินงานและรายการสิ่งที่ต้องทำ (TODO.md)](TODO.md)
+* 📋 **[แผนการดำเนินงานและรายการสิ่งที่ต้องทำ (TODO.md)](TODO.md)**
 
 ---
 
 ## เอกสารอ้างอิงและข้อกำหนดเชิงระบบ (SRS)
 
 ดูรายละเอียดข้อกำหนดเชิงระบบ กฎระเบียบทางธุรกิจ และ Data Dictionary เพิ่มเติมได้ที่:
-* [System Requirements Specification (SRS v1.1)](system_requirements_specification.md)
+* 📄 **[System Requirements Specification (SRS v1.1)](system_requirements_specification.md)**
 
 ---
 
