@@ -397,6 +397,88 @@ common_css = '''
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Real-Time Live Sync & Toast Notification Styles */
+    .live-sync-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      user-select: none;
+    }
+    .live-sync-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: livePulse 2s infinite;
+    }
+    @keyframes livePulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .toast-container {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      pointer-events: none;
+    }
+    .toast-card {
+      pointer-events: auto;
+      background: white;
+      border: 1px solid var(--neutral-200);
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 0.85rem 1.15rem;
+      min-width: 320px;
+      max-width: 440px;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transition: all 0.3s ease;
+    }
+    .toast-card.success { border-left-color: var(--accent); }
+    .toast-card.warning { border-left-color: var(--warning); }
+    .toast-card.danger { border-left-color: var(--danger); }
+    .toast-card.closing {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    .toast-icon { flex-shrink: 0; margin-top: 2px; }
+    .toast-content { flex: 1; }
+    .toast-title { font-size: 0.875rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 2px; }
+    .toast-desc { font-size: 0.8rem; color: var(--neutral-600); line-height: 1.4; }
+    .toast-close { background: none; border: none; color: var(--neutral-400); cursor: pointer; padding: 2px; font-size: 1.1rem; line-height: 1; }
+    .toast-close:hover { color: var(--neutral-800); }
+
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes highlightNew {
+      0% { background-color: #ecfdf5; border-color: #34d399; }
+      100% { background-color: white; border-color: var(--neutral-200); }
+    }
+    .highlight-new-card {
+      animation: highlightNew 3.5s ease-out;
+    }
+
 '''
 
 # --------------------------------------------------------------------
@@ -570,6 +652,7 @@ requester_html = f'''<!DOCTYPE html>
   </style>
 </head>
 <body>
+  <div class="toast-container" id="toastContainer"></div>
 
   <!-- Top Navigation Header (Requester Portal Only) -->
   <header>
@@ -585,6 +668,11 @@ requester_html = f'''<!DOCTYPE html>
       </div>
 
       <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div class="live-sync-indicator" title="ระบบเชื่อมต่อข้อมูล Real-time อัตโนมัติ">
+          <span class="live-sync-dot"></span>
+          <span>Real-time Live</span>
+        </div>
+
         <button class="btn btn-outline" onclick="openTrackingModal()">
           {svg_icons['search']} ติดตามสถานะคำขอ
         </button>
@@ -791,6 +879,70 @@ requester_html = f'''<!DOCTYPE html>
 
     function saveReqsDB(reqs) {{
       localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs));
+    }}
+
+
+    // Web Audio Chime Utility (Zero-latency offline audio)
+    function playRealtimeChime(type = 'default') {{
+      try {{
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        if (type === 'approved') {{
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        }} else {{
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }}
+      }} catch (e) {{ }}
+    }}
+
+    function showToast(title, desc, type = 'info', playSound = true) {{
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'toast-card ' + type;
+      let icon = vIcons.check;
+      if (type === 'warning') icon = vIcons.cart;
+      if (type === 'danger') icon = vIcons.x;
+      toast.innerHTML = '<div class="toast-icon">' + icon + '</div>' +
+        '<div class="toast-content">' +
+          '<div class="toast-title">' + title + '</div>' +
+          '<div class="toast-desc">' + desc + '</div>' +
+        '</div>' +
+        '<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
+      container.appendChild(toast);
+      if (playSound) playRealtimeChime(type === 'success' ? 'approved' : 'default');
+      setTimeout(() => {{
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 350);
+      }}, 5000);
+    }}
+
+    // BROADCAST CHANNEL & STORAGE EVENT SYNC
+    const syncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('sdu_inventory_sync_channel') : null;
+
+    function broadcastSync(type, payload = {{}}) {{
+      if (syncChannel) {{
+        syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
+      }}
+      localStorage.setItem('sdu_sync_pulse', Date.now().toString());
     }}
 
     let cart = [];
@@ -1098,6 +1250,9 @@ requester_html = f'''<!DOCTYPE html>
       reqs.unshift(newReq);
       saveReqsDB(reqs);
 
+      // Broadcast Real-time event across tabs & windows
+      broadcastSync('NEW_REQUISITION', newReq);
+
       cart = [];
       document.getElementById('cartPurpose').value = '';
       updateCartBadge();
@@ -1155,6 +1310,74 @@ requester_html = f'''<!DOCTYPE html>
         </div>
       `;
     }}
+
+    // REAL-TIME AUTO SYNC LISTENER (No Refresh Needed!)
+    let lastKnownIndexItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+    let lastKnownIndexReqs = localStorage.getItem(DB_REQS_KEY) || '';
+
+    function handleIncomingRequesterSync(type, data) {{
+      if (type === 'STOCK_UPDATED' || type === 'ITEMS_UPDATED') {{
+        renderCatalog();
+      }} else if (type === 'REQ_STATUS_CHANGED') {{
+        renderCatalog();
+        const trackingInput = document.getElementById('trackingInput');
+        const activeDoc = trackingInput ? trackingInput.value.trim().toUpperCase() : '';
+        const targetDoc = (data.docNo || '').toUpperCase();
+        if (activeDoc && targetDoc === activeDoc) {{
+          searchTracking();
+          if (data.status === 'APPROVED') {{
+            showToast('คำขอของคุณได้รับการอนุมัติแล้ว!', 'เลขที่ ' + data.docNo + ' ได้รับการอนุมัติแล้ว สามารถเดินทางมารับพัสดุได้ที่ห้องคลังพัสดุ', 'success', true);
+          }} else if (data.status === 'COMPLETED') {{
+            showToast('ส่งมอบพัสดุสำเร็จ', 'คำขอ ' + data.docNo + ' บันทึกการรับของและเซ็นชื่อเรียบร้อยแล้ว', 'info', true);
+          }} else if (data.status === 'REJECTED') {{
+            showToast('คำขอไม่ได้รับการอนุมัติ', 'คำขอ ' + data.docNo + ' ถูกปฏิเสธ', 'danger', true);
+          }}
+        }}
+      }}
+    }}
+
+    if (syncChannel) {{
+      syncChannel.onmessage = (e) => {{
+        if (e.data) handleIncomingRequesterSync(e.data.type, e.data.payload || {{}});
+      }};
+    }}
+
+    // Storage Event Listener (Instant Cross-Tab Sync)
+    window.addEventListener('storage', (e) => {{
+      if (e.key === DB_ITEMS_KEY) {{
+        if (e.newValue !== lastKnownIndexItems) {{
+          lastKnownIndexItems = e.newValue || '';
+          renderCatalog();
+        }}
+      }} else if (e.key === DB_REQS_KEY) {{
+        if (e.newValue !== lastKnownIndexReqs) {{
+          lastKnownIndexReqs = e.newValue || '';
+          renderCatalog();
+          const trackingModal = document.getElementById('trackingModal');
+          if (trackingModal && trackingModal.classList.contains('open')) {{
+            searchTracking();
+          }}
+        }}
+      }}
+    }});
+
+    // 1.5s Polling Heartbeat for guaranteed sync
+    setInterval(() => {{
+      const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+      if (curItems !== lastKnownIndexItems) {{
+        lastKnownIndexItems = curItems;
+        renderCatalog();
+      }}
+      const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
+      if (curReqs !== lastKnownIndexReqs) {{
+        lastKnownIndexReqs = curReqs;
+        renderCatalog();
+        const trackingModal = document.getElementById('trackingModal');
+        if (trackingModal && trackingModal.classList.contains('open')) {{
+          searchTracking();
+        }}
+      }}
+    }}, 1500);
 
     // Initial Load
     document.addEventListener('DOMContentLoaded', () => {{
@@ -1340,6 +1563,11 @@ staff_html = f'''<!DOCTYPE html>
         </nav>
 
         <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="live-sync-indicator" title="ระบบเชื่อมต่อข้อมูล Real-time อัตโนมัติ">
+            <span class="live-sync-dot"></span>
+            <span>Real-time Live</span>
+          </div>
+
           <a href="index.html" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
             เปิดหน้าผู้เบิก ↗
           </a>
@@ -1404,7 +1632,7 @@ staff_html = f'''<!DOCTYPE html>
               <button class="btn btn-outline" onclick="alert('จำลองการนำเข้าไฟล์ ยอดสต๊อก ตค.xlsx สำเร็จ!')">
                 {svg_icons['upload']} นำเข้าจาก Excel
               </button>
-              <button class="btn btn-primary" onclick="alert('เปิดฟอร์มรับเข้าพัสดุใหม่')">
+              <button class="btn btn-primary" onclick="openStockInModal()">
                 {svg_icons['plus']} บันทึกรับเข้าพัสดุ
               </button>
             </div>
@@ -1516,6 +1744,45 @@ staff_html = f'''<!DOCTYPE html>
     </main>
   </div>
 
+
+  <!-- MODAL: STOCK IN (รับพัสดุเข้าคลัง) -->
+  <div class="modal-overlay" id="stockInModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{svg_icons['plus']} บันทึกรับพัสดุเข้าคลัง (Stock In)</h3>
+        <button class="close-btn" onclick="closeStockInModal()">{svg_icons['x']}</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>เลือกรายการพัสดุ *</label>
+          <select id="stockInItemSelect" class="form-control" onchange="updateStockInUnitLabels()">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label id="stockInBoxLabel">จำนวน (กล่อง)</label>
+            <input type="number" id="stockInBoxQty" class="form-control" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label id="stockInPieceLabel">จำนวน (ชิ้น)</label>
+            <input type="number" id="stockInPieceQty" class="form-control" min="0" placeholder="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>หมายเหตุ / เลขที่ใบสั่งซื้อ (PO/Invoice)</label>
+          <input type="text" id="stockInNote" class="form-control" placeholder="เช่น รับตามใบส่งของ เล่มที่ 12/2569">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeStockInModal()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="confirmStockIn()">
+          {svg_icons['check']} ยืนยันบันทึกรับเข้าสต๊อก
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: E-SIGNATURE PAD -->
   <div class="modal-overlay" id="signatureModal">
     <div class="modal-card">
@@ -1595,6 +1862,120 @@ staff_html = f'''<!DOCTYPE html>
     }}
     function saveReqsDB(reqs) {{ localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs)); }}
 
+
+    // Web Audio Chime Utility (Zero-latency offline audio)
+    function playRealtimeChime(type = 'default') {{
+      try {{
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        if (type === 'new_req') {{
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(698.46, now);
+          osc.frequency.setValueAtTime(880.00, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        }} else {{
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }}
+      }} catch (e) {{ }}
+    }}
+
+    function showToast(title, desc, type = 'info', playSound = true) {{
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'toast-card ' + type;
+      let icon = vIcons.check;
+      if (type === 'warning') icon = vIcons.box;
+      if (type === 'danger') icon = vIcons.x;
+      toast.innerHTML = '<div class="toast-icon">' + icon + '</div>' +
+        '<div class="toast-content">' +
+          '<div class="toast-title">' + title + '</div>' +
+          '<div class="toast-desc">' + desc + '</div>' +
+        '</div>' +
+        '<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
+      container.appendChild(toast);
+      if (playSound) playRealtimeChime(type === 'info' ? 'new_req' : 'default');
+      setTimeout(() => {{
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 350);
+      }}, 5000);
+    }}
+
+    const syncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('sdu_inventory_sync_channel') : null;
+
+    function broadcastStaffUpdate(type, payload = {{}}) {{
+      if (syncChannel) {{
+        syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
+      }}
+      localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+    }}
+
+    // Stock In Functions
+    function openStockInModal() {{
+      const items = getItemsDB();
+      const select = document.getElementById('stockInItemSelect');
+      select.innerHTML = items.map(item => 
+        '<option value="' + item.id + '">' + item.name + ' (คงเหลือปัจจุบัน: ' + item.on_hand_pieces.toLocaleString() + ' ' + item.unit_piece_name + ')</option>'
+      ).join('');
+      updateStockInUnitLabels();
+      document.getElementById('stockInBoxQty').value = '';
+      document.getElementById('stockInPieceQty').value = '';
+      document.getElementById('stockInNote').value = '';
+      document.getElementById('stockInModal').classList.add('open');
+    }}
+
+    function closeStockInModal() {{
+      document.getElementById('stockInModal').classList.remove('open');
+    }}
+
+    function updateStockInUnitLabels() {{
+      const items = getItemsDB();
+      const select = document.getElementById('stockInItemSelect');
+      const itm = items.find(i => i.id === parseInt(select.value));
+      if (!itm) return;
+      const boxName = itm.unit_box_name ? itm.unit_box_name : 'กล่อง';
+      document.getElementById('stockInBoxLabel').innerText = 'จำนวน (' + boxName + ') [1 ' + boxName + ' = ' + itm.pieces_per_box + ' ' + itm.unit_piece_name + ']';
+      document.getElementById('stockInPieceLabel').innerText = 'จำนวน (' + itm.unit_piece_name + ')';
+    }}
+
+    function confirmStockIn() {{
+      const items = getItemsDB();
+      const select = document.getElementById('stockInItemSelect');
+      const itemId = parseInt(select.value);
+      const itm = items.find(i => i.id === itemId);
+      if (!itm) return;
+
+      const boxes = parseInt(document.getElementById('stockInBoxQty').value) || 0;
+      const pieces = parseInt(document.getElementById('stockInPieceQty').value) || 0;
+      const addedPieces = (boxes * (itm.pieces_per_box || 1)) + pieces;
+
+      if (addedPieces <= 0) {{
+        alert("กรุณาระบุจำนวนที่ต้องการรับเข้าพัสดุครับ");
+        return;
+      }}
+
+      itm.on_hand_pieces += addedPieces;
+      saveItemsDB(items);
+      broadcastStaffUpdate('STOCK_UPDATED');
+      closeStockInModal();
+      renderInventoryTable();
+      showToast('รับพัสดุเข้าคลังสำเร็จ!', 'เพิ่ม ' + itm.name + ' จำนวน ' + addedPieces.toLocaleString() + ' ' + itm.unit_piece_name + ' เข้าสต๊อกเรียบร้อย', 'success', true);
+    }}
+
     // Auth Simulation
     function checkStaffAuth() {{
       const isAuth = sessionStorage.getItem('staff_auth') === 'true';
@@ -1673,7 +2054,7 @@ staff_html = f'''<!DOCTYPE html>
         if (req.status === 'COMPLETED') {{ badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว (Completed)'; }}
 
         return `
-          <div class="requisition-card">
+          <div class="requisition-card ${{req.id === highlightId ? 'highlight-new-card' : ''}}">
             <div class="req-top-row">
               <div class="req-doc-id">
                 ${{vIcons.fileText}} ${{req.id}}
@@ -1754,7 +2135,9 @@ staff_html = f'''<!DOCTYPE html>
         }});
         saveReqsDB(reqs);
         saveItemsDB(items);
-        alert(`อนุมัติคำขอ ${{docNo}} สำเร็จ! ระบบได้กันยอดสต๊อก (Reserved) ไว้เรียบร้อย`);
+        broadcastStaffUpdate('REQ_STATUS_CHANGED', {{ docNo: docNo, status: 'APPROVED' }});
+        broadcastStaffUpdate('STOCK_UPDATED');
+        showToast('อนุมัติคำขอสำเร็จ', 'คำขอ ' + docNo + ' ได้รับการอนุมัติและกันสต๊อกเรียบร้อย', 'success', false);
         renderStaffRequisitions('PENDING');
         renderInventoryTable();
       }}
@@ -1768,7 +2151,8 @@ staff_html = f'''<!DOCTYPE html>
         if (req) {{
           req.status = 'REJECTED';
           saveReqsDB(reqs);
-          alert(`ปฏิเสธคำขอ ${{docNo}} เรียบร้อยแล้ว`);
+          broadcastStaffUpdate('REQ_STATUS_CHANGED', {{ docNo: docNo, status: 'REJECTED' }});
+          showToast('ปฏิเสธคำขอเรียบร้อย', 'คำขอ ' + docNo + ' ถูกปฏิเสธ', 'warning', false);
           renderStaffRequisitions('PENDING');
         }}
       }}
@@ -1962,6 +2346,73 @@ staff_html = f'''<!DOCTYPE html>
       renderStaffRequisitions('PENDING');
       renderInventoryTable();
     }}
+
+    // REAL-TIME AUTO SYNC LISTENER FOR STAFF PORTAL (No Refresh Needed!)
+    let lastKnownStaffReqs = localStorage.getItem(DB_REQS_KEY) || '';
+    let lastKnownStaffItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+
+    function handleIncomingStaffSync(type, data) {{
+      if (type === 'NEW_REQUISITION') {{
+        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + data.id + ' จาก ' + data.dept + ' (' + data.requester + ')', 'info', true);
+        renderStaffRequisitions(currentStaffTab, data.id);
+        renderInventoryTable();
+      }} else if (type === 'REQ_STATUS_CHANGED' || type === 'REQS_UPDATED') {{
+        renderStaffRequisitions(currentStaffTab);
+      }} else if (type === 'STOCK_UPDATED') {{
+        renderInventoryTable();
+      }}
+    }}
+
+    if (syncChannel) {{
+      syncChannel.onmessage = (e) => {{
+        if (e.data) handleIncomingStaffSync(e.data.type, e.data.payload || {{}});
+      }};
+    }}
+
+    window.addEventListener('storage', (e) => {{
+      if (e.key === DB_REQS_KEY) {{
+        if (e.newValue !== lastKnownStaffReqs) {{
+          const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
+          const newList = e.newValue ? JSON.parse(e.newValue) : [];
+          lastKnownStaffReqs = e.newValue || '';
+          if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
+            const newReq = newList[0];
+            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true);
+            renderStaffRequisitions(currentStaffTab, newReq.id);
+          }} else {{
+            renderStaffRequisitions(currentStaffTab);
+          }}
+          renderInventoryTable();
+        }}
+      }} else if (e.key === DB_ITEMS_KEY) {{
+        if (e.newValue !== lastKnownStaffItems) {{
+          lastKnownStaffItems = e.newValue || '';
+          renderInventoryTable();
+        }}
+      }}
+    }});
+
+    setInterval(() => {{
+      const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
+      if (curReqs !== lastKnownStaffReqs) {{
+        const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
+        const newList = curReqs ? JSON.parse(curReqs) : [];
+        lastKnownStaffReqs = curReqs;
+        if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
+          const newReq = newList[0];
+          showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true);
+          renderStaffRequisitions(currentStaffTab, newReq.id);
+        }} else {{
+          renderStaffRequisitions(currentStaffTab);
+        }}
+        renderInventoryTable();
+      }}
+      const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+      if (curItems !== lastKnownStaffItems) {{
+        lastKnownStaffItems = curItems;
+        renderInventoryTable();
+      }}
+    }}, 1500);
 
     document.addEventListener('DOMContentLoaded', () => {{
       // Auto authenticate for demo or check session

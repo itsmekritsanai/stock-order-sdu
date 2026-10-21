@@ -30,6 +30,7 @@
 - [x] **ตัดสต๊อกจริงอัตโนมัติ:** เมื่อเซ็นรับของแล้วระบบตัดสต๊อกจริง On-Hand ออกทันที
 - [x] **แบบฟอร์มใบเบิกทางการ (Official PDF Preview):** ตราสัญลักษณ์ มสด. (Vector Seal) พร้อมลายเซ็นผู้รับ
 - [x] **100% Vector SVG Icons:** นำ Emoji ออกทั้งหมด ใช้ไอคอนเส้นเวกเตอร์มาตรฐาน
+- [x] **ระบบอัปเดตข้อมูล Real-Time สดโดยไม่ต้องรีเฟรชหน้าเว็บ:** BroadcastChannel API, Storage Event, Toast Popups & Chime Audio
 - [x] **คู่มือโครงการ:** จัดทำ `README.md` และอัปโหลดขึ้น GitHub Repository
 
 ---
