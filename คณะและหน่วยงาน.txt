@@ -1,0 +1,143 @@
+
+						<div style="width: 300px; float: left;">
+<div style="font-size: 18px;">คณะ</div>
+<hr>
+<p><a href="http://education.dusit.ac.th/" target="_blank" rel="noopener">คณะครุศาสตร์</a></p>
+<ul>
+<li><a href="http://child.dusit.ac.th/" target="_blank" rel="noopener">การศึกษาปฐมวัย</a></li>
+<li><a href="http://elementary.dusit.ac.th" target="_blank" rel="noopener">การประถมศึกษา</a></li>
+<li><a href="https://sites.google.com/view/dusit-teaching/index" target="_blank" rel="noopener">หลักสูตรประกาศนียบัตรบัณฑิตวิชาชีพครู</a></li>
+<li><a href="https://sites.google.com/view/special-edu-dusit/home" target="_blank" rel="noopener">หลักสูตรประกาศนียบัตรบัณฑิต<br>
+สาขาวิชาล่ามภาษามือ</a></li>
+<li><a href="https://sites.google.com/view/mededusuandusit" target="_blank" rel="noopener">หลักสูตรศึกษาศาสตรมหาบัณฑิต<br>
+สาขาวิชาการจัดการการศึกษาปฐมวัยและประถมศึกษา</a></li>
+<li><a href="https://med.dusit.ac.th/" target="_blank" rel="noopener">หลักสูตรศึกษาศาสตรมหาบัณฑิต<br>
+สาขาวิชาการสอนภาษาอังกฤษระดับประถมศึกษา</a></li>
+</ul>
+<p><a href="http://scitech.dusit.ac.th/" target="_blank" rel="noopener">คณะวิทยาศาสตร์และเทคโนโลยี</a></p>
+<ul>
+<li><a href="https://comsci.dusit.ac.th/">วิทยาการคอมพิวเตอร์</a></li>
+<li><a href="https://cossci.dusit.ac.th//" target="_blank" rel="noopener">วิทยาศาสตร์เครื่องสำอาง</a></li>
+<li><a href="https://occsci.dusit.ac.th/" target="_blank" rel="noopener">อาชีวอนามัยและความปลอดภัย</a></li>
+<li><a href="https://ehd.dusit.ac.th/" target="_blank" rel="noopener">อนามัยสิ่งแวดล้อมและสาธารณภัย</a></li>
+<li class="site-title"><a href="https://medsci.dusit.ac.th/" rel="home">วิทยาศาสตร์การแพทย์</a></li>
+<li class="site-title"><a href="https://gsedsci.dusit.ac.th/">วิทยาศาสตร์ทั่วไป</a></li>
+<li><a href="https://it-btech.dusit.ac.th/">เทคโนโลยีสารสนเทศ</a></li>
+<li><a href="https://bioindustry.dusit.ac.th/">อุตสาหกรรมชีวภาพเพื่อธุรกิจ</a></li>
+<li><a href="https://cybersecurity.dusit.ac.th/">ความมั่นคงปลอดภัยไซเบอร์</a></li>
+</ul>
+<p><a href="http://m-sci.dusit.ac.th/" target="_blank" rel="noopener">คณะวิทยาการจัดการ</a></p>
+<ul>
+<li><a href="https://www.facebook.com/management.sdu/" target="_blank" rel="noopener">การจัดการบัณฑิต</a></li>
+<li><a href="https://www.facebook.com/profile.php?id=100057126713308">นิเทศศาสตร์นวัตกรรมและผู้ประกอบการธุรกิจ</a></li>
+<li><a href="https://medsec.dusit.ac.th/" target="_blank" rel="noopener">เลขานุการทางการแพทย์</a></li>
+<li><a href="https://m-sci.dusit.ac.th/main/?page_id=233">การสื่อสารดิจิทัลและการสร้างสรรค์คอนเทนต์</a></li>
+<li><a href="https://m-sci.dusit.ac.th/main/?page_id=263">การตลาดและการสร้างแบรนด์บุคคล</a></li>
+<li><a href="https://www.facebook.com/SDU.DancePerformance">การเต้นและการแสดงสร้างสรรค์เพื่อธุรกิจบันเทิง</a></li>
+<li><a href="https://accounting.dusit.ac.th/" target="_blank" rel="noopener">การบัญชี</a></li>
+<li><a href="https://www.facebook.com/ChinaASEANSDU/" target="_blank" rel="noopener">ธุรกิจระหว่างประเทศ ธุรกิจจีน-อาเซียน</a></li>
+<li><a href="https://dbiztech.dusit.ac.th/" target="_blank" rel="noopener">ธุรกิจสร้างสรรค์และเทคโนโลยีดิจิทัล</a></li>
+<li><a href="https://innobiz.dusit.ac.th/" target="_blank" rel="noopener">หลักสูตรบริหารธุรกิจบัณฑิต สาขาวิชาบริหารธุรกิจ</a></li>
+</ul>
+<p><a href="http://human.dusit.ac.th/" target="_blank" rel="noopener">คณะมนุษยศาสตร์และสังคมศาสตร์</a></p>
+<ul>
+<li><a href="http://psychology.dusit.ac.th" target="_blank" rel="noopener">จิตวิทยาอุตสาหกรรมและองค์การ</a></li>
+<li><a href="http://learnthai.dusit.ac.th/" target="_blank" rel="noopener">ภาษาและการสื่อสาร</a></li>
+<li><a href="http://english.dusit.ac.th/" target="_blank" rel="noopener">ภาษาอังกฤษเพื่อการสื่อสาร</a></li>
+<li><a href="http://chinese.dusit.ac.th/" target="_blank" rel="noopener">ภาษาจีนเพื่อการสื่อสาร</a></li>
+<li><a href="http://tlc.dusit.ac.th">ภาษาและวัฒนธรรมไทย</a></li>
+<li><a href="http://engkorean.dusit.ac.th">ภาษาอังกฤษและภาษาเกาหลีเพื่อการสื่อสารข้ามวัฒนธรรม</a></li>
+</ul>
+<p><a href="https://nurse.dusit.ac.th/" target="_blank" rel="noopener">คณะพยาบาลศาสตร์</a></p>
+<ul>
+<li><a href="https://nurse.dusit.ac.th/page/nursing" target="_blank" rel="noopener">พยาบาลศาสตรบัณฑิต</a></li>
+<li><a href="https://nurse.dusit.ac.th/page/practical-nursing" target="_blank" rel="noopener">ประกาศนียบัตรผู้ช่วยพยาบาล</a></li>
+</ul>
+<p><a href="https://thmdusit.dusit.ac.th/" target="_blank" rel="noopener">โรงเรียนการท่องเที่ยวและการบริการ</a></p>
+<ul>
+<li><a href="https://thmdusit.dusit.ac.th/main/hotel-business/">ธุรกิจการโรงแรม</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/airline-business/">ธุรกิจการบิน</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/miceandevents/">การจัดการไมซ์และอีเวนต์</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/tourismandtouristguide/">การท่องเที่ยวและมัคคุเทศก์</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/entrepreneur/">ผู้ประกอบการธุรกิจบริการและการท่องเที่ยว</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/wellnessbusinessmanagement/">ธุรกิจเวลเนส (หลักสูตรภาษาอังกฤษ)</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/interdisciplinarytourism/">สหวิทยาการการท่องเที่ยว</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/tourism/">การท่องเที่ยว</a></li>
+<li><a href="https://thmdusit.dusit.ac.th/main/hospitality-managements/">การจัดการงานบริการ (หลักสูตรนานาชาติ)</a></li>
+</ul>
+<p><a href="http://food.dusit.ac.th/" target="_blank" rel="noopener">โรงเรียนการเรือน</a></p>
+<ul>
+<li><a href="https://food.dusit.ac.th/home/?page_id=1955" target="_blank" rel="noopener">เทคโนโลยีการประกอบอาหารและการบริการ</a></li>
+<li><a href="https://food.dusit.ac.th/home/?page_id=1977">คหกรรมศาสตร์</a></li>
+<li><a href=" https://food.dusit.ac.th/home/?page_id=3992">นวัตกรรมเทคโนโลยีเพื่อผู้ประกอบการอาหาร</a></li>
+<li><a href="https://food.dusit.ac.th/home/?page_id=3982">โภชนาการและการประกอบอาหารเพื่อสุขภาพและการชะลอวัย</a></li>
+<li><a href="https://food.dusit.ac.th/home/?page_id=11740">การจัดการธุรกิจบริการอาหารและศิลปะการประกอบอาหาร</a></li>
+<li><a href="https://food.dusit.ac.th/home/?page_id=10831">เทคโนโลยีการประกอบอาหารและการบริการ (ปริญญาโท)</a></li>
+</ul>
+<p><a href="http://slp.dusit.ac.th/" target="_blank" rel="noopener">โรงเรียนกฎหมายและการเมือง</a></p>
+<ul>
+<li><a href="http://lawprogram.dusit.ac.th/" target="_blank" rel="noopener">นิติศาสตร์</a></li>
+<li><a href="http://politicalscience.dusit.ac.th/" target="_blank" rel="noopener">หลักสูตรรัฐศาสตร์</a></li>
+<li><a href="http://publicadmin.dusit.ac.th/" target="_blank" rel="noopener">หลักสูตรรัฐประศาสนศาสตร์</a></li>
+<li><a href="https://publiclaw.dusit.ac.th" target="_blank" rel="noopener">กฎหมายมหาชนและการบริหารงานยุติธรรม</a></li>
+<li><a href="https://ma-slp.dusit.ac.th" target="_blank" rel="noopener">กฎหมายปกครองและการบริหารงานภาครัฐ (ปริญญาโท)</a></li>
+</ul>
+<p><a href="https://graduate.dusit.ac.th/" target="_blank" rel="noopener">บัณฑิตวิทยาลัย</a><br>
+<a href="https://la-orutis.dusit.ac.th/" target="_blank" rel="noopener">โรงเรียนสาธิตละอออุทิศ</a></p>
+</div>
+<div style="width: 300px; float: left;">
+<div style="font-size: 18px;">สถาบัน/สำนัก/ศูนย์</div>
+<hr>
+<p><a href="https://dusitpoll.dusit.ac.th/" target="_blank" rel="noopener">สวนดุสิตโพล</a><br>
+<a href="https://arit.dusit.ac.th" target="_blank" rel="noopener">สำนักวิทยบริการและเทคโนโลยีสารสนเทศ</a><br>
+<a href="http://regis.dusit.ac.th" target="_blank" rel="noopener">สำนักส่งเสริมวิชาการและงานทะเบียน</a></p>
+<ul>
+<li><a href="http://e-assessment.dusit.ac.th/" target="_blank" rel="noopener">ระบบการประเมินเพื่อพัฒนาประสิทธิภาพการจัดการศึกษา</a></li>
+</ul>
+<p><a href="http://president.dusit.ac.th/" target="_blank" rel="noopener">สำนักงานมหาวิทยาลัย</a></p>
+<ul>
+<li><a href="http://president.dusit.ac.th/center/" target="_blank" rel="noopener">กองกลาง</a></li>
+<li><a href="http://personnel.dusit.ac.th/" target="_blank" rel="noopener">กองบริหารงานบุคคล</a></li>
+<li><a href="http://finance.dusit.ac.th/" target="_blank" rel="noopener">กองคลัง</a></li>
+<li><a href="http://supply.dusit.ac.th/" target="_blank" rel="noopener">กองคลัง (งานพัสดุ)</a></li>
+<li>กองอาคารสถานที่</li>
+<li><a href="https://studentaffairs.dusit.ac.th/" target="_blank" rel="noopener">กองพัฒนานักศึกษา</a></li>
+<li><a href="https://www.facebook.com/dusit.ac.th/" target="_blank" rel="noopener">กองประชาสัมพันธ์</a></li>
+<li><a href="http://secretarygeneral.dusit.ac.th/main/">สำนักงานเลขานุการสภามหาวิทยาลัย</a></li>
+</ul>
+<p><a href="https://dusitproduct.dusit.ac.th/" target="_blank" rel="noopener">สำนักกิจการพิเศษ</a></p>
+<ul>
+<li><a href="https://dusitproduct.dusit.ac.th/" target="_blank" rel="noopener">สำนักกิจการพิเศษ</a></li>
+<li><a href="https://dusitplace.dusit.ac.th/" target="_blank" rel="noopener">โรงแรมสวนดุสิตเพลส</a></li>
+</ul>
+<p><a href="https://ilac.dusit.ac.th/" target="_blank" rel="noopener">สถาบันภาษา/ศิลปะและวัฒนธรรม</a></p>
+<p><a href="https://research.dusit.ac.th" target="_blank" rel="noopener">สถาบันวิจัยและพัฒนา</a></p>
+<ul>
+<li><a href="http://rimu.dusit.ac.th/">หน่วยบริหารนวัตกรรมการวิจัย</a></li>
+<li><a href="https://sdupersonnel.wixsite.com/sdupersonnel/pathacademic" target="_blank" rel="noopener">งานกำหนดตำเเหน่งทางวิชาการ</a></li>
+<li><a href="http://ubi.dusit.ac.th/" target="_blank" rel="noopener">หน่วยบ่มเพาะวิสาหกิจ</a></li>
+<li><a href="http://rspg.dusit.ac.th/" target="_blank" rel="noopener">ข้อมูลพันธุ์ไม้ในสวนดุสิต</a></li>
+<li><a href="https://aje.dusit.ac.th/" target="_blank" rel="noopener">ASEAN Journal of Education</a></li>
+</ul>
+<p><a href="https://hcdsuandusit.dusit.ac.th">ศูนย์พัฒนาทุนมนุษย์</a></p>
+<p><a href="https://graphicsite.co.th/" target="_blank" rel="noopener">ศูนย์บริการสื่อและสิ่งพิมพ์กราฟฟิคไซท์</a></p>
+<p><a href="https://osm.dusit.ac.th" target="_blank" rel="noopener">สำนักยุทธศาสตร์และแผน</a></p>
+<ul>
+<li><a href="https://planning.dusit.ac.th/main/" rel="home">งานแผนและงบประมาณ</a></li>
+</ul>
+<p><a href="http://sdulaw.dusit.ac.th/" target="_blank" rel="noopener">สำนักกฏหมาย</a></p>
+<p><a href="http://www.dusitcenter.org/home/" target="_blank" rel="noopener">โครงการความร่วมมือทางวิชาการ</a></p>
+<p><a href="https://guidance.dusit.ac.th/" target="_blank" rel="noopener">ศูนย์สนเทศแนะแนวการศึกษาและอาชีพ</a></p>
+<p><a title="สภาคณาจารย์และข้าราชการ" href="https://senate.dusit.ac.th/" target="_blank" rel="noopener">สภาคณาจารย์และพนักงาน</a></p>
+<p><a href="https://sahakorn.dusit.ac.th/" target="_blank" rel="noopener">สหกรณ์ออมทรัพย์</a></p>
+<p><a href="https://sduatc.dusit.ac.th/" target="_blank" rel="noopener">ศูนย์บริการทดสอบทางวิชาการสวนดุสิต</a></p>
+<div class="site-branding">
+<p class="site-title"><a href="https://foodplant.dusit.ac.th/" rel="home">โครงการปฏิบัติการอาหารแปรรูป มสด.</a></p>
+</div>
+<p><a href="http://dormitorysdu.dusit.ac.th/web/login.htm?mode=index" target="_blank" rel="noopener">อาคารหอพัก Dormsita ศูนย์วิทยาศาสตร์ มหาวิทยาลัยสวนดุสิต</a></p>
+</div>
+
+						<div class="cleaner">&nbsp;</div>
+
+						
+					
