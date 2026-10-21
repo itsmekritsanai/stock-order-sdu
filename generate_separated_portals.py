@@ -553,12 +553,35 @@ requester_html = f'''<!DOCTYPE html>
     .qty-col label {{ font-size: 0.7rem; color: var(--neutral-600); display: block; margin-bottom: 2px; }}
     .qty-input {{ width: 100%; padding: 0.45rem; border: 1px solid var(--neutral-300); border-radius: 6px; font-family: inherit; font-size: 0.85rem; text-align: center; }}
     .btn-add-cart {{
-      width: 100%; background: var(--primary); color: white; border: none; border-radius: 8px;
-      padding: 0.6rem; font-family: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s, transform 0.1s;
+      width: 100%; background: white; color: var(--primary); border: 1.5px solid var(--primary); border-radius: 8px;
+      padding: 0.55rem; font-family: inherit; font-size: 0.825rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: all 0.2s;
     }}
-    .btn-add-cart:hover {{ background: var(--primary-hover); }}
+    .btn-add-cart:hover {{ background: var(--primary-light); border-color: var(--primary-hover); }}
     .btn-add-cart:active {{ transform: scale(0.98); }}
+
+    .btn-quick-req {{
+      width: 100%; background: var(--accent); color: white; border: none; border-radius: 8px;
+      padding: 0.55rem; font-family: inherit; font-size: 0.825rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem; transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+    }}
+    .btn-quick-req:hover {{ background: var(--accent-hover); }}
+    .btn-quick-req:active {{ transform: scale(0.98); }}
+
+    .requester-view-switcher {{
+      display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--neutral-200); padding-bottom: 0.5rem;
+    }}
+    .req-view-btn {{
+      background: none; border: none; padding: 0.65rem 1.25rem; font-family: inherit; font-size: 0.95rem;
+      font-weight: 600; color: var(--neutral-600); cursor: pointer; border-radius: 8px;
+      display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s;
+    }}
+    .req-view-btn:hover {{ background: var(--neutral-100); color: var(--neutral-900); }}
+    .req-view-btn.active {{
+      background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25);
+    }}
+    .badge-rejected {{ background: var(--danger-light); color: var(--danger); }}
 
     /* Cart Button Trigger */
     .cart-trigger {{
@@ -687,62 +710,103 @@ requester_html = f'''<!DOCTYPE html>
 
   <!-- Main Content Area -->
   <main>
-    <!-- Requester Info Form with SEARCHABLE Combobox -->
-    <div class="requester-bar">
-      <div class="form-group custom-combobox-wrapper" id="deptComboboxWrapper">
-        <label for="deptSearchInput">
-          {svg_icons['building']} หน่วยงาน / คณะ / โรงเรียนที่สังกัด *
-        </label>
-        <div class="combobox-control" id="deptComboboxControl">
-          <input type="text" id="deptSearchInput" class="form-control combobox-input" 
-                 placeholder="พิมพ์ค้นหาคณะ หรือหน่วยงาน... (เช่น การเรือน, คอม, กองคลัง)" 
-                 autocomplete="off" 
-                 value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ"
-                 onfocus="openDeptDropdown()" 
-                 oninput="handleDeptSearch(this.value)">
-          <input type="hidden" id="deptSelect" value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ">
-          <button type="button" class="combobox-toggle-btn" onclick="toggleDeptDropdown(event)" title="เปิด/ปิด รายการ">
-            {svg_icons['chevron_down']}
+    <!-- Navigation Tabs for Requester Portal -->
+    <nav class="requester-view-switcher">
+      <button class="req-view-btn active" id="btnViewCatalog" onclick="switchRequesterView('catalog')">
+        {svg_icons['box']} สั่งเบิกพัสดุ (Catalog)
+      </button>
+      <button class="req-view-btn" id="btnViewMyReqs" onclick="switchRequesterView('my_reqs')">
+        {svg_icons['clipboard']} รายการคำขอของฉัน (รออนุมัติ / ติดตามสถานะ) <span class="count-tag" id="navMyPendingCount">0</span>
+      </button>
+    </nav>
+
+    <!-- SECTION 1: CATALOG VIEW -->
+    <section id="view-catalog">
+      <!-- Requester Info Form with SEARCHABLE Combobox -->
+      <div class="requester-bar">
+        <div class="form-group custom-combobox-wrapper" id="deptComboboxWrapper">
+          <label for="deptSearchInput">
+            {svg_icons['building']} หน่วยงาน / คณะ / โรงเรียนที่สังกัด *
+          </label>
+          <div class="combobox-control" id="deptComboboxControl">
+            <input type="text" id="deptSearchInput" class="form-control combobox-input" 
+                   placeholder="พิมพ์ค้นหาคณะ หรือหน่วยงาน... (เช่น การเรือน, คอม, กองคลัง)" 
+                   autocomplete="off" 
+                   value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ"
+                   onfocus="openDeptDropdown()" 
+                   oninput="handleDeptSearch(this.value)">
+            <input type="hidden" id="deptSelect" value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ">
+            <button type="button" class="combobox-toggle-btn" onclick="toggleDeptDropdown(event)" title="เปิด/ปิด รายการ">
+              {svg_icons['chevron_down']}
+            </button>
+          </div>
+          <div class="combobox-dropdown" id="deptDropdownList">
+            <!-- Populated and filtered by JS -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="requesterName">
+            {svg_icons['user']} ชื่อ-นามสกุล ผู้ขอเบิก *
+          </label>
+          <input type="text" id="requesterName" class="form-control" placeholder="เช่น อ.สมชาย ใจดี" value="อ.สมชาย ใจดี">
+        </div>
+        <div class="form-group">
+          <label for="requesterPhone">
+            {svg_icons['phone']} เบอร์โทรศัพท์ติดต่อ
+          </label>
+          <input type="tel" id="requesterPhone" class="form-control" placeholder="เช่น 081-234-5678" value="081-998-7766">
+        </div>
+      </div>
+
+      <!-- Search & Filters -->
+      <div class="search-filter-bar">
+        <div class="search-box-wrapper">
+          <span class="search-icon">{svg_icons['search']}</span>
+          <input type="text" id="itemSearchInput" class="search-input" 
+                 placeholder="พิมพ์ค้นหาชื่อพัสดุ (เช่น 279, ซองขยาย, ครุฑ, แฟ้ม, กระดาษคำตอบ)..." 
+                 oninput="handleSearch()">
+        </div>
+        <div class="category-pills">
+          <button class="pill-btn active" onclick="filterCategory('ALL', this)">ทั้งหมด</button>
+          <button class="pill-btn" onclick="filterCategory('ซองเอกสาร', this)">ซองเอกสาร</button>
+          <button class="pill-btn" onclick="filterCategory('กระดาษและแบบฟอร์ม', this)">กระดาษ/แบบฟอร์ม</button>
+          <button class="pill-btn" onclick="filterCategory('เครื่องเขียนและแฟ้ม', this)">เครื่องเขียน/แฟ้ม</button>
+        </div>
+      </div>
+
+      <!-- Item Catalog Cards Grid -->
+      <div class="catalog-grid" id="catalogGrid">
+        <!-- Rendered dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- SECTION 2: MY REQUISITIONS VIEW (รออนุมัติ / ติดตามสถานะ) -->
+    <section id="view-my-reqs" style="display: none;">
+      <div class="dashboard-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900);">รายการคำขอเบิกพัสดุของฉัน</h2>
+          <p style="color: var(--neutral-600); font-size: 0.85rem;">ติดตามสถานะคำขอที่ท่านส่งเบิก: กำลังรอเจ้าหน้าที่อนุมัติ, อนุมัติแล้วพร้อมให้มารับของ, หรือรับของสำเร็จแล้ว</p>
+        </div>
+        <div class="status-tabs" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="status-tab my-status-tab active" onclick="filterMyRequisitionsStatus('ALL', this)">
+            ทั้งหมด <span class="count-tag" id="myTabAllCount">0</span>
+          </button>
+          <button class="status-tab my-status-tab" onclick="filterMyRequisitionsStatus('PENDING', this)">
+            รออนุมัติ <span class="count-tag" id="myTabPendingCount">0</span>
+          </button>
+          <button class="status-tab my-status-tab" onclick="filterMyRequisitionsStatus('APPROVED', this)">
+            อนุมัติแล้ว รอรับของ <span class="count-tag" id="myTabApprovedCount">0</span>
+          </button>
+          <button class="status-tab my-status-tab" onclick="filterMyRequisitionsStatus('COMPLETED', this)">
+            รับของสำเร็จแล้ว <span class="count-tag" id="myTabCompletedCount">0</span>
           </button>
         </div>
-        <div class="combobox-dropdown" id="deptDropdownList">
-          <!-- Populated and filtered by JS -->
-        </div>
       </div>
-      <div class="form-group">
-        <label for="requesterName">
-          {svg_icons['user']} ชื่อ-นามสกุล ผู้ขอเบิก *
-        </label>
-        <input type="text" id="requesterName" class="form-control" placeholder="เช่น อ.สมชาย ใจดี" value="อ.สมชาย ใจดี">
-      </div>
-      <div class="form-group">
-        <label for="requesterPhone">
-          {svg_icons['phone']} เบอร์โทรศัพท์ติดต่อ
-        </label>
-        <input type="tel" id="requesterPhone" class="form-control" placeholder="เช่น 081-234-5678" value="081-998-7766">
-      </div>
-    </div>
 
-    <!-- Search & Filters -->
-    <div class="search-filter-bar">
-      <div class="search-box-wrapper">
-        <span class="search-icon">{svg_icons['search']}</span>
-        <input type="text" id="itemSearchInput" class="search-input" 
-               placeholder="พิมพ์ค้นหาชื่อพัสดุ (เช่น 279, ซองขยาย, ครุฑ, แฟ้ม, กระดาษคำตอบ)..." 
-               oninput="handleSearch()">
+      <div id="myRequisitionsList">
+        <!-- Rendered dynamically by JS -->
       </div>
-      <div class="category-pills">
-        <button class="pill-btn active" onclick="filterCategory('ALL', this)">ทั้งหมด</button>
-        <button class="pill-btn" onclick="filterCategory('ซองเอกสาร', this)">ซองเอกสาร</button>
-        <button class="pill-btn" onclick="filterCategory('กระดาษและแบบฟอร์ม', this)">กระดาษ/แบบฟอร์ม</button>
-        <button class="pill-btn" onclick="filterCategory('เครื่องเขียนและแฟ้ม', this)">เครื่องเขียน/แฟ้ม</button>
-      </div>
-    </div>
-
-    <!-- Item Catalog Cards Grid -->
-    <div class="catalog-grid" id="catalogGrid">
-      <!-- Rendered dynamically by JS -->
-    </div>
+    </section>
   </main>
 
   <!-- Slide-Over Cart Drawer -->
@@ -762,7 +826,7 @@ requester_html = f'''<!DOCTYPE html>
           <label for="cartPurpose">
             {svg_icons['edit']} วัตถุประสงค์ในการเบิกใช้งาน *
           </label>
-          <textarea id="cartPurpose" class="form-control" rows="2" placeholder="เช่น ใช้สำหรับการสอบปลายภาค, งานประชุมวิชาการ..."></textarea>
+          <textarea id="cartPurpose" class="form-control" rows="2" placeholder="เช่น ใช้สำหรับการสอบปลายภาค, งานประชุมวิชาการ...">เพื่อใช้สำหรับการเรียนการสอนและภารกิจของหน่วยงาน</textarea>
         </div>
         <button class="btn-submit-requisition" onclick="submitRequisition()">
           {svg_icons['check_circle']} ยืนยันส่งคำขอเบิกพัสดุ
@@ -784,12 +848,17 @@ requester_html = f'''<!DOCTYPE html>
           REQ-256910-0000
         </div>
         <p style="font-size: 0.9rem; color: var(--neutral-600); line-height: 1.6;">
-          คำขอของท่านถูกส่งไปยัง <strong>เจ้าหน้าที่แผนกพัสดุ</strong> เรียบร้อยแล้ว<br>
-          เมื่อเจ้าหน้าที่อนุมัติและจัดของเสร็จสิ้น ท่านสามารถเดินทางมารับพัสดุพร้อมเซ็นชื่อรับมอบผ่านหน้าจอได้ที่ห้องคลังพัสดุ
+          คำขอของท่านเข้าสู่สถานะ <strong>"รออนุมัติ (Pending)"</strong> และถูกส่งต่อไปยัง <strong>เจ้าหน้าที่แผนกพัสดุ</strong> เรียบร้อยแล้ว<br>
+          ท่านสามารถดูรายการคำขอทั้งหมดได้ในแท็บ <strong>"รายการคำขอของฉัน"</strong> หรือเปิดดูในหน้าจอเจ้าหน้าที่พัสดุ
         </p>
       </div>
-      <div class="modal-footer" style="justify-content: center; gap: 1rem;">
-        <button class="btn btn-primary" onclick="closeSuccessModal()">ตกลง / เบิกรายการอื่นต่อ</button>
+      <div class="modal-footer" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="closeSuccessModal()">
+          ดูในรายการคำขอของฉัน (รออนุมัติ)
+        </button>
+        <a href="staff.html" target="_blank" class="btn btn-outline" style="text-decoration: none;">
+          เปิดดูหน้าเจ้าหน้าที่พัสดุ (Staff Portal) ↗
+        </a>
       </div>
     </div>
   </div>
@@ -855,30 +924,51 @@ requester_html = f'''<!DOCTYPE html>
     const defaultItems = {json.dumps(initial_items, ensure_ascii=False)};
     const defaultReqs = {json.dumps(initial_requisitions, ensure_ascii=False)};
 
+    let memItemsDB = null;
+    let memReqsDB = null;
+
     function getItemsDB() {{
-      const data = localStorage.getItem(DB_ITEMS_KEY);
-      if (!data) {{
-        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
-        return defaultItems;
+      try {{
+        const data = localStorage.getItem(DB_ITEMS_KEY);
+        if (!data) {{
+          localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
+          return defaultItems;
+        }}
+        return JSON.parse(data);
+      }} catch (e) {{
+        if (!memItemsDB) memItemsDB = JSON.parse(JSON.stringify(defaultItems));
+        return memItemsDB;
       }}
-      return JSON.parse(data);
     }}
 
     function saveItemsDB(items) {{
-      localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items));
+      try {{
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items));
+      }} catch (e) {{
+        memItemsDB = items;
+      }}
     }}
 
     function getReqsDB() {{
-      const data = localStorage.getItem(DB_REQS_KEY);
-      if (!data) {{
-        localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
-        return defaultReqs;
+      try {{
+        const data = localStorage.getItem(DB_REQS_KEY);
+        if (!data) {{
+          localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
+          return defaultReqs;
+        }}
+        return JSON.parse(data);
+      }} catch (e) {{
+        if (!memReqsDB) memReqsDB = JSON.parse(JSON.stringify(defaultReqs));
+        return memReqsDB;
       }}
-      return JSON.parse(data);
     }}
 
     function saveReqsDB(reqs) {{
-      localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs));
+      try {{
+        localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs));
+      }} catch (e) {{
+        memReqsDB = reqs;
+      }}
     }}
 
 
@@ -935,14 +1025,27 @@ requester_html = f'''<!DOCTYPE html>
       }}, 5000);
     }}
 
-    // BROADCAST CHANNEL & STORAGE EVENT SYNC
-    const syncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('sdu_inventory_sync_channel') : null;
+    // BROADCAST CHANNEL & STORAGE EVENT SYNC (Multi-layer Fallback for file:// and http://)
+    let syncChannel = null;
+    try {{
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {{
+        syncChannel = new BroadcastChannel('sdu_inventory_sync_channel');
+      }}
+    }} catch (e) {{
+      console.warn('BroadcastChannel unavailable (safe fallback active):', e);
+      syncChannel = null;
+    }}
 
     function broadcastSync(type, payload = {{}}) {{
-      if (syncChannel) {{
-        syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
-      }}
-      localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+      try {{
+        if (syncChannel) {{
+          syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
+        }}
+      }} catch (e) {{ }}
+      try {{
+        localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+        localStorage.setItem('sdu_sync_event', JSON.stringify({{ type: type, payload: payload, time: Date.now() }}));
+      }} catch (e) {{ }}
     }}
 
     let cart = [];
@@ -1093,9 +1196,14 @@ requester_html = f'''<!DOCTYPE html>
                     <input type="number" id="qty-piece-${{item.id}}" class="qty-input" min="0" placeholder="0">
                   </div>
                 </div>
-                <button class="btn-add-cart" onclick="addToCart(${{item.id}})">
-                  ${{vIcons.cart}} เพิ่มเข้าตะกร้า
-                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem;">
+                  <button class="btn-quick-req" onclick="quickRequisition(${{item.id}})" title="ส่งคำขอเบิกรายการนี้ทันที">
+                    ${{vIcons.check}} ขอเบิกทันที
+                  </button>
+                  <button class="btn-add-cart" onclick="addToCart(${{item.id}})" title="เพิ่มใส่ตะกร้าเพื่อรวมขอเบิกหลายรายการ">
+                    ${{vIcons.cart}} ใส่ตะกร้า
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1211,15 +1319,210 @@ requester_html = f'''<!DOCTYPE html>
       renderCartDrawer();
     }}
 
-    function submitRequisition() {{
-      const dept = document.getElementById('deptSelect').value;
-      const requester = document.getElementById('requesterName').value.trim();
-      const phone = document.getElementById('requesterPhone').value.trim();
-      const purpose = document.getElementById('cartPurpose').value.trim();
+    // Switch between Catalog view and My Requisitions view
+    function switchRequesterView(viewName) {{
+      const secCatalog = document.getElementById('view-catalog');
+      const secMyReqs = document.getElementById('view-my-reqs');
+      const btnCatalog = document.getElementById('btnViewCatalog');
+      const btnMyReqs = document.getElementById('btnViewMyReqs');
 
-      if (!requester) {{ alert("กรุณากรอกชื่อ-นามสกุล ผู้ขอเบิกครับ"); return; }}
-      if (cart.length === 0) {{ alert("ไม่มีรายการพัสดุในตะกร้า"); return; }}
-      if (!purpose) {{ alert("กรุณาระบุวัตถุประสงค์ในการเบิกใช้งานครับ"); return; }}
+      if (viewName === 'catalog') {{
+        if (secCatalog) secCatalog.style.display = 'block';
+        if (secMyReqs) secMyReqs.style.display = 'none';
+        if (btnCatalog) btnCatalog.classList.add('active');
+        if (btnMyReqs) btnMyReqs.classList.remove('active');
+      }} else {{
+        if (secCatalog) secCatalog.style.display = 'none';
+        if (secMyReqs) secMyReqs.style.display = 'block';
+        if (btnCatalog) btnCatalog.classList.remove('active');
+        if (btnMyReqs) btnMyReqs.classList.add('active');
+        renderMyRequisitions();
+      }}
+    }}
+
+    let currentMyReqsStatus = 'ALL';
+
+    function filterMyRequisitionsStatus(status, btn) {{
+      currentMyReqsStatus = status;
+      document.querySelectorAll('.my-status-tab').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderMyRequisitions(status);
+    }}
+
+    function renderMyRequisitions(status = null, highlightId = null) {{
+      if (!status) status = currentMyReqsStatus || 'ALL';
+      currentMyReqsStatus = status;
+
+      const reqs = getReqsDB();
+      const container = document.getElementById('myRequisitionsList');
+      if (!container) return;
+
+      const pendingCount = reqs.filter(r => (r.status || '').toUpperCase() === 'PENDING').length;
+      const elBadge = document.getElementById('navMyPendingCount');
+      if (elBadge) elBadge.innerText = pendingCount;
+      const elTabAll = document.getElementById('myTabAllCount');
+      if (elTabAll) elTabAll.innerText = reqs.length;
+      const elTabPending = document.getElementById('myTabPendingCount');
+      if (elTabPending) elTabPending.innerText = pendingCount;
+      const elTabApproved = document.getElementById('myTabApprovedCount');
+      if (elTabApproved) elTabApproved.innerText = reqs.filter(r => (r.status || '').toUpperCase() === 'APPROVED').length;
+      const elTabCompleted = document.getElementById('myTabCompletedCount');
+      if (elTabCompleted) elTabCompleted.innerText = reqs.filter(r => (r.status || '').toUpperCase() === 'COMPLETED').length;
+
+      let filtered = reqs;
+      if (status !== 'ALL') {{
+        filtered = reqs.filter(r => (r.status || '').toUpperCase() === status.toUpperCase());
+      }}
+
+      if (filtered.length === 0) {{
+        container.innerHTML = `
+          <div style="background: white; border-radius: var(--radius); padding: 3rem; text-align: center; color: var(--neutral-400); border: 1px dashed var(--neutral-300);">
+            <div style="margin-bottom: 0.5rem;">${{vIcons.fileText}}</div>
+            <p>ยังไม่มีรายการคำขอในสถานะนี้</p>
+          </div>
+        `;
+        return;
+      }}
+
+      container.innerHTML = filtered.map(req => {{
+        let badgeClass = 'badge-pending';
+        let badgeText = '🟡 รอเจ้าหน้าที่พัสดุอนุมัติ (Pending)';
+        if (req.status === 'APPROVED') {{ badgeClass = 'badge-approved'; badgeText = '🔵 อนุมัติแล้ว! เชิญมารับของที่ห้องพัสดุ (Approved)'; }}
+        if (req.status === 'COMPLETED') {{ badgeClass = 'badge-completed'; badgeText = '🟢 รับมอบสำเร็จแล้ว (Completed)'; }}
+        if (req.status === 'REJECTED') {{ badgeClass = 'badge-rejected'; badgeText = '🔴 ไม่อนุมัติ (Rejected)'; }}
+
+        const isHighlighted = (highlightId && req.id === highlightId) ? 'highlight-new-card' : '';
+
+        return `
+          <div class="requisition-card ${{isHighlighted}}" id="my-req-card-${{req.id}}" style="background: white; border: 1px solid var(--neutral-200); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div class="req-top-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <div class="req-doc-id" style="font-weight: 700; color: var(--neutral-900); display: flex; align-items: center; gap: 0.5rem;">
+                ${{vIcons.fileText}} ${{req.id}}
+                <span class="req-badge ${{badgeClass}}">${{badgeText}}</span>
+              </div>
+              <span style="font-size: 0.8rem; color: var(--neutral-400); display: flex; align-items: center; gap: 4px;">
+                ${{vIcons.calendar}} วันที่ขอ: ${{req.date}}
+              </span>
+            </div>
+
+            <div class="req-details-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: var(--neutral-50); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.85rem;">
+              <div>${{vIcons.building}} <strong>หน่วยงาน:</strong> ${{req.dept}}</div>
+              <div>${{vIcons.user}} <strong>ผู้ขอเบิก:</strong> ${{req.requester}} (${{req.phone || '-'}})</div>
+              <div style="grid-column: 1 / -1;">${{vIcons.fileText}} <strong>วัตถุประสงค์:</strong> ${{req.purpose}}</div>
+            </div>
+
+            <table class="req-table" style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+              <thead>
+                <tr style="background: var(--neutral-100); text-align: left;">
+                  <th style="padding: 0.5rem 0.75rem;">รายการพัสดุ</th>
+                  <th style="width: 150px; padding: 0.5rem 0.75rem;">จำนวนที่ขอ</th>
+                  <th style="width: 180px; padding: 0.5rem 0.75rem;">สถานะการจัดของ</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${{req.items.map(item => `
+                  <tr style="border-bottom: 1px solid var(--neutral-200);">
+                    <td style="padding: 0.5rem 0.75rem;"><strong>${{item.name || '-'}}</strong></td>
+                    <td style="padding: 0.5rem 0.75rem;">${{(item.qtyBoxes > 0 ? (item.qtyBoxes + ' ' + (item.unitBox || 'กล่อง') + ' ') : '') + (item.qtyPieces > 0 ? (item.qtyPieces + ' ' + (item.unitPiece || 'ชิ้น')) : '') || ((item.totalPieces || 0) + ' ' + (item.unitPiece || 'ชิ้น'))}}</td>
+                    <td style="padding: 0.5rem 0.75rem;">
+                      ${{req.status === 'APPROVED' ? '<span style="color: var(--primary); font-weight: 600;">✓ จัดเตรียมพร้อมให้รับ</span>' : 
+                        (req.status === 'COMPLETED' ? '<span style="color: var(--accent); font-weight: 600;">✓ รับมอบเรียบร้อย</span>' : 
+                        '<span style="color: var(--warning); font-weight: 500;">⏳ กำลังรอเจ้าหน้าที่ตรวจสอบ</span>')}}
+                    </td>
+                  </tr>
+                `).join('')}}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }}).join('');
+    }}
+
+    // Quick Requisition (1-Click Direct Submit)
+    function quickRequisition(itemId) {{
+      const items = getItemsDB();
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+
+      const boxInput = document.getElementById(`qty-box-${{item.id}}`);
+      const pieceInput = document.getElementById(`qty-piece-${{item.id}}`);
+      let qtyBoxes = boxInput ? parseInt(boxInput.value || 0) : 0;
+      let qtyPieces = pieceInput ? parseInt(pieceInput.value || 0) : 0;
+
+      // Default to 1 if user didn't enter number
+      if (qtyBoxes <= 0 && qtyPieces <= 0) {{
+        if (item.is_multi_unit) qtyBoxes = 1;
+        else qtyPieces = 1;
+      }}
+
+      const totalPieces = (qtyBoxes * (item.pieces_per_box || 1)) + qtyPieces;
+      const availablePieces = Math.max(0, item.on_hand_pieces - item.reserved_pieces);
+
+      if (totalPieces > availablePieces) {{
+        showToast('พัสดุไม่เพียงพอ', 'ยอดคงเหลือพร้อมเบิกมีเพียง ' + availablePieces.toLocaleString() + ' ' + item.unit_piece_name, 'danger', true);
+        return;
+      }}
+
+      const dept = document.getElementById('deptSelect').value || 'โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ';
+      const requester = document.getElementById('requesterName').value.trim() || 'อ.สมชาย ใจดี';
+      const phone = document.getElementById('requesterPhone').value.trim() || '081-998-7766';
+      const purpose = 'เพื่อใช้สำหรับการเรียนการสอนและภารกิจของหน่วยงาน';
+
+      const randomNo = Math.floor(1000 + Math.random() * 9000);
+      const newDocNo = `REQ-256910-${{randomNo}}`;
+
+      const newReq = {{
+        id: newDocNo,
+        dept: dept,
+        requester: requester,
+        phone: phone,
+        purpose: purpose,
+        date: "21 ต.ค. 2569 " + new Date().toLocaleTimeString('th-TH', {{hour: '2-digit', minute:'2-digit'}}) + " น.",
+        status: "PENDING",
+        signature: null,
+        items: [{{
+          itemId: item.id,
+          name: item.name,
+          qtyBoxes: qtyBoxes,
+          qtyPieces: qtyPieces,
+          totalPieces: totalPieces,
+          unitBox: item.unit_box_name,
+          unitPiece: item.unit_piece_name,
+          approvedPieces: totalPieces
+        }}]
+      }};
+
+      // Save to shared localStorage DB
+      const reqs = getReqsDB();
+      reqs.unshift(newReq);
+      saveReqsDB(reqs);
+
+      // Broadcast Real-time event across tabs & windows
+      broadcastSync('NEW_REQUISITION', newReq);
+
+      if (boxInput) boxInput.value = '';
+      if (pieceInput) pieceInput.value = '';
+
+      // Switch to "รายการคำขอของฉัน" view immediately!
+      switchRequesterView('my_reqs');
+      renderMyRequisitions('PENDING', newDocNo);
+
+      // Show success modal
+      document.getElementById('successDocNo').innerText = newDocNo;
+      document.getElementById('successModal').classList.add('open');
+      showToast('ส่งคำขอเบิกสำเร็จ!', 'เลขที่ ' + newDocNo + ' เข้าสู่สถานะรออนุมัติแล้ว', 'success', true);
+    }}
+
+    function submitRequisition() {{
+      const dept = document.getElementById('deptSelect').value || 'โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ';
+      const requester = document.getElementById('requesterName').value.trim() || 'อ.สมชาย ใจดี';
+      const phone = document.getElementById('requesterPhone').value.trim() || '081-998-7766';
+      const purpose = document.getElementById('cartPurpose').value.trim() || 'เพื่อใช้สำหรับการเรียนการสอนและภารกิจของหน่วยงาน';
+
+      if (cart.length === 0) {{
+        showToast('ไม่มีรายการในตะกร้า', 'กรุณาระบุจำนวนพัสดุและกดใส่ตะกร้าก่อนส่งคำขอครับ', 'warning', false);
+        return;
+      }}
 
       const randomNo = Math.floor(1000 + Math.random() * 9000);
       const newDocNo = `REQ-256910-${{randomNo}}`;
@@ -1254,18 +1557,23 @@ requester_html = f'''<!DOCTYPE html>
       broadcastSync('NEW_REQUISITION', newReq);
 
       cart = [];
-      document.getElementById('cartPurpose').value = '';
       updateCartBadge();
       toggleCartDrawer(false);
+
+      // Switch to "รายการคำขอของฉัน" view immediately!
+      switchRequesterView('my_reqs');
+      renderMyRequisitions('PENDING', newDocNo);
 
       // Show success modal
       document.getElementById('successDocNo').innerText = newDocNo;
       document.getElementById('successModal').classList.add('open');
+      showToast('ส่งคำขอเบิกสำเร็จ!', 'เลขที่ ' + newDocNo + ' เข้าสู่สถานะรออนุมัติแล้ว', 'success', true);
     }}
 
     function closeSuccessModal() {{
       document.getElementById('successModal').classList.remove('open');
-      renderCatalog();
+      switchRequesterView('my_reqs');
+      renderMyRequisitions('PENDING');
     }}
 
     // Tracking Modal
@@ -1312,38 +1620,47 @@ requester_html = f'''<!DOCTYPE html>
     }}
 
     // REAL-TIME AUTO SYNC LISTENER (No Refresh Needed!)
-    let lastKnownIndexItems = localStorage.getItem(DB_ITEMS_KEY) || '';
-    let lastKnownIndexReqs = localStorage.getItem(DB_REQS_KEY) || '';
+    let lastKnownIndexItems = '';
+    try {{ lastKnownIndexItems = localStorage.getItem(DB_ITEMS_KEY) || ''; }} catch (e) {{}}
+    let lastKnownIndexReqs = '';
+    try {{ lastKnownIndexReqs = localStorage.getItem(DB_REQS_KEY) || ''; }} catch (e) {{}}
 
     function handleIncomingRequesterSync(type, data) {{
-      if (type === 'STOCK_UPDATED' || type === 'ITEMS_UPDATED') {{
-        renderCatalog();
-      }} else if (type === 'REQ_STATUS_CHANGED') {{
-        renderCatalog();
+      renderCatalog();
+      renderMyRequisitions();
+      if (type === 'REQ_STATUS_CHANGED') {{
         const trackingInput = document.getElementById('trackingInput');
         const activeDoc = trackingInput ? trackingInput.value.trim().toUpperCase() : '';
         const targetDoc = (data.docNo || '').toUpperCase();
         if (activeDoc && targetDoc === activeDoc) {{
           searchTracking();
-          if (data.status === 'APPROVED') {{
-            showToast('คำขอของคุณได้รับการอนุมัติแล้ว!', 'เลขที่ ' + data.docNo + ' ได้รับการอนุมัติแล้ว สามารถเดินทางมารับพัสดุได้ที่ห้องคลังพัสดุ', 'success', true);
-          }} else if (data.status === 'COMPLETED') {{
-            showToast('ส่งมอบพัสดุสำเร็จ', 'คำขอ ' + data.docNo + ' บันทึกการรับของและเซ็นชื่อเรียบร้อยแล้ว', 'info', true);
-          }} else if (data.status === 'REJECTED') {{
-            showToast('คำขอไม่ได้รับการอนุมัติ', 'คำขอ ' + data.docNo + ' ถูกปฏิเสธ', 'danger', true);
-          }}
+        }}
+        if (data.status === 'APPROVED') {{
+          showToast('คำขอของคุณได้รับการอนุมัติแล้ว!', 'เลขที่ ' + data.docNo + ' ได้รับการอนุมัติแล้ว สามารถเดินทางมารับพัสดุได้ที่ห้องคลังพัสดุ', 'success', true);
+        }} else if (data.status === 'COMPLETED') {{
+          showToast('ส่งมอบพัสดุสำเร็จ', 'คำขอ ' + data.docNo + ' บันทึกการรับของและเซ็นชื่อเรียบร้อยแล้ว', 'info', true);
+        }} else if (data.status === 'REJECTED') {{
+          showToast('คำขอไม่ได้รับการอนุมัติ', 'คำขอ ' + data.docNo + ' ถูกปฏิเสธ', 'danger', true);
         }}
       }}
     }}
 
     if (syncChannel) {{
-      syncChannel.onmessage = (e) => {{
-        if (e.data) handleIncomingRequesterSync(e.data.type, e.data.payload || {{}});
-      }};
+      try {{
+        syncChannel.onmessage = (e) => {{
+          if (e.data) handleIncomingRequesterSync(e.data.type, e.data.payload || {{}});
+        }};
+      }} catch (e) {{ }}
     }}
 
     // Storage Event Listener (Instant Cross-Tab Sync)
     window.addEventListener('storage', (e) => {{
+      if (e.key === 'sdu_sync_event' && e.newValue) {{
+        try {{
+          const ev = JSON.parse(e.newValue);
+          handleIncomingRequesterSync(ev.type, ev.payload || {{}});
+        }} catch (err) {{ }}
+      }}
       if (e.key === DB_ITEMS_KEY) {{
         if (e.newValue !== lastKnownIndexItems) {{
           lastKnownIndexItems = e.newValue || '';
@@ -1353,6 +1670,7 @@ requester_html = f'''<!DOCTYPE html>
         if (e.newValue !== lastKnownIndexReqs) {{
           lastKnownIndexReqs = e.newValue || '';
           renderCatalog();
+          renderMyRequisitions();
           const trackingModal = document.getElementById('trackingModal');
           if (trackingModal && trackingModal.classList.contains('open')) {{
             searchTracking();
@@ -1361,29 +1679,33 @@ requester_html = f'''<!DOCTYPE html>
       }}
     }});
 
-    // 1.5s Polling Heartbeat for guaranteed sync
+    // 1s Polling Heartbeat for guaranteed sync across all tabs
     setInterval(() => {{
-      const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
-      if (curItems !== lastKnownIndexItems) {{
-        lastKnownIndexItems = curItems;
-        renderCatalog();
-      }}
-      const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
-      if (curReqs !== lastKnownIndexReqs) {{
-        lastKnownIndexReqs = curReqs;
-        renderCatalog();
-        const trackingModal = document.getElementById('trackingModal');
-        if (trackingModal && trackingModal.classList.contains('open')) {{
-          searchTracking();
+      try {{
+        const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+        if (curItems !== lastKnownIndexItems) {{
+          lastKnownIndexItems = curItems;
+          renderCatalog();
         }}
-      }}
-    }}, 1500);
+        const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
+        if (curReqs !== lastKnownIndexReqs) {{
+          lastKnownIndexReqs = curReqs;
+          renderCatalog();
+          renderMyRequisitions();
+          const trackingModal = document.getElementById('trackingModal');
+          if (trackingModal && trackingModal.classList.contains('open')) {{
+            searchTracking();
+          }}
+        }}
+      }} catch (e) {{ }}
+    }}, 1000);
 
     // Initial Load
     document.addEventListener('DOMContentLoaded', () => {{
       getItemsDB();
       getReqsDB();
       renderCatalog();
+      renderMyRequisitions('PENDING');
     }});
   </script>
 </body>
@@ -1845,25 +2167,50 @@ staff_html = f'''<!DOCTYPE html>
     const defaultItems = {json.dumps(initial_items, ensure_ascii=False)};
     const defaultReqs = {json.dumps(initial_requisitions, ensure_ascii=False)};
 
+    let memItemsDB = null;
+    let memReqsDB = null;
+
     function getItemsDB() {{
-      const data = localStorage.getItem(DB_ITEMS_KEY);
-      if (!data) {{
-        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
-        return defaultItems;
+      try {{
+        const data = localStorage.getItem(DB_ITEMS_KEY);
+        if (!data) {{
+          localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
+          return defaultItems;
+        }}
+        return JSON.parse(data);
+      }} catch (e) {{
+        if (!memItemsDB) memItemsDB = JSON.parse(JSON.stringify(defaultItems));
+        return memItemsDB;
       }}
-      return JSON.parse(data);
     }}
-    function saveItemsDB(items) {{ localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items)); }}
+    function saveItemsDB(items) {{
+      try {{
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items));
+      }} catch (e) {{
+        memItemsDB = items;
+      }}
+    }}
 
     function getReqsDB() {{
-      const data = localStorage.getItem(DB_REQS_KEY);
-      if (!data) {{
-        localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
-        return defaultReqs;
+      try {{
+        const data = localStorage.getItem(DB_REQS_KEY);
+        if (!data) {{
+          localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
+          return defaultReqs;
+        }}
+        return JSON.parse(data);
+      }} catch (e) {{
+        if (!memReqsDB) memReqsDB = JSON.parse(JSON.stringify(defaultReqs));
+        return memReqsDB;
       }}
-      return JSON.parse(data);
     }}
-    function saveReqsDB(reqs) {{ localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs)); }}
+    function saveReqsDB(reqs) {{
+      try {{
+        localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs));
+      }} catch (e) {{
+        memReqsDB = reqs;
+      }}
+    }}
 
 
     // Web Audio Chime Utility (Zero-latency offline audio)
@@ -1926,13 +2273,27 @@ staff_html = f'''<!DOCTYPE html>
       }}, 5000);
     }}
 
-    const syncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('sdu_inventory_sync_channel') : null;
+    // Multi-layer sync for file:// and http://
+    let syncChannel = null;
+    try {{
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {{
+        syncChannel = new BroadcastChannel('sdu_inventory_sync_channel');
+      }}
+    }} catch (e) {{
+      console.warn('BroadcastChannel unavailable (safe fallback active):', e);
+      syncChannel = null;
+    }}
 
     function broadcastStaffUpdate(type, payload = {{}}) {{
-      if (syncChannel) {{
-        syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
-      }}
-      localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+      try {{
+        if (syncChannel) {{
+          syncChannel.postMessage({{ type: type, payload: payload, time: Date.now() }});
+        }}
+      }} catch (e) {{ }}
+      try {{
+        localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+        localStorage.setItem('sdu_sync_event', JSON.stringify({{ type: type, payload: payload, time: Date.now() }}));
+      }} catch (e) {{ }}
     }}
 
     // Stock In Functions
@@ -2385,22 +2746,24 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     // REAL-TIME AUTO SYNC LISTENER FOR STAFF PORTAL (No Refresh Needed!)
-    let lastKnownStaffReqs = localStorage.getItem(DB_REQS_KEY) || '';
-    let lastKnownStaffItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+    let lastKnownStaffReqs = '';
+    try {{ lastKnownStaffReqs = localStorage.getItem(DB_REQS_KEY) || ''; }} catch (e) {{}}
+    let lastKnownStaffItems = '';
+    try {{ lastKnownStaffItems = localStorage.getItem(DB_ITEMS_KEY) || ''; }} catch (e) {{}}
 
     function handleIncomingStaffSync(type, data) {{
       if (type === 'NEW_REQUISITION') {{
-        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + (data.id || '') + ' จาก ' + (data.dept || '') + ' (' + (data.requester || '') + ')', 'info', true, () => {{
-          switchStaffView('requisitions');
-          filterStaffRequisitionStatus('PENDING');
+        // Unconditionally switch to 'PENDING' tab and render new card!
+        switchStaffView('requisitions');
+        filterStaffRequisitionStatus('PENDING');
+        renderStaffRequisitions('PENDING', data.id);
+        updateStaffCounters();
+        renderInventoryTable();
+        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + (data.id || '') + ' จาก ' + (data.dept || '') + ' (' + (data.requester || '') + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+        setTimeout(() => {{
           const el = document.getElementById('req-card-' + data.id);
           if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
-        }});
-        updateStaffCounters();
-        if (currentStaffStatus === 'PENDING') {{
-          renderStaffRequisitions('PENDING', data.id);
-        }}
-        renderInventoryTable();
+        }}, 100);
       }} else if (type === 'REQ_STATUS_CHANGED' || type === 'REQS_UPDATED') {{
         updateStaffCounters();
         renderStaffRequisitions(currentStaffStatus);
@@ -2411,71 +2774,84 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     if (syncChannel) {{
-      syncChannel.onmessage = (e) => {{
-        if (e.data) handleIncomingStaffSync(e.data.type, e.data.payload || {{}});
-      }};
+      try {{
+        syncChannel.onmessage = (e) => {{
+          if (e.data) handleIncomingStaffSync(e.data.type, e.data.payload || {{}});
+        }};
+      }} catch (e) {{ }}
     }}
 
     window.addEventListener('storage', (e) => {{
+      if (e.key === 'sdu_sync_event' && e.newValue) {{
+        try {{
+          const ev = JSON.parse(e.newValue);
+          handleIncomingStaffSync(ev.type, ev.payload || {{}});
+        }} catch (err) {{ }}
+      }}
       if (e.key === DB_REQS_KEY) {{
-        if (e.newValue !== lastKnownStaffReqs) {{
+        try {{
+          if (e.newValue !== lastKnownStaffReqs) {{
+            const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
+            const newList = e.newValue ? JSON.parse(e.newValue) : [];
+            lastKnownStaffReqs = e.newValue || '';
+            updateStaffCounters();
+            if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
+              const newReq = newList[0];
+              switchStaffView('requisitions');
+              filterStaffRequisitionStatus('PENDING');
+              renderStaffRequisitions('PENDING', newReq.id);
+              showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+              setTimeout(() => {{
+                const el = document.getElementById('req-card-' + newReq.id);
+                if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+              }}, 100);
+            }} else {{
+              renderStaffRequisitions(currentStaffStatus);
+            }}
+            renderInventoryTable();
+          }}
+        }} catch (err) {{ }}
+      }} else if (e.key === DB_ITEMS_KEY) {{
+        try {{
+          if (e.newValue !== lastKnownStaffItems) {{
+            lastKnownStaffItems = e.newValue || '';
+            renderInventoryTable();
+          }}
+        }} catch (err) {{ }}
+      }}
+    }});
+
+    // 1s Polling Heartbeat for guaranteed sync across all tabs
+    setInterval(() => {{
+      try {{
+        const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
+        if (curReqs && curReqs !== lastKnownStaffReqs) {{
           const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
-          const newList = e.newValue ? JSON.parse(e.newValue) : [];
-          lastKnownStaffReqs = e.newValue || '';
+          const newList = curReqs ? JSON.parse(curReqs) : [];
+          lastKnownStaffReqs = curReqs;
           updateStaffCounters();
           if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
             const newReq = newList[0];
-            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {{
-              switchStaffView('requisitions');
-              filterStaffRequisitionStatus('PENDING');
+            switchStaffView('requisitions');
+            filterStaffRequisitionStatus('PENDING');
+            renderStaffRequisitions('PENDING', newReq.id);
+            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+            setTimeout(() => {{
               const el = document.getElementById('req-card-' + newReq.id);
               if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
-            }});
-            if (currentStaffStatus === 'PENDING') {{
-              renderStaffRequisitions('PENDING', newReq.id);
-            }}
+            }}, 100);
           }} else {{
             renderStaffRequisitions(currentStaffStatus);
           }}
           renderInventoryTable();
         }}
-      }} else if (e.key === DB_ITEMS_KEY) {{
-        if (e.newValue !== lastKnownStaffItems) {{
-          lastKnownStaffItems = e.newValue || '';
+        const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+        if (curItems && curItems !== lastKnownStaffItems) {{
+          lastKnownStaffItems = curItems;
           renderInventoryTable();
         }}
-      }}
-    }});
-
-    setInterval(() => {{
-      const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
-      if (curReqs !== lastKnownStaffReqs) {{
-        const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
-        const newList = curReqs ? JSON.parse(curReqs) : [];
-        lastKnownStaffReqs = curReqs;
-        updateStaffCounters();
-        if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
-          const newReq = newList[0];
-          showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {{
-            switchStaffView('requisitions');
-            filterStaffRequisitionStatus('PENDING');
-            const el = document.getElementById('req-card-' + newReq.id);
-            if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
-          }});
-          if (currentStaffStatus === 'PENDING') {{
-            renderStaffRequisitions('PENDING', newReq.id);
-          }}
-        }} else {{
-          renderStaffRequisitions(currentStaffStatus);
-        }}
-        renderInventoryTable();
-      }}
-      const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
-      if (curItems !== lastKnownStaffItems) {{
-        lastKnownStaffItems = curItems;
-        renderInventoryTable();
-      }}
-    }}, 1500);
+      }} catch (e) {{ }}
+    }}, 1000);
 
     document.addEventListener('DOMContentLoaded', () => {{
       // Auto authenticate for demo or check session

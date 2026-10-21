@@ -731,25 +731,50 @@
     const defaultItems = [{"id": 1, "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1750, "reserved_pieces": 500, "min_alert": 500, "image_piece": "assets/images/image1.jpeg", "image_box": "assets/images/image10.jpeg"}, {"id": 2, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ใบ", "pieces_per_box": 2000, "on_hand_pieces": 34500, "reserved_pieces": 2000, "min_alert": 5000, "image_piece": "assets/images/image2.jpeg", "image_box": "assets/images/image11.jpeg"}, {"id": 3, "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/image3.jpeg", "image_box": "assets/images/image12.jpeg"}, {"id": 4, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 23500, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/image4.jpeg", "image_box": "assets/images/image13.jpeg"}, {"id": 5, "name": "แฟ้มเสนอ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "เล่ม", "unit_piece_name": "เล่ม", "pieces_per_box": 1, "on_hand_pieces": 15, "reserved_pieces": 3, "min_alert": 5, "image_piece": "assets/images/image5.jpeg", "image_box": "assets/images/image5.jpeg"}, {"id": 6, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/image14.jpeg", "image_box": "assets/images/image15.jpeg"}];
     const defaultReqs = [{"id": "REQ-256910-0042", "dept": "โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ", "requester": "อ.สมชาย ใจดี", "phone": "081-998-7766", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ภาคเรียน 1/2569", "date": "21 ต.ค. 2569 10:15 น.", "status": "APPROVED", "signature": null, "items": [{"itemId": 1, "name": "ซองขยายข้างมีครุฑ 279´432", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500}, {"itemId": 2, "name": "กระดาษคำตอบ", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 2000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 2000}, {"itemId": 5, "name": "แฟ้มเสนอ", "qtyBoxes": 0, "qtyPieces": 3, "totalPieces": 3, "unitBox": "เล่ม", "unitPiece": "เล่ม", "approvedPieces": 3}]}, {"id": "REQ-256910-0043", "dept": "คณะพยาบาลศาสตร์ - พยาบาลศาสตรบัณฑิต", "requester": "คุณพรทิพย์ สุขขี", "phone": "089-112-3344", "purpose": "เตรียมเอกสารปฐมนิเทศนักศึกษาฝึกปฏิบัติงานคลินิก", "date": "21 ต.ค. 2569 10:45 น.", "status": "PENDING", "signature": null, "items": [{"itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500}, {"itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000}]}];
 
+    let memItemsDB = null;
+    let memReqsDB = null;
+
     function getItemsDB() {
-      const data = localStorage.getItem(DB_ITEMS_KEY);
-      if (!data) {
-        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
-        return defaultItems;
+      try {
+        const data = localStorage.getItem(DB_ITEMS_KEY);
+        if (!data) {
+          localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
+          return defaultItems;
+        }
+        return JSON.parse(data);
+      } catch (e) {
+        if (!memItemsDB) memItemsDB = JSON.parse(JSON.stringify(defaultItems));
+        return memItemsDB;
       }
-      return JSON.parse(data);
     }
-    function saveItemsDB(items) { localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items)); }
+    function saveItemsDB(items) {
+      try {
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items));
+      } catch (e) {
+        memItemsDB = items;
+      }
+    }
 
     function getReqsDB() {
-      const data = localStorage.getItem(DB_REQS_KEY);
-      if (!data) {
-        localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
-        return defaultReqs;
+      try {
+        const data = localStorage.getItem(DB_REQS_KEY);
+        if (!data) {
+          localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
+          return defaultReqs;
+        }
+        return JSON.parse(data);
+      } catch (e) {
+        if (!memReqsDB) memReqsDB = JSON.parse(JSON.stringify(defaultReqs));
+        return memReqsDB;
       }
-      return JSON.parse(data);
     }
-    function saveReqsDB(reqs) { localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs)); }
+    function saveReqsDB(reqs) {
+      try {
+        localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs));
+      } catch (e) {
+        memReqsDB = reqs;
+      }
+    }
 
 
     // Web Audio Chime Utility (Zero-latency offline audio)
@@ -812,13 +837,27 @@
       }, 5000);
     }
 
-    const syncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel('sdu_inventory_sync_channel') : null;
+    // Multi-layer sync for file:// and http://
+    let syncChannel = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        syncChannel = new BroadcastChannel('sdu_inventory_sync_channel');
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel unavailable (safe fallback active):', e);
+      syncChannel = null;
+    }
 
     function broadcastStaffUpdate(type, payload = {}) {
-      if (syncChannel) {
-        syncChannel.postMessage({ type: type, payload: payload, time: Date.now() });
-      }
-      localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+      try {
+        if (syncChannel) {
+          syncChannel.postMessage({ type: type, payload: payload, time: Date.now() });
+        }
+      } catch (e) { }
+      try {
+        localStorage.setItem('sdu_sync_pulse', Date.now().toString());
+        localStorage.setItem('sdu_sync_event', JSON.stringify({ type: type, payload: payload, time: Date.now() }));
+      } catch (e) { }
     }
 
     // Stock In Functions
@@ -1272,22 +1311,24 @@
     }
 
     // REAL-TIME AUTO SYNC LISTENER FOR STAFF PORTAL (No Refresh Needed!)
-    let lastKnownStaffReqs = localStorage.getItem(DB_REQS_KEY) || '';
-    let lastKnownStaffItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+    let lastKnownStaffReqs = '';
+    try { lastKnownStaffReqs = localStorage.getItem(DB_REQS_KEY) || ''; } catch (e) {}
+    let lastKnownStaffItems = '';
+    try { lastKnownStaffItems = localStorage.getItem(DB_ITEMS_KEY) || ''; } catch (e) {}
 
     function handleIncomingStaffSync(type, data) {
       if (type === 'NEW_REQUISITION') {
-        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + (data.id || '') + ' จาก ' + (data.dept || '') + ' (' + (data.requester || '') + ')', 'info', true, () => {
-          switchStaffView('requisitions');
-          filterStaffRequisitionStatus('PENDING');
+        // Unconditionally switch to 'PENDING' tab and render new card!
+        switchStaffView('requisitions');
+        filterStaffRequisitionStatus('PENDING');
+        renderStaffRequisitions('PENDING', data.id);
+        updateStaffCounters();
+        renderInventoryTable();
+        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + (data.id || '') + ' จาก ' + (data.dept || '') + ' (' + (data.requester || '') + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+        setTimeout(() => {
           const el = document.getElementById('req-card-' + data.id);
           if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        });
-        updateStaffCounters();
-        if (currentStaffStatus === 'PENDING') {
-          renderStaffRequisitions('PENDING', data.id);
-        }
-        renderInventoryTable();
+        }, 100);
       } else if (type === 'REQ_STATUS_CHANGED' || type === 'REQS_UPDATED') {
         updateStaffCounters();
         renderStaffRequisitions(currentStaffStatus);
@@ -1298,71 +1339,84 @@
     }
 
     if (syncChannel) {
-      syncChannel.onmessage = (e) => {
-        if (e.data) handleIncomingStaffSync(e.data.type, e.data.payload || {});
-      };
+      try {
+        syncChannel.onmessage = (e) => {
+          if (e.data) handleIncomingStaffSync(e.data.type, e.data.payload || {});
+        };
+      } catch (e) { }
     }
 
     window.addEventListener('storage', (e) => {
+      if (e.key === 'sdu_sync_event' && e.newValue) {
+        try {
+          const ev = JSON.parse(e.newValue);
+          handleIncomingStaffSync(ev.type, ev.payload || {});
+        } catch (err) { }
+      }
       if (e.key === DB_REQS_KEY) {
-        if (e.newValue !== lastKnownStaffReqs) {
+        try {
+          if (e.newValue !== lastKnownStaffReqs) {
+            const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
+            const newList = e.newValue ? JSON.parse(e.newValue) : [];
+            lastKnownStaffReqs = e.newValue || '';
+            updateStaffCounters();
+            if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {
+              const newReq = newList[0];
+              switchStaffView('requisitions');
+              filterStaffRequisitionStatus('PENDING');
+              renderStaffRequisitions('PENDING', newReq.id);
+              showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+              setTimeout(() => {
+                const el = document.getElementById('req-card-' + newReq.id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 100);
+            } else {
+              renderStaffRequisitions(currentStaffStatus);
+            }
+            renderInventoryTable();
+          }
+        } catch (err) { }
+      } else if (e.key === DB_ITEMS_KEY) {
+        try {
+          if (e.newValue !== lastKnownStaffItems) {
+            lastKnownStaffItems = e.newValue || '';
+            renderInventoryTable();
+          }
+        } catch (err) { }
+      }
+    });
+
+    // 1s Polling Heartbeat for guaranteed sync across all tabs
+    setInterval(() => {
+      try {
+        const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
+        if (curReqs && curReqs !== lastKnownStaffReqs) {
           const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
-          const newList = e.newValue ? JSON.parse(e.newValue) : [];
-          lastKnownStaffReqs = e.newValue || '';
+          const newList = curReqs ? JSON.parse(curReqs) : [];
+          lastKnownStaffReqs = curReqs;
           updateStaffCounters();
           if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {
             const newReq = newList[0];
-            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {
-              switchStaffView('requisitions');
-              filterStaffRequisitionStatus('PENDING');
+            switchStaffView('requisitions');
+            filterStaffRequisitionStatus('PENDING');
+            renderStaffRequisitions('PENDING', newReq.id);
+            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ') เข้าสู่สถานะรออนุมัติแล้ว', 'info', true);
+            setTimeout(() => {
               const el = document.getElementById('req-card-' + newReq.id);
               if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            });
-            if (currentStaffStatus === 'PENDING') {
-              renderStaffRequisitions('PENDING', newReq.id);
-            }
+            }, 100);
           } else {
             renderStaffRequisitions(currentStaffStatus);
           }
           renderInventoryTable();
         }
-      } else if (e.key === DB_ITEMS_KEY) {
-        if (e.newValue !== lastKnownStaffItems) {
-          lastKnownStaffItems = e.newValue || '';
+        const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
+        if (curItems && curItems !== lastKnownStaffItems) {
+          lastKnownStaffItems = curItems;
           renderInventoryTable();
         }
-      }
-    });
-
-    setInterval(() => {
-      const curReqs = localStorage.getItem(DB_REQS_KEY) || '';
-      if (curReqs !== lastKnownStaffReqs) {
-        const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
-        const newList = curReqs ? JSON.parse(curReqs) : [];
-        lastKnownStaffReqs = curReqs;
-        updateStaffCounters();
-        if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {
-          const newReq = newList[0];
-          showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {
-            switchStaffView('requisitions');
-            filterStaffRequisitionStatus('PENDING');
-            const el = document.getElementById('req-card-' + newReq.id);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          });
-          if (currentStaffStatus === 'PENDING') {
-            renderStaffRequisitions('PENDING', newReq.id);
-          }
-        } else {
-          renderStaffRequisitions(currentStaffStatus);
-        }
-        renderInventoryTable();
-      }
-      const curItems = localStorage.getItem(DB_ITEMS_KEY) || '';
-      if (curItems !== lastKnownStaffItems) {
-        lastKnownStaffItems = curItems;
-        renderInventoryTable();
-      }
-    }, 1500);
+      } catch (e) { }
+    }, 1000);
 
     document.addEventListener('DOMContentLoaded', () => {
       // Auto authenticate for demo or check session
