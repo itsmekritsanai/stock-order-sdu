@@ -9,6 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <!-- SweetAlert2 (Offline local asset with CDN fallback) -->
+  <script src="assets/js/sweetalert2.all.min.js"></script>
+  <script>
+    if (typeof Swal === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
+    }
+  </script>
+  
   <style>
 
     :root {
@@ -203,6 +211,40 @@
       font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: white;
     }
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+    /* SweetAlert2 SDU Theme Customization */
+    .swal2-popup {
+      font-family: 'Prompt', 'Sarabun', sans-serif !important;
+      border-radius: 14px !important;
+      padding: 1.75rem 1.5rem !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    }
+    .swal2-title {
+      font-family: 'Prompt', sans-serif !important;
+      font-size: 1.35rem !important;
+      font-weight: 700 !important;
+      color: #0f172a !important;
+    }
+    .swal2-html-container {
+      font-family: 'Prompt', 'Sarabun', sans-serif !important;
+      font-size: 0.95rem !important;
+      color: #475569 !important;
+      line-height: 1.6 !important;
+    }
+    .swal2-confirm {
+      font-family: 'Prompt', sans-serif !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: 0.95rem !important;
+      padding: 0.6rem 1.5rem !important;
+    }
+    .swal2-cancel {
+      font-family: 'Prompt', sans-serif !important;
+      border-radius: 8px !important;
+      font-weight: 500 !important;
+      font-size: 0.95rem !important;
+      padding: 0.6rem 1.25rem !important;
+    }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -1233,7 +1275,13 @@
       const qtyPieces = pieceInput ? parseInt(pieceInput.value || 0) : 0;
 
       if (qtyBoxes <= 0 && qtyPieces <= 0) {
-        alert("กรุณาระบุจำนวนที่ต้องการเบิกอย่างน้อย 1 ชิ้นหรือกล่องครับ");
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาระบุจำนวน',
+          text: 'กรุณาระบุจำนวนที่ต้องการเบิกอย่างน้อย 1 ชิ้นหรือกล่องครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
         return;
       }
 
@@ -1241,7 +1289,13 @@
       const availablePieces = item.on_hand_pieces - item.reserved_pieces;
 
       if (totalPieces > availablePieces) {
-        alert(`ยอดคงเหลือพร้อมเบิกไม่เพียงพอ! (ขอเบิก ${totalPieces} ${item.unit_piece_name} แต่มีพร้อมเบิกเพียง ${availablePieces} ${item.unit_piece_name})`);
+        Swal.fire({
+          icon: 'error',
+          title: 'ยอดพัสดุไม่เพียงพอ',
+          html: `คุณขอเบิกจำนวน <b>${totalPieces.toLocaleString()} ${item.unit_piece_name}</b><br>แต่มีพร้อมเบิกเพียง <b>${availablePieces.toLocaleString()} ${item.unit_piece_name}</b>`,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'เข้าใจแล้ว'
+        });
         return;
       }
 
@@ -1268,6 +1322,17 @@
       updateCartBadge();
       renderCartDrawer();
       toggleCartDrawer(true);
+
+      Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1800,
+        timerProgressBar: true
+      }).fire({
+        icon: 'success',
+        title: `เพิ่ม "${item.name}" ใส่ตะกร้าแล้ว`
+      });
     }
 
     function updateCartBadge() {
@@ -1306,9 +1371,22 @@
     }
 
     function removeCartItem(idx) {
+      const removed = cart[idx];
       cart.splice(idx, 1);
       updateCartBadge();
       renderCartDrawer();
+      if (removed) {
+        Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1800,
+          timerProgressBar: true
+        }).fire({
+          icon: 'info',
+          title: `ลบ "${removed.name}" ออกจากตะกร้าแล้ว`
+        });
+      }
     }
 
     function submitRequisition() {
@@ -1317,47 +1395,110 @@
       const phone = document.getElementById('requesterPhone').value.trim();
       const purpose = document.getElementById('cartPurpose').value.trim();
 
-      if (!requester) { alert("กรุณากรอกชื่อ-นามสกุล ผู้ขอเบิกครับ"); return; }
-      if (cart.length === 0) { alert("ไม่มีรายการพัสดุในตะกร้า"); return; }
-      if (!purpose) { alert("กรุณาระบุวัตถุประสงค์ในการเบิกใช้งานครับ"); return; }
+      if (!requester) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ข้อมูลไม่ครบถ้วน',
+          text: 'กรุณากรอกชื่อ-นามสกุล ผู้ขอเบิกครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
+      if (cart.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไม่มีรายการในตะกร้า',
+          text: 'กรุณาเลือกรายการพัสดุและระบุจำนวนก่อนส่งคำขอครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
+      if (!purpose) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ระบุวัตถุประสงค์',
+          text: 'กรุณาระบุวัตถุประสงค์ในการเบิกใช้งานพัสดุครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
 
-      const randomNo = Math.floor(1000 + Math.random() * 9000);
-      const newDocNo = `REQ-256910-${randomNo}`;
+      Swal.fire({
+        title: 'ยืนยันส่งคำขอเบิกพัสดุ?',
+        html: `
+          <div style="text-align: left; font-size: 0.95rem; margin-top: 0.5rem; color: #475569; line-height: 1.6;">
+            <p><strong>หน่วยงาน:</strong> ${dept}</p>
+            <p><strong>ผู้ขอเบิก:</strong> ${requester} ${phone ? `(${phone})` : ''}</p>
+            <p><strong>จำนวนพัสดุ:</strong> ${cart.length} รายการ</p>
+            <p><strong>วัตถุประสงค์:</strong> ${purpose}</p>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '✓ ยืนยันส่งคำขอ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const randomNo = Math.floor(1000 + Math.random() * 9000);
+          const newDocNo = `REQ-256910-${randomNo}`;
 
-      const newReq = {
-        id: newDocNo,
-        dept: dept,
-        requester: requester,
-        phone: phone,
-        purpose: purpose,
-        date: "21 ต.ค. 2569 " + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) + " น.",
-        status: "PENDING",
-        signature: null,
-        items: cart.map(c => ({
-          itemId: c.itemId,
-          name: c.name,
-          qtyBoxes: c.qtyBoxes,
-          qtyPieces: c.qtyPieces,
-          totalPieces: c.totalPieces,
-          unitBox: c.unitBox,
-          unitPiece: c.unitPiece,
-          approvedPieces: c.totalPieces
-        }))
-      };
+          const newReq = {
+            id: newDocNo,
+            dept: dept,
+            requester: requester,
+            phone: phone,
+            purpose: purpose,
+            date: "21 ต.ค. 2569 " + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) + " น.",
+            status: "PENDING",
+            signature: null,
+            items: cart.map(c => ({
+              itemId: c.itemId,
+              name: c.name,
+              qtyBoxes: c.qtyBoxes,
+              qtyPieces: c.qtyPieces,
+              totalPieces: c.totalPieces,
+              unitBox: c.unitBox,
+              unitPiece: c.unitPiece,
+              approvedPieces: c.totalPieces
+            }))
+          };
 
-      // Save to shared localStorage DB
-      const reqs = getReqsDB();
-      reqs.unshift(newReq);
-      saveReqsDB(reqs);
+          // Save to shared localStorage DB
+          const reqs = getReqsDB();
+          reqs.unshift(newReq);
+          saveReqsDB(reqs);
 
-      cart = [];
-      document.getElementById('cartPurpose').value = '';
-      updateCartBadge();
-      toggleCartDrawer(false);
+          cart = [];
+          document.getElementById('cartPurpose').value = '';
+          updateCartBadge();
+          toggleCartDrawer(false);
+          renderCatalog();
 
-      // Show success modal
-      document.getElementById('successDocNo').innerText = newDocNo;
-      document.getElementById('successModal').classList.add('open');
+          Swal.fire({
+            icon: 'success',
+            title: 'ส่งคำขอเบิกพัสดุสำเร็จ!',
+            html: `
+              <div style="margin: 0.75rem 0;">
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;">เลขที่เอกสารคำขอเบิกของคุณ:</p>
+                <div style="font-size: 1.6rem; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 0.75rem 1rem; border-radius: 8px; border: 1px dashed #bfdbfe; letter-spacing: 1px;">
+                  ${newDocNo}
+                </div>
+                <p style="font-size: 0.85rem; color: #475569; margin-top: 0.85rem; line-height: 1.6;">
+                  คำขอของท่านเข้าสู่สถานะ <b>"รออนุมัติ (Pending)"</b> และถูกส่งต่อไปยังเจ้าหน้าที่แผนกพัสดุเรียบร้อยแล้ว<br>
+                  เมื่อเจ้าหน้าที่อนุมัติ ท่านสามารถเดินทางไปรับพัสดุได้ที่ห้องคลังพัสดุ
+                </p>
+              </div>
+            `,
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง / เบิกรายการอื่นต่อ'
+          });
+        }
+      });
     }
 
     function closeSuccessModal() {
@@ -1379,6 +1520,13 @@
       const req = reqs.find(r => r.id.toLowerCase() === docNo.toLowerCase());
 
       if (!req) {
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่พบข้อมูลเอกสาร',
+          text: `ไม่พบข้อมูลคำขอเบิกเลขที่ "${docNo}" ในระบบ กรุณาตรวจสอบเลขที่เอกสารอีกครั้งครับ`,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
         area.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 1rem;">ไม่พบข้อมูลเอกสารเลขที่ "${docNo}"</p>`;
         return;
       }
