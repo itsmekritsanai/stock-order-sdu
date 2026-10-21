@@ -1185,7 +1185,7 @@
     }
 
     function loadStaffDashboard() {
-      renderStaffRequisitions('PENDING');
+      renderStaffRequisitions(currentStaffStatus);
       renderInventoryTable();
     }
 
@@ -1195,6 +1195,13 @@
         sessionStorage.setItem('staff_auth', 'true'); // Default logged in for immediate preview
       }
       checkStaffAuth();
+    });
+
+    // Real-time synchronization across tabs/windows
+    window.addEventListener('storage', (e) => {
+      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY) {
+        loadStaffDashboard();
+      }
     });
   </script>
 </body>
