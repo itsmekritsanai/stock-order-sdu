@@ -9,6 +9,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <!-- SweetAlert2 (Offline local asset with CDN fallback) -->
+  <script src="assets/js/sweetalert2.all.min.js"></script>
+  <script>
+    if (typeof Swal === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
+    }
+  </script>
+  
   <style>
 
     :root {
@@ -203,6 +211,40 @@
       font-family: inherit; font-size: 0.9rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: white;
     }
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+    /* SweetAlert2 SDU Theme Customization */
+    .swal2-popup {
+      font-family: 'Prompt', 'Sarabun', sans-serif !important;
+      border-radius: 14px !important;
+      padding: 1.75rem 1.5rem !important;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    }
+    .swal2-title {
+      font-family: 'Prompt', sans-serif !important;
+      font-size: 1.35rem !important;
+      font-weight: 700 !important;
+      color: #0f172a !important;
+    }
+    .swal2-html-container {
+      font-family: 'Prompt', 'Sarabun', sans-serif !important;
+      font-size: 0.95rem !important;
+      color: #475569 !important;
+      line-height: 1.6 !important;
+    }
+    .swal2-confirm {
+      font-family: 'Prompt', sans-serif !important;
+      border-radius: 8px !important;
+      font-weight: 600 !important;
+      font-size: 0.95rem !important;
+      padding: 0.6rem 1.5rem !important;
+    }
+    .swal2-cancel {
+      font-family: 'Prompt', sans-serif !important;
+      border-radius: 8px !important;
+      font-weight: 500 !important;
+      font-size: 0.95rem !important;
+      padding: 0.6rem 1.25rem !important;
+    }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -418,10 +460,10 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง (On-Hand vs Available)</h3>
             <div style="display: flex; gap: 0.5rem;">
-              <button class="btn btn-outline" onclick="alert('จำลองการนำเข้าไฟล์ ยอดสต๊อก ตค.xlsx สำเร็จ!')">
+              <button class="btn btn-outline" onclick="simulateExcelImport()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg> นำเข้าจาก Excel
               </button>
-              <button class="btn btn-primary" onclick="alert('เปิดฟอร์มรับเข้าพัสดุใหม่')">
+              <button class="btn btn-primary" onclick="openStockInModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> บันทึกรับเข้าพัสดุ
               </button>
             </div>
@@ -642,8 +684,21 @@
     }
 
     function logoutStaff() {
-      sessionStorage.removeItem('staff_auth');
-      checkStaffAuth();
+      Swal.fire({
+        title: 'ยืนยันออกจากระบบ?',
+        text: 'คุณต้องการออกจากระบบเจ้าหน้าที่พัสดุใช่หรือไม่',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          sessionStorage.removeItem('staff_auth');
+          checkStaffAuth();
+        }
+      });
     }
 
     // Navigation
@@ -772,33 +827,86 @@
       const reqs = getReqsDB();
       const items = getItemsDB();
       const req = reqs.find(r => r.id === docNo);
+      if (!req) return;
 
-      if (req) {
-        req.status = 'APPROVED';
-        req.items.forEach(i => {
-          const itm = items.find(si => si.id === i.itemId);
-          if (itm) itm.reserved_pieces += i.approvedPieces;
-        });
-        saveReqsDB(reqs);
-        saveItemsDB(items);
-        alert(`อนุมัติคำขอ ${docNo} สำเร็จ! ระบบได้กันยอดสต๊อก (Reserved) ไว้เรียบร้อย`);
-        renderStaffRequisitions('PENDING');
-        renderInventoryTable();
-      }
+      Swal.fire({
+        title: 'ยืนยันการอนุมัติคำขอเบิก?',
+        html: `
+          <div style="text-align: left; font-size: 0.95rem; margin-top: 0.5rem; color: #475569; line-height: 1.6;">
+            <p><strong>เลขที่เอกสาร:</strong> <span style="color: #1e40af; font-weight: 700;">${docNo}</span></p>
+            <p><strong>ผู้ขอเบิก:</strong> ${req.requester} (${req.dept})</p>
+            <p><strong>จำนวนพัสดุ:</strong> ${req.items.length} รายการ</p>
+            <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.85rem;">
+              ✓ ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ทันที
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '✓ ยืนยันอนุมัติ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          req.status = 'APPROVED';
+          req.items.forEach(i => {
+            const itm = items.find(si => si.id === i.itemId);
+            if (itm) itm.reserved_pieces += i.approvedPieces;
+          });
+          saveReqsDB(reqs);
+          saveItemsDB(items);
+          renderStaffRequisitions('PENDING');
+          renderInventoryTable();
+
+          Swal.fire({
+            icon: 'success',
+            title: 'อนุมัติคำขอสำเร็จ!',
+            text: `คำขอเลขที่ ${docNo} ได้รับการอนุมัติและกันสต๊อกเรียบร้อยแล้ว`,
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง'
+          });
+        }
+      });
     }
 
     function rejectRequisition(docNo) {
-      const reason = prompt("ระบุเหตุผลในการปฏิเสธคำขอเบิก:", "พัสดุในคลังไม่เพียงพอ");
-      if (reason) {
-        const reqs = getReqsDB();
-        const req = reqs.find(r => r.id === docNo);
-        if (req) {
-          req.status = 'REJECTED';
-          saveReqsDB(reqs);
-          alert(`ปฏิเสธคำขอ ${docNo} เรียบร้อยแล้ว`);
-          renderStaffRequisitions('PENDING');
+      Swal.fire({
+        title: 'ปฏิเสธคำขอเบิกพัสดุ',
+        text: `ระบุเหตุผลในการไม่อนุมัติคำขอเลขที่ ${docNo}:`,
+        input: 'textarea',
+        inputPlaceholder: 'เช่น พัสดุในคลังไม่เพียงพอ, รายละเอียดไม่ชัดเจน...',
+        inputValue: 'พัสดุในคลังไม่เพียงพอสำหรับรอบการเบิกนี้',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ยืนยันปฏิเสธคำขอ',
+        cancelButtonText: 'ยกเลิก',
+        inputValidator: (val) => {
+          if (!val || !val.trim()) {
+            return 'กรุณาระบุเหตุผลในการปฏิเสธคำขอครับ!';
+          }
         }
-      }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const reqs = getReqsDB();
+          const req = reqs.find(r => r.id === docNo);
+          if (req) {
+            req.status = 'REJECTED';
+            req.rejectReason = result.value.trim();
+            saveReqsDB(reqs);
+            renderStaffRequisitions('PENDING');
+
+            Swal.fire({
+              icon: 'warning',
+              title: 'ปฏิเสธคำขอเรียบร้อยแล้ว',
+              text: `คำขอ ${docNo} ถูกปฏิเสธเรียบร้อยแล้ว`,
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+          }
+        }
+      });
     }
 
     // E-Signature
@@ -892,11 +1000,101 @@
       }
 
       closeSignatureModal();
-      alert(`บันทึกการจ่ายของและเซ็นชื่อรับมอบสำเร็จ!
-ตัดยอดสต๊อกเรียบร้อยแล้ว`);
-      previewDocInPdf(currentActiveReqForSig.id);
       renderStaffRequisitions('APPROVED');
       renderInventoryTable();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกการจ่ายของและเซ็นรับสำเร็จ!',
+        html: `
+          <div style="margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
+            ระบบได้ตัดยอดสต๊อกคงคลังและประทับตราลายเซ็นดิจิทัลลงในเอกสารเรียบร้อยแล้ว
+          </div>
+        `,
+        confirmButtonColor: '#059669',
+        confirmButtonText: '✓ ดูใบเบิก PDF (พร้อมลายเซ็น)'
+      }).then(() => {
+        previewDocInPdf(currentActiveReqForSig.id);
+      });
+    }
+
+    function simulateExcelImport() {
+      Swal.fire({
+        title: 'นำเข้าข้อมูลจาก Excel',
+        html: `
+          <div style="text-align: left; margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
+            <p style="margin-bottom: 0.5rem;">กำลังประมวลผลไฟล์ <b>"ยอดสต๊อก ตค.xlsx"</b>...</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #334155; line-height: 1.6;">
+              ✓ จำนวนพัสดุในไฟล์: <b>4,045 รายการ</b><br>
+              ✓ สถานะการซิงค์: <b>นำเข้าข้อมูลสต๊อกสมบูรณ์</b><br>
+              ✓ เชื่อมโยงหมวดหมู่: <b>สำนักงาน, งานบ้าน, ไฟฟ้า, คอมพิวเตอร์</b>
+            </div>
+          </div>
+        `,
+        icon: 'success',
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ตกลง'
+      });
+    }
+
+    function openStockInModal() {
+      const items = getItemsDB();
+      const options = items.map(i => `<option value="${i.id}">${i.name} (คงเหลือ: ${i.on_hand_pieces.toLocaleString()} ${i.unit_piece_name})</option>`).join('');
+
+      Swal.fire({
+        title: 'บันทึกรับเข้าพัสดุใหม่',
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เลือกรายการพัสดุ:</label>
+              <select id="swalStockItem" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+                ${options}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนที่รับเข้า (ชิ้น):</label>
+              <input type="number" id="swalStockQty" min="1" placeholder="ระบุจำนวน" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">หมายเหตุ / เลขที่ใบส่งของ (ถ้ามี):</label>
+              <input type="text" id="swalStockNote" placeholder="เช่น PO-2569-001 หรือ ใบส่งของ..." class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 0.9rem; border-radius: 8px;">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '✓ ยืนยันรับเข้า',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {
+          const itemId = parseInt(document.getElementById('swalStockItem').value);
+          const qty = parseInt(document.getElementById('swalStockQty').value) || 0;
+          if (qty <= 0) {
+            Swal.showValidationMessage('กรุณาระบุจำนวนที่รับเข้ามากกว่า 0 ครับ');
+            return false;
+          }
+          return { itemId, qty };
+        }
+      }).then((res) => {
+        if (res.isConfirmed && res.value) {
+          const { itemId, qty } = res.value;
+          const items = getItemsDB();
+          const itm = items.find(i => i.id === itemId);
+          if (itm) {
+            itm.on_hand_pieces += qty;
+            saveItemsDB(items);
+            renderInventoryTable();
+
+            Swal.fire({
+              icon: 'success',
+              title: 'รับเข้าพัสดุสำเร็จ!',
+              text: `เพิ่ม ${itm.name} จำนวน ${qty.toLocaleString()} ${itm.unit_piece_name} เข้าสต๊อกเรียบร้อย`,
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+          }
+        }
+      });
     }
 
     // PDF Preview
