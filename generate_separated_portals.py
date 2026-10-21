@@ -1817,6 +1817,9 @@ staff_html = f'''<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Toast Notifications Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
   <!-- Scripts -->
   <script>
     const vIcons = {{
@@ -1893,11 +1896,19 @@ staff_html = f'''<!DOCTYPE html>
       }} catch (e) {{ }}
     }}
 
-    function showToast(title, desc, type = 'info', playSound = true) {{
+    function showToast(title, desc, type = 'info', playSound = true, onClickHandler = null) {{
       const container = document.getElementById('toastContainer');
       if (!container) return;
       const toast = document.createElement('div');
       toast.className = 'toast-card ' + type;
+      if (onClickHandler) {{
+        toast.style.cursor = 'pointer';
+        toast.onclick = (e) => {{
+          if (!e.target.classList.contains('toast-close')) {{
+            onClickHandler();
+          }}
+        }};
+      }}
       let icon = vIcons.check;
       if (type === 'warning') icon = vIcons.box;
       if (type === 'danger') icon = vIcons.x;
@@ -1906,7 +1917,7 @@ staff_html = f'''<!DOCTYPE html>
           '<div class="toast-title">' + title + '</div>' +
           '<div class="toast-desc">' + desc + '</div>' +
         '</div>' +
-        '<button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
+        '<button class="toast-close" onclick="event.stopPropagation(); this.parentElement.remove()">&times;</button>';
       container.appendChild(toast);
       if (playSound) playRealtimeChime(type === 'info' ? 'new_req' : 'default');
       setTimeout(() => {{
@@ -2016,26 +2027,48 @@ staff_html = f'''<!DOCTYPE html>
 
     // Requisition Management Logic
     let currentStaffStatus = 'PENDING';
+    let currentStaffTab = 'PENDING';
     let currentActiveReqForSig = null;
 
-    function filterStaffRequisitionStatus(status, btn) {{
+    function updateStaffCounters() {{
+      const reqs = getReqsDB();
+      const pendingCount = reqs.filter(r => r.status === 'PENDING').length;
+      const elPending = document.getElementById('pendingCount');
+      if (elPending) elPending.innerText = pendingCount;
+      const elNav = document.getElementById('navPendingBadge');
+      if (elNav) elNav.innerText = pendingCount;
+      const elApproved = document.getElementById('approvedCount');
+      if (elApproved) elApproved.innerText = reqs.filter(r => r.status === 'APPROVED').length;
+      const elCompleted = document.getElementById('completedCount');
+      if (elCompleted) elCompleted.innerText = reqs.filter(r => r.status === 'COMPLETED').length;
+    }}
+
+    function filterStaffRequisitionStatus(status, btn = null) {{
       currentStaffStatus = status;
+      currentStaffTab = status;
       document.querySelectorAll('.status-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      if (btn) {{
+        btn.classList.add('active');
+      }} else {{
+        const tabs = document.querySelectorAll('.status-tab');
+        if (status === 'PENDING' && tabs[0]) tabs[0].classList.add('active');
+        if (status === 'APPROVED' && tabs[1]) tabs[1].classList.add('active');
+        if (status === 'COMPLETED' && tabs[2]) tabs[2].classList.add('active');
+      }}
       renderStaffRequisitions(status);
     }}
 
-    function renderStaffRequisitions(status) {{
+    function renderStaffRequisitions(status = null, highlightId = null) {{
+      if (!status) status = currentStaffStatus || 'PENDING';
+      currentStaffStatus = status;
+      currentStaffTab = status;
+      updateStaffCounters();
+
       const reqs = getReqsDB();
       const container = document.getElementById('requisitionsContainer');
-      const filtered = reqs.filter(r => r.status === status);
+      if (!container) return;
 
-      // Counters
-      const pendingCount = reqs.filter(r => r.status === 'PENDING').length;
-      document.getElementById('pendingCount').innerText = pendingCount;
-      document.getElementById('navPendingBadge').innerText = pendingCount;
-      document.getElementById('approvedCount').innerText = reqs.filter(r => r.status === 'APPROVED').length;
-      document.getElementById('completedCount').innerText = reqs.filter(r => r.status === 'COMPLETED').length;
+      const filtered = reqs.filter(r => r.status === status);
 
       if (filtered.length === 0) {{
         container.innerHTML = `
@@ -2053,8 +2086,10 @@ staff_html = f'''<!DOCTYPE html>
         if (req.status === 'APPROVED') {{ badgeClass = 'badge-approved'; badgeText = 'อนุมัติแล้ว รอผู้เบิกมารับของ'; }}
         if (req.status === 'COMPLETED') {{ badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว (Completed)'; }}
 
+        const isHighlighted = (highlightId && req.id === highlightId) ? 'highlight-new-card' : '';
+
         return `
-          <div class="requisition-card ${{req.id === highlightId ? 'highlight-new-card' : ''}}">
+          <div class="requisition-card ${{isHighlighted}}" id="req-card-${{req.id}}">
             <div class="req-top-row">
               <div class="req-doc-id">
                 ${{vIcons.fileText}} ${{req.id}}
@@ -2083,9 +2118,9 @@ staff_html = f'''<!DOCTYPE html>
               <tbody>
                 ${{req.items.map(item => `
                   <tr>
-                    <td><strong>${{item.name}}</strong></td>
-                    <td>${{item.qtyBoxes > 0 ? `${{item.qtyBoxes}} ${{item.unitBox}} ` : ''}}${{item.qtyPieces > 0 ? `${{item.qtyPieces}} ${{item.unitPiece}}` : ''}}</td>
-                    <td style="font-weight: 600; color: var(--accent);">${{item.approvedPieces.toLocaleString()}} ${{item.unitPiece}}</td>
+                    <td><strong>${{item.name || '-'}}</strong></td>
+                    <td>${{(item.qtyBoxes > 0 ? (item.qtyBoxes + ' ' + (item.unitBox || 'กล่อง') + ' ') : '') + (item.qtyPieces > 0 ? (item.qtyPieces + ' ' + (item.unitPiece || 'ชิ้น')) : '') || ((item.totalPieces || 0) + ' ' + (item.unitPiece || 'ชิ้น'))}}</td>
+                    <td style="font-weight: 600; color: var(--accent);">${{((item.approvedPieces != null ? item.approvedPieces : item.totalPieces) || 0).toLocaleString()}} ${{item.unitPiece || 'ชิ้น'}}</td>
                     <td><span style="color: var(--accent);">พร้อมจ่าย</span></td>
                   </tr>
                 `).join('')}}
@@ -2246,6 +2281,8 @@ staff_html = f'''<!DOCTYPE html>
 
         saveReqsDB(reqs);
         saveItemsDB(items);
+        broadcastStaffUpdate('REQ_STATUS_CHANGED', {{ docNo: currentActiveReqForSig.id, status: 'COMPLETED' }});
+        broadcastStaffUpdate('STOCK_UPDATED');
       }}
 
       closeSignatureModal();
@@ -2353,11 +2390,21 @@ staff_html = f'''<!DOCTYPE html>
 
     function handleIncomingStaffSync(type, data) {{
       if (type === 'NEW_REQUISITION') {{
-        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + data.id + ' จาก ' + data.dept + ' (' + data.requester + ')', 'info', true);
-        renderStaffRequisitions(currentStaffTab, data.id);
+        showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + (data.id || '') + ' จาก ' + (data.dept || '') + ' (' + (data.requester || '') + ')', 'info', true, () => {{
+          switchStaffView('requisitions');
+          filterStaffRequisitionStatus('PENDING');
+          const el = document.getElementById('req-card-' + data.id);
+          if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+        }});
+        updateStaffCounters();
+        if (currentStaffStatus === 'PENDING') {{
+          renderStaffRequisitions('PENDING', data.id);
+        }}
         renderInventoryTable();
       }} else if (type === 'REQ_STATUS_CHANGED' || type === 'REQS_UPDATED') {{
-        renderStaffRequisitions(currentStaffTab);
+        updateStaffCounters();
+        renderStaffRequisitions(currentStaffStatus);
+        renderInventoryTable();
       }} else if (type === 'STOCK_UPDATED') {{
         renderInventoryTable();
       }}
@@ -2375,12 +2422,20 @@ staff_html = f'''<!DOCTYPE html>
           const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
           const newList = e.newValue ? JSON.parse(e.newValue) : [];
           lastKnownStaffReqs = e.newValue || '';
+          updateStaffCounters();
           if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
             const newReq = newList[0];
-            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true);
-            renderStaffRequisitions(currentStaffTab, newReq.id);
+            showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {{
+              switchStaffView('requisitions');
+              filterStaffRequisitionStatus('PENDING');
+              const el = document.getElementById('req-card-' + newReq.id);
+              if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+            }});
+            if (currentStaffStatus === 'PENDING') {{
+              renderStaffRequisitions('PENDING', newReq.id);
+            }}
           }} else {{
-            renderStaffRequisitions(currentStaffTab);
+            renderStaffRequisitions(currentStaffStatus);
           }}
           renderInventoryTable();
         }}
@@ -2398,12 +2453,20 @@ staff_html = f'''<!DOCTYPE html>
         const oldList = lastKnownStaffReqs ? JSON.parse(lastKnownStaffReqs) : [];
         const newList = curReqs ? JSON.parse(curReqs) : [];
         lastKnownStaffReqs = curReqs;
+        updateStaffCounters();
         if (newList.length > oldList.length && newList[0] && (!oldList.length || newList[0].id !== oldList[0].id)) {{
           const newReq = newList[0];
-          showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true);
-          renderStaffRequisitions(currentStaffTab, newReq.id);
+          showToast('มีคำขอเบิกพัสดุใหม่เข้ามา!', 'เลขที่ ' + newReq.id + ' จาก ' + newReq.dept + ' (' + newReq.requester + ')', 'info', true, () => {{
+            switchStaffView('requisitions');
+            filterStaffRequisitionStatus('PENDING');
+            const el = document.getElementById('req-card-' + newReq.id);
+            if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+          }});
+          if (currentStaffStatus === 'PENDING') {{
+            renderStaffRequisitions('PENDING', newReq.id);
+          }}
         }} else {{
-          renderStaffRequisitions(currentStaffTab);
+          renderStaffRequisitions(currentStaffStatus);
         }}
         renderInventoryTable();
       }}
