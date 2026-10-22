@@ -6,10 +6,10 @@
 ## 🎯 สรุปภาพรวมความคืบหน้า (Progress Summary)
 - [x] **Phase 1: สถาปัตยกรรมหลักและการแยกระบบพอร์ทัล 100% (Completed)**
 - [x] **Phase 2: ยกระดับ UI/UX, Vector Icons, SweetAlert2 และระบบรายการคำขอ (Completed)**
-- [ ] **Phase 3: การออกแบบโครงสร้างฐานข้อมูล Google Sheets (Current Focus)**
-- [ ] **Phase 4: พัฒนา Google Apps Script REST API & Concurrency Control**
-- [ ] **Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API & Offline Fallback**
-- [ ] **Phase 6: Deploy ขึ้น GitHub Pages & การทดสอบข้ามอุปกรณ์ (Multi-device Testing)**
+- [ ] **Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support**
+- [ ] **Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script**
+- [ ] **Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API & ระบบ Offline Fallback**
+- [ ] **Phase 6: การทดสอบอัตโนมัติ (pytest Coverage >= 90%), CI/CD Workflow & GitHub Pages Deployment**
 
 ---
 
@@ -39,45 +39,45 @@
 
 ---
 
-## ⏳ Phase 3: การเตรียมโครงสร้างฐานข้อมูล Google Sheets (Next Step)
-- [ ] **Task 3.1:** สร้างไฟล์ Google Sheets ฐานข้อมูลหลัก (ชื่อ `SDU_Inventory_Database`)
-- [ ] **Task 3.2:** สร้างแผ่นงาน `Items` (คลังพัสดุ 58 รายการ) พร้อมคอลัมน์ `id`, `name`, `category`, `unit_box_name`, `unit_piece_name`, `pieces_per_box`, `on_hand_pieces`, `reserved_pieces`, `min_alert`, `image_piece`, `image_box`
-- [ ] **Task 3.3:** สร้างแผ่นงาน `Requisitions` (ประวัติและคิวคำขอ) พร้อมคอลัมน์ `id`, `timestamp`, `requester`, `department`, `phone`, `purpose`, `status`, `signature_url_or_base64`, `updated_at`
-- [ ] **Task 3.4:** สร้างแผ่นงาน `Requisition_Items` (รายการพัสดุในคำขอ) พร้อมคอลัมน์ `requisition_id`, `item_id`, `item_name`, `qty_boxes`, `qty_pieces`, `total_pieces`, `unit_box`, `unit_piece`, `approved_pieces`
-- [ ] **Task 3.5:** สร้างแผ่นงาน `Departments` (รายชื่อ 90+ หน่วยงาน)
+## ⏳ Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support (Quick Polish)
+- [ ] **Task 3.1:** นำเข้าตราสัญลักษณ์ทางการ มสด. (`logo_sdu.png`) ย้ายจัดเก็บใน `assets/logo_sdu.png` และสร้างไอคอน **`favicon.ico`**, **`assets/favicon.svg`**, **`assets/icon-192.png`**, **`assets/icon-512.png`** เพื่อลบข้อผิดพลาด `404 Not Found: /favicon.ico` บนเซิร์ฟเวอร์
+- [ ] **Task 3.2:** สร้างไฟล์ **`LICENSE`** (MIT License) อย่างเป็นทางการให้สอดคล้องกับ Badge ใน README
+- [ ] **Task 3.3:** พัฒนาหน้า **`404.html`** แบบ Custom ธีม SDU Blue พร้อมปุ่มพากลับสู่หน้าหลัก (`index.html`) รองรับกรณีพิมพ์ URL ผิดบน GitHub Pages
+- [ ] **Task 3.4:** สร้างไฟล์ **`manifest.json`** และการตั้งค่า Web App Manifest เพื่อรองรับฟีเจอร์ **Add to Home Screen (PWA)** สำหรับอาจารย์และบุคลากรที่ใช้งานผ่านสมาร์ตโฟน/แท็บเล็ต
+- [ ] **Task 3.5:** นำตราสัญลักษณ์ทางการ มสด. ไปประดับบน Header ของ `index.html`, `staff.html` และหัวเอกสารใบขอเบิกพัสดุ (PDF Printable Form) อย่างสง่างาม
 
 ---
 
-## ⏳ Phase 4: พัฒนา Google Apps Script REST API (Next Step)
-- [ ] **Task 4.1:** สร้างสคริปต์ Google Apps Script ใน Google Sheets
-- [ ] **Task 4.2:** เขียนฟังก์ชัน `doGet(e)`:
-  - `action=getItems`: ส่งออก JSON รายการพัสดุและสต๊อกคงเหลือทั้งหมด
-  - `action=getRequisitions`: ส่งออก JSON รายการคำขอเบิกทั้งหมด (รองรับ filter ตามสถานะ)
-  - `action=trackRequisition&docNo=...`: ค้นหาประวัติและสถานะคำขอตามเลขที่เอกสาร
-  - `action=getDepartments`: ส่งออก JSON รายชื่อหน่วยงาน 90+ รายการ
-- [ ] **Task 4.3:** เขียนฟังก์ชัน `doPost(e)`:
-  - `action=createRequisition`: บันทึกคำขอใหม่ลงชีต `Requisitions` และ `Requisition_Items`
-  - `action=approveRequisition`: เปลี่ยนสถานะเป็น `APPROVED` และเพิ่มยอด `reserved_pieces`
-  - `action=completeRequisition`: เปลี่ยนสถานะเป็น `COMPLETED`, บันทึกลายเซ็น Base64, และลดสต๊อกจริง `on_hand_pieces`
-  - `action=rejectRequisition`: เปลี่ยนสถานะเป็น `REJECTED` และคืนยอดจอง
-  - `action=restockItem`: ปรับเพิ่มยอดคงเหลือจริงในคลัง
-- [ ] **Task 4.4:** ติดตั้ง `LockService.getScriptLock()` เพื่อป้องกัน Concurrency เมื่อมีคนกดเบิกพร้อมกันในเสี้ยววินาที
-- [ ] **Task 4.5:** Deploy เป็น **Web App** (ตั้งค่า Execute as: *Me*, Who has access: *Anyone*) พร้อมรับ Web App URL
+## ⏳ Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script (Backend Template)
+- [ ] **Task 4.1:** สร้างไฟล์โค้ดต้นแบบ **`backend/Code.gs`** รวบรวมฟังก์ชัน Google Apps Script ทั้งหมดตามที่ระบุใน [docs/API_SPEC.md](docs/API_SPEC.md) เพื่อให้สามารถคัดลอกไปวางใน Google Sheets Script Editor แล้วกด Deploy ใช้งานได้ทันทีใน 1 นาที
+- [ ] **Task 4.2:** ติดตั้งระบบ **`LockService.getScriptLock()`** ใน `Code.gs` เพื่อป้องกัน Concurrency Race Condition เมื่อมีคนกดเบิกพร้อมกันในเสี้ยววินาที
+- [ ] **Task 4.3:** จัดเตรียมโครงสร้าง Google Sheets ฐานข้อมูลหลัก (ชื่อ `SDU_Inventory_Database`):
+  - แผ่นงาน `Items`: คลังพัสดุ 58 รายการ พร้อมข้อมูลแปลงหน่วยนับ
+  - แผ่นงาน `Requisitions`: ประวัติและคิวคำขอเบิกพัสดุ
+  - แผ่นงาน `Requisition_Items`: รายการพัสดุในแต่ละคำขอ
+  - แผ่นงาน `Departments`: ฐานข้อมูล 90+ หน่วยงาน
+- [ ] **Task 4.4:** Deploy Google Apps Script เป็น **Web App** (Execute as: *Me*, Access: *Anyone*) พร้อมบันทึก Web App URL ลงใน `.env`
 
 ---
 
-## ⏳ Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API
-- [ ] **Task 5.1:** เพิ่มตัวแปร `GOOGLE_SCRIPT_API_URL` ใน `index.html` และ `staff.html`
-- [ ] **Task 5.2:** ปรับปรุง `index.html` ให้โหลดรายการพัสดุสดจาก Google Sheets ตอนเปิดหน้าเว็บ
-- [ ] **Task 5.3:** ปรับปรุง `submitRequisition()` ใน `index.html` ให้ส่งข้อมูลผ่าน `fetch(..., {method: 'POST'})` เข้า Google Apps Script
+## ⏳ Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API & ระบบ Offline Fallback
+- [ ] **Task 5.1:** เพิ่มตัวแปร `GOOGLE_SCRIPT_API_URL` ใน `index.html` และ `staff.html` (อ่านจาก config หรือ runtime constant)
+- [ ] **Task 5.2:** ปรับปรุง `index.html` ให้โหลดรายการพัสดุสดจาก Google Sheets API ตอนเปิดหน้าเว็บ
+- [ ] **Task 5.3:** ปรับปรุงฟังก์ชัน `submitRequisition()` ใน `index.html` ให้ส่งข้อมูลคำขอผ่าน `fetch(..., {method: 'POST'})` เข้า Google Apps Script
 - [ ] **Task 5.4:** ปรับปรุง `staff.html` ให้ดึงคำขอรออนุมัติ และส่งคำสั่งตัดยอดสต๊อกเข้า Google Sheets ทันที
-- [ ] **Task 5.5:** สร้างระบบ **Offline Fallback**: หากเชื่อมต่อ Google Sheets ไม่ได้หรือออฟไลน์ ให้ fallback ใช้ข้อมูลใน `localStorage` พร้อมแสดง SweetAlert2 เตือนผู้ใช้
+- [ ] **Task 5.5:** สร้างระบบ **Offline & Network Fallback**: หากเชื่อมต่อ Google Sheets ไม่ได้หรือออฟไลน์ ให้สลับไปใช้ข้อมูลใน `localStorage` พร้อมแสดง SweetAlert2 แจ้งเตือนผู้ใช้
 
 ---
 
-## ⏳ Phase 6: Deploy ขึ้น GitHub Pages & ทดสอบข้ามอุปกรณ์
-- [ ] **Task 6.1:** ตรวจสอบ Relative Path ของรูปภาพและ Asset ทั้งหมดให้ถูกต้อง (`./assets/...`)
-- [ ] **Task 6.2:** เปิดใช้งาน **GitHub Pages** ใน Repository Settings (เลือก Source: `main` branch)
-- [ ] **Task 6.3:** ทดสอบการขอเบิกจากอุปกรณ์อื่น (มือถือ หรือคอมพิวเตอร์เครื่องอื่น)
-- [ ] **Task 6.4:** ตรวจสอบความถูกต้องว่าข้อมูลคำขอเข้าสู่ Google Sheets จริง และหน้าจอของเจ้าหน้าที่พัสดุมองเห็นทันที
-- [ ] **Task 6.5:** อัปเดตลิงก์ GitHub Pages ตัวจริงลงใน `README.md`
+## ⏳ Phase 6: การทดสอบอัตโนมัติ (pytest Coverage >= 90%), CI/CD Workflow & GitHub Pages Deployment
+- [ ] **Task 6.1:** สร้างชุดทดสอบอัตโนมัติ **`tests/test_stock_logic.py`** ด้วย **`pytest`** ครอบคลุม:
+  - การคำนวณแปลง 2 หน่วยนับ $(\text{Boxes} \times \text{Ratio}) + \text{Pieces}$
+  - สูตรคำนวณสต๊อกคงเหลือจริง $\text{Available} = \text{On-Hand} - \text{Reserved}$
+  - การตรวจสอบสถานะคำขอ (State Transitions: `PENDING` ➔ `APPROVED` ➔ `COMPLETED` / `REJECTED`)
+  - การตรวจสอบความครบถ้วนและความถูกต้องของโครงสร้าง JSON หน่วยงาน 90+ แห่ง
+  - ตรวจสอบเกณฑ์ **Test Code Coverage >= 90%**
+- [ ] **Task 6.2:** สร้าง **GitHub Actions CI Workflow (`.github/workflows/ci.yml`)** เพื่อรันการตรวจสอบ Python Test (`pytest`) และ JavaScript Syntax อัตโนมัติทุกครั้งที่มีการ Push โค้ด
+- [ ] **Task 6.3:** ตรวจสอบ Relative Path ของรูปภาพและ Asset ทั้งหมดให้ถูกต้องสมบูรณ์ (`./assets/...`)
+- [ ] **Task 6.4:** เปิดใช้งาน **GitHub Pages** ใน Repository Settings (เลือก Source: `main` branch)
+- [ ] **Task 6.5:** ทดสอบการขอเบิกจากอุปกรณ์อื่น (มือถือ หรือคอมพิวเตอร์เครื่องอื่น) ว่าข้อมูลไหลลง Google Sheets และหน้าจอเจ้าหน้าที่มองเห็นทันที
+- [ ] **Task 6.6:** อัปเดตลิงก์ GitHub Pages ตัวจริงลงใน `README.md`
