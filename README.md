@@ -102,9 +102,8 @@ stock-order-sdu/
 │
 ├── .cursorrules                         # กฎเหล็กและข้อกำหนดสำหรับ AI Assistant (Cursor)
 ├── copilot-instructions.md              # ข้อตกลงสำหรับ GitHub Copilot & AI Assistants
-├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม และกลุ่มผู้ใช้งานเป้าหมาย
+├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
 ├── TASKS.md                             # รายการขั้นตอนงานและแผนการพัฒนา (Roadmap)
-├── Context.md                           # ข้อกำหนดบริบทและการควบคุมคุณภาพ (Testing & Rules)
 ├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
 ├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ API
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
@@ -126,7 +125,6 @@ stock-order-sdu/
 ├── คณะและหน่วยงาน.txt                     # ข้อมูลดิบรายชื่อหน่วยงาน มหาวิทยาลัยสวนดุสิต
 ├── ยอดสต๊อก ตค.xlsx                       # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel
 ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
-├── TODO.md                              # รายการสิ่งที่ต้องทำและแผนการเชื่อมต่อ Google Sheets Database
 └── generate_separated_portals.py        # สคริปต์ Python สำหรับสร้างและคอมไพล์โค้ด HTML ทั้งสองพอร์ทัล
 ```
 
@@ -159,7 +157,7 @@ stock-order-sdu/
 * **ปัจจุบัน (Local Mode):** ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event):
   * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
   * **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
-* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TODO.md](TODO.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
+* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TASKS.md](TASKS.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
 
 ---
 
