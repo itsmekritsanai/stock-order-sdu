@@ -1077,7 +1077,11 @@ requester_html = f'''<!DOCTYPE html>
     <div>
       © 2569 ระบบเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต | ใช้งานเฉพาะภายในสถาบัน
     </div>
-    <div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <a href="portal.html" style="display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 500;">
+        {svg_icons['layers']} ศูนย์กลางพอร์ทัล
+      </a>
+      <span style="color: var(--neutral-300);">|</span>
       <a href="staff.html" style="display: inline-flex; align-items: center; gap: 4px; color: var(--neutral-600); font-weight: 500;">
         {svg_icons['lock']} สำหรับเจ้าหน้าที่พัสดุ (Staff Portal) →
       </a>
@@ -2060,9 +2064,13 @@ staff_html = f'''<!DOCTYPE html>
       </button>
     </form>
 
-    <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid var(--neutral-200); padding-top: 1rem;">
-      <a href="index.html" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">
-        ← กลับหน้าขอเบิกพัสดุ (สำหรับผู้เบิก)
+    <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid var(--neutral-200); padding-top: 1rem; display: flex; justify-content: center; gap: 0.75rem; align-items: center;">
+      <a href="portal.html" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; font-weight: 500;">
+        ศูนย์กลางพอร์ทัล
+      </a>
+      <span style="color: var(--neutral-300);">|</span>
+      <a href="index.html" style="font-size: 0.85rem; color: var(--neutral-600); text-decoration: none;">
+        หน้าขอเบิกพัสดุ (สำหรับผู้เบิก) →
       </a>
     </div>
   </div>
@@ -2090,7 +2098,10 @@ staff_html = f'''<!DOCTYPE html>
           </button>
         </nav>
 
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <a href="portal.html" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+            {svg_icons['layers']} ศูนย์กลางพอร์ทัล
+          </a>
           <a href="index.html" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
             เปิดหน้าผู้เบิก ↗
           </a>
