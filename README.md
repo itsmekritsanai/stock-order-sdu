@@ -100,8 +100,21 @@ graph TD
 ```text
 stock-order-sdu/
 │
+├── .cursorrules                         # กฎเหล็กและข้อกำหนดสำหรับ AI Assistant (Cursor)
+├── copilot-instructions.md              # ข้อตกลงสำหรับ GitHub Copilot & AI Assistants
+├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม และกลุ่มผู้ใช้งานเป้าหมาย
+├── TASKS.md                             # รายการขั้นตอนงานและแผนการพัฒนา (Roadmap)
+├── Context.md                           # ข้อกำหนดบริบทและการควบคุมคุณภาพ (Testing & Rules)
+├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
+├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ API
+├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
+│
 ├── index.html                           # หน้าเว็บสำหรับผู้ขอเบิก (Public Requester Portal)
 ├── staff.html                           # หน้าเว็บสำหรับเจ้าหน้าที่พัสดุ (Private Staff Portal)
+│
+├── docs/                                # เอกสารข้อมูลเชิงเทคนิค (Technical Specifications)
+│   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล Entity-Relationship & Data Types
+│   └── API_SPEC.md                      # โครงสร้าง API Endpoints (Request/Response Specs)
 │
 ├── assets/                              # ทรัพยากรของโครงการ
 │   ├── js/                              # ไลบรารี JavaScript ออฟไลน์
@@ -114,10 +127,7 @@ stock-order-sdu/
 ├── ยอดสต๊อก ตค.xlsx                       # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel
 ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
 ├── TODO.md                              # รายการสิ่งที่ต้องทำและแผนการเชื่อมต่อ Google Sheets Database
-│
-├── generate_separated_portals.py        # สคริปต์ Python สำหรับสร้างและคอมไพล์โค้ด HTML ทั้งสองพอร์ทัล
-├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
-└── README.md                            # เอกสารแนะนำและคู่มือการใช้งานโครงการ
+└── generate_separated_portals.py        # สคริปต์ Python สำหรับสร้างและคอมไพล์โค้ด HTML ทั้งสองพอร์ทัล
 ```
 
 ---
@@ -149,20 +159,18 @@ stock-order-sdu/
 * **ปัจจุบัน (Local Mode):** ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event):
   * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
   * **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
-* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TODO.md](TODO.md))
+* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TODO.md](TODO.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
 
 ---
 
-## แผนการพัฒนาและสิ่งที่ต้องทำ (Roadmap & To-Do List)
+## แผนการพัฒนาและเอกสารสำคัญ (Roadmap & Documentation)
 
-ติดตามความคืบหน้าของโครงการและแผนการเชื่อมต่อ **Google Sheets Database** สำหรับ GitHub Pages ได้ที่:
-* 📋 **[แผนการดำเนินงานและรายการสิ่งที่ต้องทำ (TODO.md)](TODO.md)**
-
----
-
-## เอกสารอ้างอิงและข้อกำหนดเชิงระบบ (SRS)
-
-ดูรายละเอียดข้อกำหนดเชิงระบบ กฎระเบียบทางธุรกิจ และ Data Dictionary เพิ่มเติมได้ที่:
+* 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[copilot-instructions.md](copilot-instructions.md)**
+* 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
+* 📋 **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
+* 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล (docs/SCHEMA.md)](docs/SCHEMA.md)**
+* 🔌 **[โครงสร้าง API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
+* ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
 * 📄 **[System Requirements Specification (SRS v1.1)](system_requirements_specification.md)**
 
 ---

@@ -1,0 +1,61 @@
+# AI Development Guidelines & System Rules (.cursorrules)
+# Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
+
+## 1. Role & Identity
+You are an expert Senior Full-Stack Software Engineer and Enterprise Solutions Architect specializing in resilient web applications, data systems, and institutional digital transformation for Suan Dusit University (SDU).
+
+---
+
+## 2. Absolute Hard Rules (Non-Negotiable)
+1. **ห้ามแก้ไขไฟล์ Config หลักโดยไม่ขออนุญาต:** Do not alter core configuration files, repository structure, or core deployment settings without explicit user consent.
+2. **100% Strict Portal Separation (Zero-Trust):**
+   - The system is composed of two completely separate portals:
+     - `index.html`: Public Requester Portal (Professors, department officers). **MUST NEVER** contain approval buttons, stock editing forms, inventory deduction logic, or admin dashboard panels.
+     - `staff.html`: Private Staff & Warehouse Portal (Inventory officers). Protected by authentication.
+   - **NEVER** merge `index.html` and `staff.html` into a single file or shared interface.
+3. **Inventory Deduction State Machine:**
+   - Available stock formula: `Available = On-Hand - Reserved`
+   - Approval of requisition (`APPROVED`) only increments `Reserved`. **DO NOT** deduct `On-Hand` during approval.
+   - Physical stock deduction (`On-Hand`) occurs **ONLY** when the requester physically collects items and signs on the digital canvas pad (`COMPLETED`).
+4. **Single Source of Truth (SSOT):**
+   - Both `index.html` and `staff.html` are compiled and generated via `generate_separated_portals.py`.
+   - Edits to UI, styles, icons, and shared logic must be reflected in or generated from `generate_separated_portals.py`.
+5. **No Native Dialogs:**
+   - **NEVER** use browser `alert()`, `confirm()`, or `prompt()`.
+   - **ALWAYS** use SweetAlert2 (`Swal.fire()` / `Swal.mixin()`) styled with SDU theme (`#1e40af`, `#059669`, Prompt font, 14px rounded corners).
+6. **Strict No-Emoji Policy in UI:**
+   - Do not use emoji characters in buttons, tables, badges, or headers.
+   - **ALWAYS** use 100% Vector SVG Icons (Stroke-based, 24x24 viewBox) from the `svg_icons` registry.
+7. **Offline-First Resilience:**
+   - Always prioritize local assets (e.g. `assets/js/sweetalert2.all.min.js`) with automatic CDN fallback.
+   - Code must run in a standalone browser or local server without requiring an active external internet connection.
+
+---
+
+## 3. Technology Stack Constraints
+- **Frontend Core:** Pure HTML5 (Semantic), Vanilla CSS3 (Custom Properties/Variables, Flexbox, CSS Grid), Modern Vanilla JavaScript (ES6+).
+- **No Heavy Frameworks:** No React, No Vue, No Angular, No TailwindCSS. Maintain 0ms compile overhead and zero build dependency for runtime.
+- **Python Automation:** Python 3.x for build/generator scripts, following **PEP 8** standards (4-space indentation, explicit UTF-8 file operations).
+- **Testing:** `pytest` for Python scripts with **Coverage >= 90%**. JavaScript syntax validation via Node.js runtime parser.
+
+---
+
+## 4. Code Style & Standards
+- **Indentation:** 2 spaces for HTML, CSS, JavaScript; 4 spaces for Python.
+- **Naming Conventions:**
+  - HTML IDs: `camelCase` (e.g. `myRequisitionsModal`, `itemSearchInput`)
+  - CSS Classes: `kebab-case` (e.g. `req-card-item`, `cart-drawer-overlay`)
+  - JavaScript Functions: `camelCase` (e.g. `openMyRequisitionsModal()`, `submitRequisition()`)
+  - Python Variables/Functions: `snake_case` (e.g. `dept_js_items`, `generate_portals()`)
+- **CSS Architecture:**
+  - Token-based design system using CSS Variables (`--primary: #1e40af`, `--accent: #059669`, `--warning: #d97706`, `--danger: #dc2626`).
+  - Google Fonts: `Prompt` (Modern UI) and `Sarabun` (Official Thai documentation).
+
+---
+
+## 5. Verification Checklist Before Delivering Code
+- [ ] No native `alert()`, `confirm()`, or `prompt()` in code.
+- [ ] No emoji in UI elements; SVG vector icons used exclusively.
+- [ ] JavaScript syntax validated with zero errors (`new Function(code)`).
+- [ ] Local web server responds with HTTP 200 and 0 missing assets.
+- [ ] Git commits are informative and clearly scoped.
