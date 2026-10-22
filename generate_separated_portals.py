@@ -1360,7 +1360,7 @@ requester_html = f'''<!DOCTYPE html>
         showCancelButton: true,
         confirmButtonColor: '#059669',
         cancelButtonColor: '#64748b',
-        confirmButtonText: '✓ ยืนยันส่งคำขอ',
+        confirmButtonText: 'ยืนยันส่งคำขอ',
         cancelButtonText: 'ยกเลิก'
       }}).then((result) => {{
         if (result.isConfirmed) {{
@@ -1418,7 +1418,7 @@ requester_html = f'''<!DOCTYPE html>
             showCancelButton: true,
             confirmButtonColor: '#1e40af',
             cancelButtonColor: '#64748b',
-            confirmButtonText: '📋 ดูในรายการคำขอของฉัน',
+            confirmButtonText: 'ดูในรายการคำขอของฉัน',
             cancelButtonText: 'ตกลง / เบิกรายการอื่นต่อ'
           }}).then((res) => {{
             if (res.isConfirmed) {{
@@ -2328,7 +2328,7 @@ staff_html = f'''<!DOCTYPE html>
             <p><strong>ผู้ขอเบิก:</strong> ${{req.requester}} (${{req.dept}})</p>
             <p><strong>จำนวนพัสดุ:</strong> ${{req.items.length}} รายการ</p>
             <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.85rem;">
-              ✓ ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ทันที
+              • ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ทันที
             </div>
           </div>
         `,
@@ -2336,7 +2336,7 @@ staff_html = f'''<!DOCTYPE html>
         showCancelButton: true,
         confirmButtonColor: '#1e40af',
         cancelButtonColor: '#64748b',
-        confirmButtonText: '✓ ยืนยันอนุมัติ',
+        confirmButtonText: 'ยืนยันอนุมัติ',
         cancelButtonText: 'ยกเลิก'
       }}).then((result) => {{
         if (result.isConfirmed) {{
@@ -2503,7 +2503,7 @@ staff_html = f'''<!DOCTYPE html>
           </div>
         `,
         confirmButtonColor: '#059669',
-        confirmButtonText: '✓ ดูใบเบิก PDF (พร้อมลายเซ็น)'
+        confirmButtonText: 'ดูใบเบิก PDF (พร้อมลายเซ็น)'
       }}).then(() => {{
         previewDocInPdf(currentActiveReqForSig.id);
       }});
@@ -2516,9 +2516,9 @@ staff_html = f'''<!DOCTYPE html>
           <div style="text-align: left; margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
             <p style="margin-bottom: 0.5rem;">กำลังประมวลผลไฟล์ <b>"ยอดสต๊อก ตค.xlsx"</b>...</p>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #334155; line-height: 1.6;">
-              ✓ จำนวนพัสดุในไฟล์: <b>4,045 รายการ</b><br>
-              ✓ สถานะการซิงค์: <b>นำเข้าข้อมูลสต๊อกสมบูรณ์</b><br>
-              ✓ เชื่อมโยงหมวดหมู่: <b>สำนักงาน, งานบ้าน, ไฟฟ้า, คอมพิวเตอร์</b>
+              • จำนวนพัสดุในไฟล์: <b>4,045 รายการ</b><br>
+              • สถานะการซิงค์: <b>นำเข้าข้อมูลสต๊อกสมบูรณ์</b><br>
+              • เชื่อมโยงหมวดหมู่: <b>สำนักงาน, งานบ้าน, ไฟฟ้า, คอมพิวเตอร์</b>
             </div>
           </div>
         `,
@@ -2555,7 +2555,7 @@ staff_html = f'''<!DOCTYPE html>
         showCancelButton: true,
         confirmButtonColor: '#1e40af',
         cancelButtonColor: '#64748b',
-        confirmButtonText: '✓ ยืนยันรับเข้า',
+        confirmButtonText: 'ยืนยันรับเข้า',
         cancelButtonText: 'ยกเลิก',
         preConfirm: () => {{
           const itemId = parseInt(document.getElementById('swalStockItem').value);
