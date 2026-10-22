@@ -439,6 +439,46 @@ common_css = '''
     }
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Official PDF Requisition Slip Styles */
+    .pdf-preview-container { background: #525659; padding: 2rem; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+    .pdf-page { background: white; width: 100%; max-width: 800px; padding: 2.8rem 3.2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }
+    .pdf-header { text-align: center; margin-bottom: 1.75rem; position: relative; display: flex; flex-direction: column; align-items: center; }
+    .pdf-header h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .pdf-header p { font-size: 0.9rem; color: #444; }
+    .pdf-meta-table { width: 100%; margin-bottom: 1.25rem; font-size: 0.95rem; }
+    .pdf-meta-table td { padding: 4px 0; }
+    .pdf-items-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.95rem; }
+    .pdf-items-table th, .pdf-items-table td { border: 1px solid #333; padding: 8px 10px; }
+    .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
+    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 2.5rem; text-align: center; font-size: 0.875rem; }
+    .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
+    .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
+    .sig-line { width: 80%; border-bottom: 1px dotted #333; margin-bottom: 6px; }
+
+    /* Clean Print Isolation - Only the A4 document prints */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #printablePdf, #printablePdf * {
+        visibility: visible !important;
+      }
+      #printablePdf {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 2cm 2.5cm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        background: white !important;
+      }
+      header, footer, .modal-header, .modal-footer, .pdf-preview-actions, .close-btn, .btn, .cart-drawer, .nav-container {
+        display: none !important;
+      }
+    }
 '''
 
 # --------------------------------------------------------------------
@@ -942,6 +982,96 @@ requester_html = f'''<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- OFFICIAL REQUISITION PDF MODAL (REQUESTER PORTAL) -->
+  <div class="modal-overlay" id="requisitionPdfModal" style="display: none; align-items: center; justify-content: center; z-index: 100;">
+    <div class="modal-card" style="max-width: 880px; width: 95%; max-height: 94vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; background: white;">
+      <div class="modal-header" style="padding: 1rem 1.5rem; background: var(--neutral-50); border-bottom: 1px solid var(--neutral-200); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          {svg_icons['file_text']}
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--neutral-900);">ใบขอเบิกพัสดุ (Official Requisition Form)</h3>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <button class="btn btn-primary" onclick="printRequisitionPdf()" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
+            {svg_icons['printer']} สั่งพิมพ์เอกสาร (Print PDF)
+          </button>
+          <button class="close-btn" onclick="closeRequisitionPdfModal()">
+            {svg_icons['x']}
+          </button>
+        </div>
+      </div>
+      
+      <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; background: #525659; display: flex; justify-content: center;">
+        <div class="pdf-page" id="printablePdf">
+          <div class="pdf-header">
+            <img src="assets/logo_sdu.png" alt="ตราสัญลักษณ์ มหาวิทยาลัยสวนดุสิต" style="height: 75px; width: auto; object-fit: contain; margin-bottom: 0.5rem;">
+            <h2>ใบขอเบิกพัสดุ</h2>
+            <p>ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
+          </div>
+
+          <table class="pdf-meta-table">
+            <tr>
+              <td style="width: 55%;"><strong>เลขที่เอกสาร:</strong> <span id="pdfDocNo">-</span></td>
+              <td><strong>วันที่ขอเบิก:</strong> <span id="pdfDate">-</span></td>
+            </tr>
+            <tr>
+              <td><strong>หน่วยงาน/คณะ:</strong> <span id="pdfDept">-</span></td>
+              <td><strong>ชื่อผู้ขอเบิก:</strong> <span id="pdfRequester">-</span></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>วัตถุประสงค์ในการขอเบิก:</strong> <span id="pdfPurpose">-</span></td>
+            </tr>
+          </table>
+
+          <table class="pdf-items-table">
+            <thead>
+              <tr>
+                <th style="width: 45px;">ลำดับ</th>
+                <th>รายการพัสดุ</th>
+                <th style="width: 140px;">จำนวนที่ขอเบิก</th>
+                <th style="width: 140px;">จำนวนจ่ายจริง</th>
+                <th style="width: 100px;">หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="pdfItemsTbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+
+          <div class="pdf-signatures">
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <div>ลงชื่อ.......................................................</div>
+              <div style="margin-top: 4px;">(<span id="pdfSigRequester">-</span>)</div>
+              <div style="font-size: 0.8rem; color: #555;">ผู้ขอเบิก</div>
+            </div>
+
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <div>ลงชื่อ.......................................................</div>
+              <div style="margin-top: 4px;">(.......................................................)</div>
+              <div style="font-size: 0.8rem; color: #555;">หัวหน้าหน่วยงาน / ผู้เห็นชอบ</div>
+            </div>
+
+            <div class="sig-box">
+              <div class="sig-line"></div>
+              <div id="pdfSigOfficerBox">
+                <div>ลงชื่อ.......................................................</div>
+              </div>
+              <div style="margin-top: 4px;">(<span id="pdfSigRecipient">-</span>)</div>
+              <div style="font-size: 0.8rem; color: #555;">ผู้รับพัสดุ / เจ้าหน้าที่จ่ายของ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 0.75rem 1.5rem; background: var(--neutral-50); border-top: 1px solid var(--neutral-200); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.8rem; color: var(--neutral-400);">
+          เอกสารแบบฟอร์มมาตรฐาน มสด. | พิมพ์ขนาด A4
+        </span>
+        <button class="btn btn-outline" onclick="closeRequisitionPdfModal()">ปิดหน้าต่าง</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer with isolated Staff Portal Link -->
   <footer>
     <div>
@@ -971,6 +1101,8 @@ requester_html = f'''<!DOCTYPE html>
       info: `{svg_icons['info']}`,
       user: `{svg_icons['user']}`,
       building: `{svg_icons['building']}`,
+      file_text: `{svg_icons['file_text']}`,
+      printer: `{svg_icons['printer']}`,
       x: `{svg_icons['x']}`
     }};
 
@@ -1626,9 +1758,12 @@ requester_html = f'''<!DOCTYPE html>
               </tbody>
             </table>
 
-            <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="viewTrackingForDoc('${{req.id}}')">
                 ${{vIcons.search}} ติดตามไทม์ไลน์สถานะ
+              </button>
+              <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="openRequisitionPdf('${{req.id}}')">
+                ${{vIcons.file_text}} พิมพ์ใบเบิกพัสดุ (PDF)
               </button>
             </div>
           </div>
@@ -1682,8 +1817,82 @@ requester_html = f'''<!DOCTYPE html>
               ${{req.items.map(i => `<li>${{i.name}}: ${{i.totalPieces.toLocaleString()}} ${{i.unitPiece}}</li>`).join('')}}
             </ul>
           </div>
+          <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="openRequisitionPdf('${{req.id}}')">
+              ${{vIcons.file_text}} พิมพ์ใบขอเบิกพัสดุ (PDF)
+            </button>
+          </div>
         </div>
       `;
+    }}
+
+    // Requisition Official PDF Viewer (Requester Portal)
+    function openRequisitionPdf(docNo) {{
+      const reqs = getReqsDB();
+      const req = reqs.find(r => r.id === docNo);
+      if (!req) {{
+        Swal.fire({{
+          icon: 'error',
+          title: 'ไม่พบเอกสาร',
+          text: `ไม่พบข้อมูลเอกสารเลขที่ ${{docNo}}`,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        }});
+        return;
+      }}
+
+      document.getElementById('pdfDocNo').innerText = req.id;
+      document.getElementById('pdfDate').innerText = req.date || '21 ตุลาคม 2569';
+      document.getElementById('pdfDept').innerText = req.dept;
+      document.getElementById('pdfRequester').innerText = req.requester + (req.phone ? ` (โทร ${{req.phone}})` : '');
+      document.getElementById('pdfPurpose').innerText = req.purpose || '-';
+      document.getElementById('pdfSigRequester').innerText = req.requester;
+      document.getElementById('pdfSigRecipient').innerText = req.requester;
+
+      const tbody = document.getElementById('pdfItemsTbody');
+      tbody.innerHTML = (req.items || []).map((it, idx) => {{
+        let reqQty = it.qtyBoxes > 0 && it.qtyPieces > 0 ?
+          `${{it.qtyBoxes}} ${{it.unitBox}} + ${{it.qtyPieces}} ${{it.unitPiece}} (รวม ${{it.totalPieces.toLocaleString()}} ${{it.unitPiece}})` :
+          (it.qtyBoxes > 0 ? `${{it.qtyBoxes}} ${{it.unitBox}} (${{it.totalPieces.toLocaleString()}} ${{it.unitPiece}})` : `${{it.qtyPieces}} ${{it.unitPiece}}`);
+        
+        let approvedQty = it.approvedPieces !== undefined ? `${{it.approvedPieces.toLocaleString()}} ${{it.unitPiece}}` : (req.status === 'COMPLETED' ? reqQty : '-');
+
+        let noteText = 'รออนุมัติ';
+        if (req.status === 'APPROVED') noteText = 'อนุมัติแล้ว';
+        else if (req.status === 'COMPLETED') noteText = 'จ่ายพัสดุครบถ้วน';
+        else if (req.status === 'REJECTED') noteText = 'ไม่อนุมัติ';
+
+        return `
+          <tr>
+            <td style="text-align: center;">${{idx + 1}}</td>
+            <td><strong>${{it.name}}</strong></td>
+            <td style="text-align: right;">${{reqQty}}</td>
+            <td style="text-align: right; font-weight: 600; color: ${{req.status === 'COMPLETED' ? '#059669' : '#000'}};">${{approvedQty}}</td>
+            <td style="text-align: center; font-size: 0.85rem; color: #555;">${{noteText}}</td>
+          </tr>
+        `;
+      }}).join('');
+
+      const sigBox = document.getElementById('pdfSigOfficerBox');
+      if (req.signature) {{
+        sigBox.innerHTML = `<img src="${{req.signature}}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
+      }} else {{
+        sigBox.innerHTML = `<div>ลงชื่อ.......................................................</div>`;
+      }}
+
+      const modal = document.getElementById('requisitionPdfModal');
+      modal.style.display = 'flex';
+      modal.classList.add('open');
+    }}
+
+    function closeRequisitionPdfModal() {{
+      const modal = document.getElementById('requisitionPdfModal');
+      modal.style.display = 'none';
+      modal.classList.remove('open');
+    }}
+
+    function printRequisitionPdf() {{
+      window.print();
     }}
 
     // Initial Load
@@ -1812,22 +2021,7 @@ staff_html = f'''<!DOCTYPE html>
     canvas#signaturePad {{ width: 100%; height: 200px; display: block; cursor: crosshair; }}
     .signature-placeholder {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.9rem; color: var(--neutral-400); pointer-events: none; }}
 
-    /* PDF View */
-    .pdf-preview-container {{ background: #525659; padding: 2rem; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }}
-    .pdf-page {{ background: white; width: 100%; max-width: 800px; padding: 3rem 3.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }}
-    .pdf-header {{ text-align: center; margin-bottom: 2rem; position: relative; display: flex; flex-direction: column; align-items: center; }}
-    .pdf-vector-seal {{ margin-bottom: 0.75rem; }}
-    .pdf-header h2 {{ font-size: 1.35rem; font-weight: 700; margin-bottom: 0.25rem; }}
-    .pdf-header p {{ font-size: 0.9rem; color: #444; }}
-    .pdf-meta-table {{ width: 100%; margin-bottom: 1.5rem; font-size: 0.95rem; }}
-    .pdf-meta-table td {{ padding: 4px 0; }}
-    .pdf-items-table {{ width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.95rem; }}
-    .pdf-items-table th, .pdf-items-table td {{ border: 1px solid #333; padding: 8px 10px; }}
-    .pdf-items-table th {{ background: #f3f4f6; font-weight: 600; text-align: center; }}
-    .pdf-signatures {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 3rem; text-align: center; font-size: 0.875rem; }}
-    .sig-box {{ display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }}
-    .sig-img-preview {{ max-height: 60px; max-width: 130px; margin-bottom: 4px; }}
-    .sig-line {{ width: 80%; border-bottom: 1px dotted #333; margin-bottom: 6px; }}
+
 
     /* Metrics */
     .metrics-row {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }}
@@ -1893,9 +2087,6 @@ staff_html = f'''<!DOCTYPE html>
           </button>
           <button class="view-btn" onclick="switchStaffView('inventory')">
             {svg_icons['chart']} สรุปยอดสต๊อกคลัง
-          </button>
-          <button class="view-btn" onclick="switchStaffView('pdf')">
-            {svg_icons['file_text']} ใบเบิก PDF (พร้อมลายเซ็น)
           </button>
         </nav>
 
@@ -2201,9 +2392,8 @@ staff_html = f'''<!DOCTYPE html>
       if (target) target.classList.add('active');
 
       const btns = document.querySelectorAll('.view-btn');
-      if (viewName === 'requisitions') btns[0].classList.add('active');
-      if (viewName === 'inventory') btns[1].classList.add('active');
-      if (viewName === 'pdf') btns[2].classList.add('active');
+      if (viewName === 'requisitions' && btns[0]) btns[0].classList.add('active');
+      if (viewName === 'inventory' && btns[1]) btns[1].classList.add('active');
     }}
 
     // Requisition Management Logic
