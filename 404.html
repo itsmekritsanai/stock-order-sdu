@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - ไม่พบหน้าที่ต้องการ | มหาวิทยาลัยสวนดุสิต</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-hover: #1d4ed8;
+      --neutral-50: #f8fafc;
+      --neutral-600: #475569;
+      --neutral-800: #1e293b;
+      --neutral-900: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: var(--neutral-50);
+      color: var(--neutral-800);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 3rem 2rem;
+      max-width: 520px;
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+    }
+    .logo {
+      height: 75px;
+      width: auto;
+      object-fit: contain;
+      margin-bottom: 1.5rem;
+    }
+    .status-code {
+      font-size: 4rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--neutral-900);
+      margin-bottom: 0.75rem;
+    }
+    p {
+      color: var(--neutral-600);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 0.75rem 1.4rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: white;
+      color: var(--neutral-800);
+      border: 1px solid #cbd5e1;
+    }
+    .btn-outline:hover {
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="logo">
+    <div class="status-code">404</div>
+    <h1>ไม่พบหน้าที่คุณต้องการ</h1>
+    <p>ลิงก์อาจถูกย้าย มีการพิมพ์ URL ไม่ถูกต้อง หรือหน้านี้ถูกลบออกจากระบบคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต</p>
+    <div class="actions">
+      <a href="index.html" class="btn btn-primary">
+        ← กลับสู่หน้าหลักขอเบิกพัสดุ
+      </a>
+      <a href="staff.html" class="btn btn-outline">
+        พอร์ทัลเจ้าหน้าที่พัสดุ
+      </a>
+    </div>
+  </div>
+</body>
+</html>

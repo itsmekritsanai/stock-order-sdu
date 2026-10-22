@@ -275,7 +275,15 @@ common_css = '''
       gap: 1rem;
     }
 
-    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand { display: flex; align-items: center; gap: 0.85rem; }
+    .brand-logo-img {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+      transition: transform 0.2s ease;
+    }
+    .brand-logo-img:hover { transform: scale(1.04); }
     .brand-icon {
       width: 42px;
       height: 42px;
@@ -442,6 +450,19 @@ requester_html = f'''<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบขอเบิกพัสดุออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
+  
+  <!-- PWA & Mobile Icons -->
+  <meta name="theme-color" content="#1e40af">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+
   <!-- Google Fonts: Prompt for modern UI, Sarabun for official doc/text -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -712,9 +733,7 @@ requester_html = f'''<!DOCTYPE html>
   <header>
     <div class="nav-container">
       <div class="brand">
-        <div class="brand-icon">
-          {svg_icons['box']}
-        </div>
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
         <div class="brand-text">
           <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
           <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
@@ -1706,6 +1725,19 @@ staff_html = f'''<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบบริหารคลังพัสดุ (Staff Portal) | มหาวิทยาลัยสวนดุสิต</title>
+  
+  <!-- PWA & Mobile Icons -->
+  <meta name="theme-color" content="#1e40af">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+
   <!-- Google Fonts: Prompt for modern UI, Sarabun for official doc/text -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1815,9 +1847,7 @@ staff_html = f'''<!DOCTYPE html>
   <!-- LOGIN SCREEN (If not authenticated) -->
   <div id="loginScreen" class="login-container" style="display: none;">
     <div style="text-align: center; margin-bottom: 1.5rem;">
-      <div class="brand-icon" style="margin: 0 auto 1rem auto; width: 50px; height: 50px;">
-        {svg_icons['lock']}
-      </div>
+      <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 72px; width: auto; object-fit: contain; margin-bottom: 0.75rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
       <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</h2>
       <p style="font-size: 0.85rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
     </div>
@@ -1849,9 +1879,7 @@ staff_html = f'''<!DOCTYPE html>
     <header>
       <div class="nav-container">
         <div class="brand">
-          <div class="brand-icon">
-            {svg_icons['box']}
-          </div>
+          <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
           <div class="brand-text">
             <h1>ระบบบริหารคลังพัสดุ (Staff Portal)</h1>
             <p>ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
@@ -1977,7 +2005,7 @@ staff_html = f'''<!DOCTYPE html>
 
           <div class="pdf-page" id="printablePdf">
             <div class="pdf-header">
-              {pdf_seal_svg}
+              <img src="assets/logo_sdu.png" alt="ตราสัญลักษณ์ มหาวิทยาลัยสวนดุสิต" style="height: 75px; width: auto; object-fit: contain; margin-bottom: 0.5rem;">
               <h2>ใบขอเบิกพัสดุ</h2>
               <p>ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
             </div>
