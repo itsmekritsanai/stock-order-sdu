@@ -23,7 +23,7 @@ graph TD
         FORM --> CAT["ค้นหาพัสดุ (No SKU Search)<br/>คำนวณหน่วยนับ กล่อง/ชิ้น"]
         CAT --> CART["ตะกร้าพัสดุ & ระบุวัตถุประสงค์"]
         CART --> SUBMIT["ส่งคำขอเบิก (SweetAlert2 Popup)"]
-        SUBMIT --> MYREQS["📋 รายการคำขอของฉัน (ดูสถานะ & คัดลอกรหัส)"]
+        SUBMIT --> MYREQS["รายการคำขอของฉัน (ดูสถานะ & คัดลอกรหัส)"]
         SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking Timeline)"]
     end
 
@@ -60,7 +60,7 @@ graph TD
 * **ระบบคำนวณหลายหน่วยนับ (Multi-Unit Conversion):** สามารถเลือกเบิกเป็น "กล่อง" หรือ "ชิ้น/ซอง/แผ่น" ได้ โดยระบบจะคำนวณยอดรวมและตัดสต๊อกให้อัตโนมัติ
 * **แสดงสต๊อกคงเหลือจริง (Available Stock):** แสดงยอดสต๊อกที่เบิกได้จริงตามสูตร `Available = On-Hand - Reserved` ป้องกันการเบิกชนกัน
 * **ตะกร้าขอเบิกและสร้างเอกสาร:** เพิ่มรายการใส่ตะกร้า ระบุวัตถุประสงค์ และสร้างเลขที่คำขอ `REQ-256910-XXXX`
-* **ปุ่ม "📋 รายการคำขอของฉัน" (My Requisitions):**
+* **ปุ่ม "รายการคำขอของฉัน" (My Requisitions):**
   * ปุ่มบนเมนูด้านบนพร้อม **ตัวเลขนับจำนวนคำขอ (Count Badge)** แสดงยอดคำขอแบบเรียลไทม์
   * หน้าต่างป๊อปอัปดูรายการคำขอทั้งหมด พร้อมช่องค้นหาเอกสาร/ผู้เบิก/พัสดุ
   * แท็บคัดกรองสถานะ: ทั้งหมด, รออนุมัติ (Pending), อนุมัติแล้ว (Approved), รับมอบสำเร็จ (Completed), ไม่อนุมัติ (Rejected)
@@ -100,22 +100,36 @@ graph TD
 ```text
 stock-order-sdu/
 │
-├── .cursorrules                         # กฎเหล็กและข้อกำหนดสำหรับ AI Assistant (Cursor)
-├── copilot-instructions.md              # ข้อตกลงสำหรับ GitHub Copilot & AI Assistants
+├── .cursorrules                         # กฎเกณฑ์สำหรับ AI Assisted Coding (Cursor)
 ├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
 ├── TASKS.md                             # รายการขั้นตอนงานและแผนการพัฒนา (Roadmap)
 ├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
+├── LICENSE                              # สัญญาอนุญาต MIT License
 ├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ API
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
 │
+├── portal.html                          # ศูนย์กลางเชื่อมต่อพอร์ทัลกลาง (Gateway Hub)
 ├── index.html                           # หน้าเว็บสำหรับผู้ขอเบิก (Public Requester Portal)
 ├── staff.html                           # หน้าเว็บสำหรับเจ้าหน้าที่พัสดุ (Private Staff Portal)
+├── 404.html                             # หน้าแสดงข้อผิดพลาดเมื่อไม่พบหน้าเว็บ (Custom 404)
+├── manifest.json                        # การตั้งค่า Progressive Web App (PWA) ติดตั้งบนมือถือ
+├── favicon.ico                          # ไอคอน Favicon แบบหลายขนาด
+│
+├── start.bat                            # สคริปต์ 1-Click เปิดระบบอัตโนมัติบน Windows
+├── launch.py                            # สคริปต์ 1-Click รัน Local Server ด้วย Python
+├── run.bat                              # ทางลัดรันสคริปต์ start.bat
+│
+├── .github/                             # การกำหนดค่า GitHub และ AI Assistant
+│   └── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
 │
 ├── docs/                                # เอกสารข้อมูลเชิงเทคนิค (Technical Specifications)
 │   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล Entity-Relationship & Data Types
 │   └── API_SPEC.md                      # โครงสร้าง API Endpoints (Request/Response Specs)
 │
 ├── assets/                              # ทรัพยากรของโครงการ
+│   ├── logo_sdu.png                     # ตราสัญลักษณ์ทางการ มหาวิทยาลัยสวนดุสิต
+│   ├── favicon.svg / favicon-*.png      # ไอคอน Favicon ขนาดต่างๆ
+│   ├── icon-192.png / icon-512.png      # ไอคอนสำหรับติดตั้งเป็น PWA App
 │   ├── js/                              # ไลบรารี JavaScript ออฟไลน์
 │   │   └── sweetalert2.all.min.js       # SweetAlert2 Local Asset สำหรับการทำงานออฟไลน์
 │   └── images/                          # รูปภาพพัสดุจริงสกัดจากไฟล์สต๊อก (58 รายการ)
@@ -163,9 +177,9 @@ stock-order-sdu/
 
 ## แผนการพัฒนาและเอกสารสำคัญ (Roadmap & Documentation)
 
-* 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[copilot-instructions.md](copilot-instructions.md)**
+* 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[.github/copilot-instructions.md](.github/copilot-instructions.md)**
 * 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
-* 📋 **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
+* **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
 * 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล (docs/SCHEMA.md)](docs/SCHEMA.md)**
 * 🔌 **[โครงสร้าง API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
 * ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
