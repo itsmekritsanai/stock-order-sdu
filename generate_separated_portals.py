@@ -762,9 +762,8 @@ requester_html = f'''<!DOCTYPE html>
     footer {{
       margin-top: auto; padding: 1.5rem; background: white; border-top: 1px solid var(--neutral-200);
       text-align: center; font-size: 0.85rem; color: var(--neutral-600);
-      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+      display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 1rem;
     }}
-    footer a {{ color: var(--primary); text-decoration: none; }}
   </style>
 </head>
 <body>
@@ -1076,11 +1075,6 @@ requester_html = f'''<!DOCTYPE html>
   <footer>
     <div>
       © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต | ใช้งานเฉพาะภายในสถาบัน
-    </div>
-    <div>
-      <a href="portal.html" style="display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 500;">
-        {svg_icons['layers']} ศูนย์กลางพอร์ทัล
-      </a>
     </div>
   </footer>
 
