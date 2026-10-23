@@ -30,3 +30,8 @@ Thumbs.db
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Internship / Student documents (Never push to git)
+แบบบันทึกการปฏิบัติงาน*
+*.docx
+
