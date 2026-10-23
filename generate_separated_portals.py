@@ -1072,18 +1072,14 @@ requester_html = f'''<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- Footer with isolated Staff Portal Link -->
+  <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต | ใช้งานเฉพาะภายในสถาบัน
     </div>
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
+    <div>
       <a href="portal.html" style="display: inline-flex; align-items: center; gap: 4px; color: var(--primary); font-weight: 500;">
         {svg_icons['layers']} ศูนย์กลางพอร์ทัล
-      </a>
-      <span style="color: var(--neutral-300);">|</span>
-      <a href="staff.html" style="display: inline-flex; align-items: center; gap: 4px; color: var(--neutral-600); font-weight: 500;">
-        {svg_icons['lock']} สำหรับเจ้าหน้าที่พัสดุ (Staff Portal) →
       </a>
     </div>
   </footer>
