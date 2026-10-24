@@ -809,10 +809,10 @@ requester_html = f'''<!DOCTYPE html>
           <input type="text" id="deptSearchInput" class="form-control combobox-input" 
                  placeholder="พิมพ์ค้นหาคณะ หรือหน่วยงาน... (เช่น การเรือน, คอม, กองคลัง)" 
                  autocomplete="off" 
-                 value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ"
+                 value=""
                  onfocus="openDeptDropdown()" 
                  oninput="handleDeptSearch(this.value)">
-          <input type="hidden" id="deptSelect" value="โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ">
+          <input type="hidden" id="deptSelect" value="">
           <button type="button" class="combobox-toggle-btn" onclick="toggleDeptDropdown(event)" title="เปิด/ปิด รายการ">
             {svg_icons['chevron_down']}
           </button>
@@ -825,13 +825,13 @@ requester_html = f'''<!DOCTYPE html>
         <label for="requesterName">
           {svg_icons['user']} ชื่อ-นามสกุล ผู้ขอเบิก *
         </label>
-        <input type="text" id="requesterName" class="form-control" placeholder="เช่น อ.สมชาย ใจดี" value="อ.สมชาย ใจดี">
+        <input type="text" id="requesterName" class="form-control" placeholder="เช่น อ.สมชาย ใจดี" value="">
       </div>
       <div class="form-group">
         <label for="requesterPhone">
           {svg_icons['phone']} เบอร์โทรศัพท์ติดต่อ
         </label>
-        <input type="tel" id="requesterPhone" class="form-control" placeholder="เช่น 081-234-5678" value="081-998-7766">
+        <input type="tel" id="requesterPhone" class="form-control" placeholder="เช่น 081-234-5678" value="">
       </div>
     </div>
 
@@ -1441,6 +1441,16 @@ requester_html = f'''<!DOCTYPE html>
       const phone = document.getElementById('requesterPhone').value.trim();
       const purpose = document.getElementById('cartPurpose').value.trim();
 
+      if (!dept) {{
+        Swal.fire({{
+          icon: 'warning',
+          title: 'ข้อมูลไม่ครบถ้วน',
+          text: 'กรุณาเลือกหน่วยงาน / คณะ / โรงเรียนที่สังกัดครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        }});
+        return;
+      }}
       if (!requester) {{
         Swal.fire({{
           icon: 'warning',

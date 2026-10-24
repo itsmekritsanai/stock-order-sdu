@@ -7,7 +7,7 @@
 - [x] **Phase 1: สถาปัตยกรรมหลักและการแยกระบบพอร์ทัล 100% (Completed)**
 - [x] **Phase 2: ยกระดับ UI/UX, Vector Icons, SweetAlert2 และระบบรายการคำขอ (Completed)**
 - [x] **Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support (Completed)**
-- [ ] **Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script**
+- [x] **Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script (Completed)**
 - [ ] **Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API & ระบบ Offline Fallback**
 - [ ] **Phase 6: การทดสอบอัตโนมัติ (pytest Coverage >= 90%), CI/CD Workflow & GitHub Pages Deployment**
 
@@ -48,15 +48,15 @@
 
 ---
 
-## ⏳ Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script (Backend Template)
-- [ ] **Task 4.1:** สร้างไฟล์โค้ดต้นแบบ **`backend/Code.gs`** รวบรวมฟังก์ชัน Google Apps Script ทั้งหมดตามที่ระบุใน [docs/API_SPEC.md](docs/API_SPEC.md) เพื่อให้สามารถคัดลอกไปวางใน Google Sheets Script Editor แล้วกด Deploy ใช้งานได้ทันทีใน 1 นาที
-- [ ] **Task 4.2:** ติดตั้งระบบ **`LockService.getScriptLock()`** ใน `Code.gs` เพื่อป้องกัน Concurrency Race Condition เมื่อมีคนกดเบิกพร้อมกันในเสี้ยววินาที
-- [ ] **Task 4.3:** จัดเตรียมโครงสร้าง Google Sheets ฐานข้อมูลหลัก (ชื่อ `SDU_Inventory_Database`):
-  - แผ่นงาน `Items`: คลังพัสดุ 58 รายการ พร้อมข้อมูลแปลงหน่วยนับ
+## ✅ Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script (Completed)
+- [x] **Task 4.1:** สร้างไฟล์โค้ดต้นแบบ **`backend/Code.gs`** รวบรวมฟังก์ชัน Google Apps Script ทั้งหมดตามที่ระบุใน [docs/API_SPEC.md](docs/API_SPEC.md) เพื่อให้สามารถคัดลอกไปวางใน Google Sheets Script Editor แล้วกด Deploy ใช้งานได้ทันทีใน 1 นาที (Completed)
+- [x] **Task 4.2:** ติดตั้งระบบ **`LockService.getScriptLock()`** ใน `Code.gs` เพื่อป้องกัน Concurrency Race Condition เมื่อมีคนกดเบิกพร้อมกันในเสี้ยววินาที (Completed)
+- [x] **Task 4.3:** จัดเตรียมโครงสร้าง Google Sheets ฐานข้อมูลหลัก (ชื่อ `SDU_Inventory_Database`): (Completed)
+  - แผ่นงาน `Items`: คลังพัสดุพร้อมข้อมูลแปลงหน่วยนับ (ดึงผ่าน API สำเร็จ 34 รายการ)
   - แผ่นงาน `Requisitions`: ประวัติและคิวคำขอเบิกพัสดุ
   - แผ่นงาน `Requisition_Items`: รายการพัสดุในแต่ละคำขอ
-  - แผ่นงาน `Departments`: ฐานข้อมูล 90+ หน่วยงาน
-- [ ] **Task 4.4:** Deploy Google Apps Script เป็น **Web App** (Execute as: *Me*, Access: *Anyone*) พร้อมบันทึก Web App URL ลงใน `.env`
+  - แผ่นงาน `Departments`: ฐานข้อมูล 88+ หน่วยงาน
+- [x] **Task 4.4:** Deploy Google Apps Script เป็น **Web App** (Execute as: *Me*, Access: *Anyone*) พร้อมบันทึก Web App URL ลงใน `.env` และ `.env.example` (Completed)
 
 ---
 
