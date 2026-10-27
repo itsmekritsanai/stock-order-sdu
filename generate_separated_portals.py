@@ -1,5 +1,7 @@
 import json
 
+SYSTEM_VERSION = "1.3.0"
+
 # Read department options and structure
 with open('departments_structured.json', 'r', encoding='utf-8') as f:
     depts_data = json.load(f)
@@ -1074,12 +1076,13 @@ requester_html = f'''<!DOCTYPE html>
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v{SYSTEM_VERSION}) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
+    const APP_VERSION = '{SYSTEM_VERSION}';
     const departmentsData = {dept_json_str};
 
     const vIcons = {{
@@ -2312,8 +2315,16 @@ staff_html = f'''<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Footer -->
+  <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
+    <div>
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v{SYSTEM_VERSION}) | ใช้งานเฉพาะภายในสถาบัน
+    </div>
+  </footer>
+
   <!-- Scripts -->
   <script>
+    const APP_VERSION = '{SYSTEM_VERSION}';
     const vIcons = {{
       box: `{svg_icons['box']}`,
       cart: `{svg_icons['cart']}`,

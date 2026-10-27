@@ -35,3 +35,9 @@ A standalone institutional web application for Suan Dusit University (SDU) provi
 - Indentation: 2 spaces for HTML/CSS/JS, 4 spaces for Python (PEP 8).
 - Python Testing: `pytest` with code coverage target >= 90%.
 - All JavaScript must parse cleanly without syntax errors in Node.js.
+
+### 5. Strict Versioning & Changelog Protocol
+- Whenever making code changes, bug fixes, or enhancements, increment the system version following Semantic Versioning (`MAJOR.MINOR.PATCH`).
+- Record every change immediately in `CHANGELOG.md` following the Keep a Changelog standard (Added, Changed, Deprecated, Removed, Fixed, Security).
+- Maintain version number synchronization across `CHANGELOG.md`, `generate_separated_portals.py` (`SYSTEM_VERSION`), UI footers, and backend (`CONFIG.VERSION`).
+
