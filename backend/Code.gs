@@ -32,7 +32,7 @@
 // ==============================================================================
 
 const CONFIG = {
-  VERSION: '1.0.0',
+  VERSION: '1.3.0',
   LOCK_TIMEOUT_MS: 30000, // 30 seconds wait timeout for Concurrency Control
   SHEETS: {
     ITEMS: 'Items',

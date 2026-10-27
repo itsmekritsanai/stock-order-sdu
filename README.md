@@ -1,12 +1,14 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
+[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![CSS3](https://img.shields.io/badge/CSS3-Vanilla-1572B6?style=flat&logo=css3&logoColor=white)](https://www.w3.org/Style/CSS/)
 [![SweetAlert2](https://img.shields.io/badge/SweetAlert2-v11-b02a37?style=flat)](https://sweetalert2.github.io/)
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
+
 
 เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย พร้อมระบบลงนามรับของดิจิทัล (E-Signature) พิมพ์ใบเบิกทางการ (Official PDF) และระบบป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
 
@@ -179,6 +181,7 @@ stock-order-sdu/
 
 * 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[.github/copilot-instructions.md](.github/copilot-instructions.md)**
 * 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
+* 📝 **[บันทึกประวัติการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
 * **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
 * 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล (docs/SCHEMA.md)](docs/SCHEMA.md)**
 * 🔌 **[โครงสร้าง API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
