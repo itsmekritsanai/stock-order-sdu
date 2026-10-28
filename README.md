@@ -1,7 +1,7 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
-[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue.svg)](CHANGELOG.md)
+[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue.svg)](docs/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
@@ -18,19 +18,19 @@
 > ### 🚨 เอกสารบังคับที่ต้องอ่านก่อนเริ่มเขียนโค้ด "ทุกครั้ง" (Strict Mandatory Reading - Read Before Every Session)
 > **ข้อกำหนดเด็ดขาด:** นักพัฒนาและ AI Assistant **"ต้องอ่านและทำความเข้าใจเอกสารเหล่านี้ก่อนเริ่มลงมือเขียนหรือแก้ไขโค้ดทุกครั้งโดยไม่มีข้อยกเว้น"** เพื่อป้องกันความผิดพลาดและรักษามาตรฐานความปลอดภัย สถาปัตยกรรม และ Design System ของระบบ:
 >
-> 1. 🌐 **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) (สำคัญที่สุด - ต้องอ่านอันดับแรก):**
+> 1. 🌐 **[docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) (สำคัญที่สุด - ต้องอ่านอันดับแรก):**
 >    * **Single Source of Truth (SSOT):** โค้ดของ `index.html` และ `staff.html` สร้างและควบคุมผ่าน [generate_separated_portals.py](generate_separated_portals.py)
 >    * **Zero-Build Runtime:** โค้ดทั้งหมดต้องเป็น Pure Semantic HTML5, Vanilla CSS3 และ Modern JavaScript (ES6+) รันแบบ Static ได้ทันทีโดยไม่ต้องผ่าน Build Tool / Node.js
 >    * **Design System & CSS Tokens:** อ้างอิงตัวแปร CSS ของระบบเท่านั้น (`var(--primary)`, `var(--accent)`, `var(--neutral-*)`)
 >    * **Strict No-Emoji Policy:** ห้ามใช้อีโมจิรูปภาพใน UI ทุกหน้า ให้ใช้ SVG Vector Icons (viewBox 24x24) จากชุดที่กำหนดไว้เท่านั้น
 >    * **Zero-Trust Portal Isolation:** แยกสิทธิ์เด็ดขาด ห้ามใส่ลิงก์เชื่อมต่อไปยัง `staff.html` จากหน้าผู้ขอเบิก
-> 2. 📄 **[system_requirements_specification.md](system_requirements_specification.md) (ข้อกำหนดเชิงระบบ SRS v1.1):**
+> 2. 📄 **[docs/system_requirements_specification.md](docs/system_requirements_specification.md) (ข้อกำหนดเชิงระบบ SRS v1.1):**
 >    * เข้าใจ Business Logic กระบวนการขอเบิก (Requisition Workflow), การตัดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการแปลงหน่วยนับ (Multi-Unit Ratio)
 > 3. 🗄️ **[docs/SCHEMA.md](docs/SCHEMA.md) & 🔌 [docs/API_SPEC.md](docs/API_SPEC.md):**
 >    * รายละเอียดโครงสร้างข้อมูลใน `localStorage` (`inventory_items`, `inventory_requisitions`) และข้อกำหนด API สำหรับเชื่อมต่อ Google Apps Script Web App
 > 4. 🤖 **[.github/copilot-instructions.md](.github/copilot-instructions.md) / [.cursorrules](.cursorrules):**
 >    * กฎเหล็กและข้อกำหนดสไตล์การเขียนโค้ดสำหรับ AI Coding Assistant
-> 5. 📋 **[TASKS.md](TASKS.md):**
+> 5. 📋 **[docs/TASKS.md](docs/TASKS.md):**
 >    * ตรวจสอบ Roadmap สถานะงานปัจจุบันและงานในเฟสถัดไปเพื่อป้องกันการทำงานซ้ำซ้อน
 
 ---
@@ -144,7 +144,11 @@ stock-order-sdu/
 ├── .github/                             # การกำหนดค่า GitHub และ AI Assistant
 │   └── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
 │
-├── docs/                                # เอกสารข้อมูลเชิงเทคนิค (Technical Specifications)
+├── docs/                                # โฟลเดอร์รวมเอกสารข้อมูลและคู่มือระบบ (.md)
+│   ├── PROJECT_CONTEXT.md               # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
+│   ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
+│   ├── TASKS.md                         # รายการขั้นตอนงานและแผนพัฒนา (Roadmap)
+│   ├── CHANGELOG.md                     # บันทึกประวัติการเปลี่ยนแปลงตามเวอร์ชัน
 │   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล Entity-Relationship & Data Types
 │   └── API_SPEC.md                      # โครงสร้าง API Endpoints (Request/Response Specs)
 │
@@ -162,7 +166,6 @@ stock-order-sdu/
 ├── departments_structured.json          # ฐานข้อมูลรายชื่อคณะ/สำนัก/สถาบัน/โรงเรียน 90+ หน่วยงาน
 ├── คณะและหน่วยงาน.txt                     # ข้อมูลดิบรายชื่อหน่วยงาน มหาวิทยาลัยสวนดุสิต
 ├── ยอดสต๊อก ตค.xlsx                       # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel
-├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
 └── generate_separated_portals.py        # สคริปต์ Python สำหรับสร้างและคอมไพล์โค้ด HTML ทั้งสองพอร์ทัล
 ```
 
@@ -195,20 +198,20 @@ stock-order-sdu/
 * **ปัจจุบัน (Local Mode):** ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event):
   * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
   * **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
-* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [TASKS.md](TASKS.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
+* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [docs/TASKS.md](docs/TASKS.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
 
 ---
 
 ## แผนการพัฒนาและเอกสารสำคัญ (Roadmap & Documentation)
 
 * 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[.github/copilot-instructions.md](.github/copilot-instructions.md)**
-* 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
-* 📝 **[บันทึกประวัติการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
-* **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
+* 🌐 **[ภาพรวมบริบทโครงการ (docs/PROJECT_CONTEXT.md)](docs/PROJECT_CONTEXT.md)**
+* 📝 **[บันทึกประวัติการเปลี่ยนแปลง (docs/CHANGELOG.md)](docs/CHANGELOG.md)**
+* 📋 **[รายการขั้นตอนงานและแผนพัฒนา (docs/TASKS.md)](docs/TASKS.md)**
 * 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล (docs/SCHEMA.md)](docs/SCHEMA.md)**
 * 🔌 **[โครงสร้าง API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
 * ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
-* 📄 **[System Requirements Specification (SRS v1.1)](system_requirements_specification.md)**
+* 📄 **[System Requirements Specification (docs/SRS v1.1)](docs/system_requirements_specification.md)**
 
 ---
 

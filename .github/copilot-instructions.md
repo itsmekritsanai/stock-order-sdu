@@ -38,6 +38,6 @@ A standalone institutional web application for Suan Dusit University (SDU) provi
 
 ### 5. Strict Versioning & Changelog Protocol
 - Whenever making code changes, bug fixes, or enhancements, increment the system version following Semantic Versioning (`MAJOR.MINOR.PATCH`).
-- Record every change immediately in `CHANGELOG.md` following the Keep a Changelog standard (Added, Changed, Deprecated, Removed, Fixed, Security).
-- Maintain version number synchronization across `CHANGELOG.md`, `generate_separated_portals.py` (`SYSTEM_VERSION`), UI footers, and backend (`CONFIG.VERSION`).
+- Record every change immediately in `docs/CHANGELOG.md` following the Keep a Changelog standard (Added, Changed, Deprecated, Removed, Fixed, Security).
+- Maintain version number synchronization across `docs/CHANGELOG.md`, `generate_separated_portals.py` (`SYSTEM_VERSION`), UI footers, and backend (`CONFIG.VERSION`).
 
