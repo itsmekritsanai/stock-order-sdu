@@ -125,14 +125,18 @@ stateDiagram-v2
    $$\text{Available Pieces} = \text{On-Hand Pieces} - \text{Reserved Pieces}$$
 2. **ตรรกะ 2 หน่วยนับ (Multi-Unit Ratio Calculation):**
    $$\text{Total Requested Pieces} = (\text{Requested Boxes} \times \text{Pieces Per Box}) + \text{Requested Pieces}$$
-3. **ขั้นตอนการตัดสต๊อก (Inventory Lifecycle):**
-   * **เมื่อผู้เบิกส่งคำขอ (`PENDING`):** ตรวจสอบว่า `Total Requested <= Available` หากผ่าน จะสร้างเลขที่คำขอ `REQ-YYYYMM-XXXX` (ยังไม่มีการตัดสต๊อก)
+3. **ขั้นตอนการตัดสต๊อกและวงจรชีวิตเอกสาร (Inventory Lifecycle):**
+   * **เมื่อผู้เบิกส่งคำขอ (`PENDING`):** ตรวจสอบว่า $\text{Total Requested} \le \text{Available}$ หากผ่าน จะสร้างเลขที่คำขอ `REQ-YYYYMM-XXXX` (ยังไม่มีการตัดสต๊อก)
    * **เมื่อเจ้าหน้าที่อนุมัติ (`APPROVED`):** เพิ่มยอด `reserved_pieces += approved_pieces` เพื่อล็อกยอดไว้ไม่ให้ผู้อื่นเบิกซ้ำ
-   * **เมื่อลงนามรับมอบสำเร็จ (`COMPLETED`):**
+   * **เมื่อลงนามรับมอบและกดยืนยันจ่ายของ (`COMPLETED`):**
      * ลดสต๊อกจริง: `on_hand_pieces -= approved_pieces`
      * คืนยอดกันจอง: `reserved_pieces -= approved_pieces`
      * แนบภาพลายเซ็น Base64 เข้ากับเอกสารคำขอ
+     * **บันทึกวันที่และเวลายืนยันจ่ายของจริง (`disbursed_at = CURRENT_TIMESTAMP`)** เพื่อใช้แสดงผลในประวัติและเอกสารทางการ
    * **กรณีปฏิเสธคำขอ (`REJECTED`):** หากคำขอนั้นเคยถูกกันยอดไว้ จะคืนยอด `reserved_pieces` กลับสู่สต๊อก
+4. **กฎเหล็กการป้องกันเมื่อของหมด (Out-of-Stock Guard & Rules):**
+   * **บล็อกการขอเบิกเมื่อสินค้าหมด:** หากรายการใดมี $\text{Available Pieces} \le 0$ ระบบจะต้อง **Disable ปุ่มขอเบิกทันที** เปลี่ยนป้ายกำกับเป็น *"สินค้าหมด"* ปิดช่องกรอกจำนวน และห้ามหยิบใส่ตะกร้าโดยเด็ดขาด พร้อมการตรวจสอบซ้ำ (Validation) ระดับ Backend API
+   * **แจ้งกำหนดการพัสดุเข้าเมื่อของหมด (Expected Restock Arrival):** เจ้าหน้าที่สามารถระบุ `expected_restock_date` สำหรับพัสดุที่หมดหรือใกล้หมด ระบบจะแสดงป้ายแจ้งเตือนระบุวันที่คาดว่าของจะเข้าบนการ์ดพัสดุในหน้าผู้ขอเบิก เช่น *"สินค้าหมด (คาดว่าของจะเข้า: 15 พ.ย. 2569)"* เพื่อความโปร่งใสและวางแผนงานล่วงหน้าได้
 
 ---
 

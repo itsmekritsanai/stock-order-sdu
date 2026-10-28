@@ -20,7 +20,11 @@
 ## [Unreleased]
 
 ### Planned (Phase 5 - 6)
-- **Phase 5:** พัฒนา Backend REST API Service (Node.js / Express หรือ Python FastAPI) เชื่อมต่อฐานข้อมูล PostgreSQL พร้อมระบบจัดการ Concurrency ผ่าน Transaction Row-Level Locking (`SELECT FOR UPDATE`)
+- **Phase 5:** พัฒนา Backend REST API Service เชื่อมต่อฐานข้อมูล PostgreSQL บน Docker:
+  - **Out-of-Stock Guard:** ล็อกปุ่มและป้องกันการขอเบิกเมื่อสินค้าหมดสต๊อก ($\text{Available} \le 0$) ทั้งฝั่ง Frontend และ Backend Validation
+  - **Estimated Restock Date:** ฟิลด์ `expected_restock_date` สำหรับแจ้งอาจารย์/ผู้ขอเบิกว่าของล็อตใหม่จะเข้าวันไหนเมื่อสินค้าหมด
+  - **Disbursement Confirmation Timestamp:** บันทึกวันและเวลาที่กดยืนยันจ่ายของจริง (`disbursed_at`) ในสถานะ `COMPLETED` พร้อมแสดงในประวัติและเอกสารทางการ
+  - **Concurrency Control:** จัดการธุรกรรมตัดสต๊อกด้วย Row-Level Locking (`SELECT FOR UPDATE`)
 - **Phase 6:** ชุดทดสอบอัตโนมัติ (Automated Testing) ครอบคลุมคำนวณสต๊อกและแปลงหน่วย (Coverage >= 90%), CI/CD Workflow (`.github/workflows/ci.yml`) และ Docker Deployment
 
 ---

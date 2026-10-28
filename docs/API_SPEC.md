@@ -61,6 +61,7 @@
       "reserved_pieces": 500,
       "available_pieces": 1250,
       "min_alert": 500,
+      "expected_restock_date": "2026-11-15",
       "image_piece": "assets/images/image1.jpeg",
       "image_box": "assets/images/image10.jpeg"
     }
@@ -90,7 +91,8 @@
     "dept": "โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ",
     "phone": "081-998-7766",
     "purpose": "ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ภาคเรียน 1/2569",
-    "status": "APPROVED",
+    "status": "COMPLETED",
+    "disbursed_at": "2026-10-22T14:30:00Z",
     "items": [
       {
         "itemId": 1,
@@ -172,6 +174,21 @@
 }
 ```
 
+* **Response Error (พัสดุหมดสต๊อก / Out of Stock Guard):**
+```json
+{
+  "status": "error",
+  "code": "OUT_OF_STOCK",
+  "message": "ไม่สามารถสร้างคำขอได้ เนื่องจากพัสดุบางรายการหมดสต๊อก (Available <= 0)",
+  "details": {
+    "itemId": 1,
+    "name": "ซองขยายข้างมีครุฑ 279´432",
+    "available": 0,
+    "expected_restock_date": "2026-11-15"
+  }
+}
+```
+
 ---
 
 ### 3.4 `POST /exec` — อนุมัติคำขอ (`approveRequisition`)
@@ -206,7 +223,7 @@
 ---
 
 ### 3.5 `POST /exec` — บันทึกรับของสำเร็จและตัดสต๊อกจริง (`completeRequisition`)
-ผู้ขอเบิกเดินทางมารับของและเซ็นชื่อผ่านแท่นดิจิทัล ระบบจะตัดยอด `on_hand_pieces` และคืน `reserved_pieces`
+ผู้ขอเบิกเดินทางมารับของและเซ็นชื่อผ่านแท่นดิจิทัล ระบบจะบันทึกวัน-เวลาที่จ่ายของจริง (`disbursed_at = CURRENT_TIMESTAMP`), ลดสต๊อกจริง `on_hand_pieces` และคืนยอดจอง `reserved_pieces`
 
 * **Request Body:**
 ```json
@@ -225,7 +242,8 @@
   "status": "success",
   "docNo": "REQ-256910-4491",
   "statusNow": "COMPLETED",
-  "message": "บันทึกลายเซ็นและตัดยอดคงคลังจริงเรียบร้อยแล้ว"
+  "disbursedAt": "2026-10-22T14:30:00Z",
+  "message": "บันทึกลายเซ็น ประทับเวลายืนยันจ่ายของ และตัดยอดคงคลังจริงเรียบร้อยแล้ว"
 }
 ```
 
@@ -252,5 +270,58 @@
   "docNo": "REQ-256910-4491",
   "statusNow": "REJECTED",
   "message": "ปฏิเสธคำขอและคืนยอดพัสดุเรียบร้อยแล้ว"
+}
+```
+
+---
+
+### 3.7 `POST /exec` — รับพัสดุเข้าคลัง (`restockItem`)
+เจ้าหน้าที่นำพัสดุเข้าคลังเพื่อเพิ่มสต๊อก `on_hand_pieces`
+
+* **Request Body:**
+```json
+{
+  "action": "restockItem",
+  "payload": {
+    "itemId": 1,
+    "addBoxes": 10,
+    "addPieces": 0
+  }
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "itemId": 1,
+  "newOnHandPieces": 4250,
+  "message": "รับพัสดุเข้าคลังสำเร็จ"
+}
+```
+
+---
+
+### 3.8 `POST /exec` — กำหนดวันที่พัสดุเข้าเมื่อของหมด (`updateRestockDate`)
+เจ้าหน้าที่ระบุหรืออัปเดตวันที่คาดว่าพัสดุจะมาส่งเข้าคลังเมื่อของหมด
+
+* **Request Body:**
+```json
+{
+  "action": "updateRestockDate",
+  "payload": {
+    "itemId": 1,
+    "expectedRestockDate": "2026-11-15"
+  }
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "itemId": 1,
+  "expectedRestockDate": "2026-11-15",
+  "message": "บันทึกวันที่คาดว่าพัสดุจะเข้าสำเร็จ"
 }
 ```
