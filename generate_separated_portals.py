@@ -518,6 +518,9 @@ requester_html = f'''<!DOCTYPE html>
     }}
   </script>
   
+  <!-- SDU Stylesheet -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+
   <style>
 {common_css}
 
@@ -666,98 +669,368 @@ requester_html = f'''<!DOCTYPE html>
     .timeline-title {{ font-size: 0.9rem; font-weight: 600; color: var(--neutral-800); }}
     .timeline-desc {{ font-size: 0.8rem; color: var(--neutral-600); }}
 
-    /* My Requisitions Modal & Card Styles */
+    /* ==========================================================================
+       My Requisitions Modal & Modern Card CSS Styles
+       ========================================================================== */
     .req-modal-card {{
-      max-width: 840px !important;
+      max-width: 860px !important;
       max-height: 90vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
       display: flex;
       flex-direction: column;
+      border: 1px solid var(--neutral-200);
+      background: #f8fafc;
     }}
-    .req-filter-tabs {{
+    .req-modal-header {{
+      background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+      color: white;
+      padding: 1.1rem 1.5rem;
       display: flex;
-      gap: 0.5rem;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    }}
+    .req-modal-title {{
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: white;
+      margin: 0;
+    }}
+    .req-modal-counter {{
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.2);
+      color: #eff6ff;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      letter-spacing: 0.2px;
+    }}
+    .req-modal-close-btn {{
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }}
+    .req-modal-close-btn:hover {{
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg);
+    }}
+
+    /* Filter Bar & Quick Switch */
+    .req-toolbar {{
+      display: flex;
+      gap: 0.75rem;
       flex-wrap: wrap;
+      align-items: center;
       margin-bottom: 1rem;
     }}
+    .req-search-wrapper {{
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }}
+    .req-search-icon {{
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--neutral-400);
+      display: flex;
+      pointer-events: none;
+    }}
+    .req-search-field {{
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.4rem;
+      border: 1px solid var(--neutral-300);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      background: white;
+      transition: all 0.2s;
+      outline: none;
+    }}
+    .req-search-field:focus {{
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+    }}
+    .req-user-filter-toggle {{
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.825rem;
+      font-weight: 500;
+      color: var(--neutral-700);
+      background: white;
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--neutral-300);
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }}
+    .req-user-filter-toggle:hover {{
+      border-color: var(--primary-border);
+      background: var(--primary-light);
+    }}
+    .req-user-filter-toggle input[type="checkbox"] {{
+      cursor: pointer;
+      accent-color: var(--primary);
+    }}
+
+    /* Filter Tabs */
+    .req-filter-tabs {{
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.15rem;
+    }}
     .req-tab-btn {{
-      padding: 0.45rem 0.95rem;
+      padding: 0.4rem 0.85rem;
       border-radius: 999px;
       border: 1px solid var(--neutral-300);
       background: white;
       font-family: inherit;
-      font-size: 0.825rem;
+      font-size: 0.8rem;
       font-weight: 500;
-      color: var(--neutral-700);
+      color: var(--neutral-600);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      gap: 0.35rem;
       transition: all 0.2s;
     }}
     .req-tab-btn:hover {{
       background: var(--neutral-100);
+      color: var(--neutral-800);
       border-color: var(--neutral-400);
     }}
     .req-tab-btn.active {{
       background: var(--primary);
       color: white;
       border-color: var(--primary);
-      box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25);
+      box-shadow: 0 2px 5px rgba(30, 64, 175, 0.28);
     }}
+
+    /* Requisition Card Item */
     .req-card-item {{
       background: white;
       border: 1px solid var(--neutral-200);
       border-radius: 12px;
-      padding: 1.25rem;
+      padding: 1.15rem 1.25rem;
       margin-bottom: 1rem;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s;
-      border-left: 4px solid var(--primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: all 0.2s ease-in-out;
+      border-left: 5px solid var(--primary);
+      position: relative;
     }}
     .req-card-item:hover {{
       border-color: var(--primary-border);
-      box-shadow: var(--shadow-md);
-      transform: translateY(-1px);
+      box-shadow: 0 6px 14px -2px rgba(0, 0, 0, 0.08);
+      transform: translateY(-2px);
     }}
     .req-card-item.status-border-pending {{ border-left-color: #d97706; }}
     .req-card-item.status-border-approved {{ border-left-color: #2563eb; }}
     .req-card-item.status-border-completed {{ border-left-color: #059669; }}
     .req-card-item.status-border-rejected {{ border-left-color: #dc2626; }}
 
+    .req-card-topbar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      margin-bottom: 0.85rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid var(--neutral-100);
+    }}
+    .req-doc-id-pill {{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }}
+    .btn-copy-doc {{
+      padding: 2px 8px;
+      font-size: 0.725rem;
+      border-radius: 5px;
+      border: 1px solid var(--neutral-300);
+      background: white;
+      color: var(--neutral-600);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }}
+    .btn-copy-doc:hover {{
+      background: var(--neutral-100);
+      color: var(--neutral-900);
+    }}
+
+    /* Status Pills */
     .req-status-pill {{
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.775rem;
+      gap: 5px;
+      font-size: 0.75rem;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 999px;
     }}
-    .pill-pending {{ background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }}
-    .pill-approved {{ background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }}
-    .pill-completed {{ background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }}
-    .pill-rejected {{ background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }}
+    .pill-pending {{ background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }}
+    .pill-approved {{ background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }}
+    .pill-completed {{ background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }}
+    .pill-rejected {{ background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }}
 
+    .req-time-stamp {{
+      font-size: 0.8rem;
+      color: var(--neutral-400);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }}
+
+    /* Meta Info Grid */
+    .req-meta-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.65rem;
+      font-size: 0.825rem;
+      color: var(--neutral-700);
+      margin-bottom: 0.85rem;
+      background: #f8fafc;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--neutral-200);
+    }}
+    .req-meta-item-label {{
+      font-size: 0.75rem;
+      color: var(--neutral-400);
+      display: block;
+      margin-bottom: 2px;
+    }}
+    .req-meta-item strong {{
+      color: var(--neutral-900);
+    }}
+    .req-meta-purpose-box {{
+      grid-column: 1 / -1;
+      padding-top: 4px;
+      border-top: 1px dashed var(--neutral-200);
+      margin-top: 2px;
+    }}
+
+    /* Items Table */
     .req-item-mini-table {{
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       margin-top: 0.75rem;
-      font-size: 0.85rem;
-      background: var(--neutral-50);
+      font-size: 0.825rem;
+      border: 1px solid var(--neutral-200);
       border-radius: 8px;
       overflow: hidden;
+      background: white;
     }}
     .req-item-mini-table th {{
       background: #f1f5f9;
       color: var(--neutral-700);
       font-weight: 600;
       text-align: left;
-      padding: 6px 12px;
-      font-size: 0.8rem;
+      padding: 7px 12px;
+      font-size: 0.775rem;
+      border-bottom: 1px solid var(--neutral-200);
     }}
     .req-item-mini-table td {{
-      padding: 7px 12px;
-      border-top: 1px solid var(--neutral-200);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--neutral-100);
+      color: var(--neutral-800);
+      vertical-align: middle;
+    }}
+    .req-item-mini-table tr:last-child td {{
+      border-bottom: none;
+    }}
+    .req-item-name {{
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }}
+    .req-item-dot {{
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+    }}
+    .req-qty-badge-requested {{
+      display: inline-block;
+      font-weight: 600;
+      color: #1e3a8a;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+    }}
+    .req-badge-pending-status {{
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: #92400e;
+      background: #fef3c7;
+      padding: 2px 7px;
+      border-radius: 5px;
+      border: 1px solid #fde68a;
+    }}
+    .req-badge-approved-status {{
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #065f46;
+      background: #ecfdf5;
+      padding: 2px 8px;
+      border-radius: 5px;
+      border: 1px solid #a7f3d0;
+    }}
+
+    .req-card-actions {{
+      margin-top: 0.85rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }}
+    .req-btn-action {{
+      font-size: 0.785rem;
+      padding: 0.35rem 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }}
       color: var(--neutral-800);
     }}
 
@@ -911,25 +1184,29 @@ requester_html = f'''<!DOCTYPE html>
   <!-- My Requisitions Modal -->
   <div class="modal-overlay" id="myRequisitionsModal">
     <div class="modal-card req-modal-card">
-      <div class="modal-header">
-        <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+      <div class="req-modal-header">
+        <h3 class="req-modal-title">
           {svg_icons['clipboard']} รายการคำขอเบิกพัสดุของฉัน
-          <span id="myReqsModalCount" style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-600);">(0 รายการ)</span>
+          <span id="myReqsModalCount" class="req-modal-counter">(0 รายการ)</span>
         </h3>
-        <button class="close-btn" onclick="closeMyRequisitionsModal()">{svg_icons['x']}</button>
+        <button class="req-modal-close-btn" onclick="closeMyRequisitionsModal()">{svg_icons['x']}</button>
       </div>
 
       <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; max-height: calc(88vh - 130px);">
         <!-- Search and Filter Bar -->
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
-          <div style="flex: 1; min-width: 260px; position: relative;">
-            <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--neutral-400); display: flex;">
+        <div class="req-toolbar">
+          <div class="req-search-wrapper">
+            <span class="req-search-icon">
               {svg_icons['search']}
             </span>
-            <input type="text" id="myReqsSearchInput" class="form-control" style="padding-left: 2.3rem;"
+            <input type="text" id="myReqsSearchInput" class="req-search-field"
                    placeholder="ค้นหาเลขที่คำขอ, ชื่อผู้ขอ, หน่วยงาน, หรือชื่อพัสดุ..." 
                    oninput="handleMyReqsSearch()">
           </div>
+          <label class="req-user-filter-toggle" id="onlyMyReqsLabel" title="กรองเฉพาะคำขอที่เป็นชื่อของผู้ขอเบิก">
+            <input type="checkbox" id="onlyMyReqsCheckbox" onchange="handleMyReqsSearch()">
+            <span>เฉพาะคำขอของฉัน</span>
+          </label>
         </div>
 
         <div class="req-filter-tabs">
@@ -1579,6 +1856,19 @@ requester_html = f'''<!DOCTYPE html>
     function openMyRequisitionsModal() {{
       const modal = document.getElementById('myRequisitionsModal');
       modal.classList.add('open');
+      const reqNameInput = (document.getElementById('requesterName')?.value || '').trim();
+      const onlyCheckbox = document.getElementById('onlyMyReqsCheckbox');
+      const onlyLabel = document.getElementById('onlyMyReqsLabel');
+      if (onlyLabel) {{
+        if (reqNameInput) {{
+          onlyLabel.title = `กรองเฉพาะคำขอของ "${reqNameInput}"`;
+          if (onlyCheckbox && !onlyCheckbox.dataset.userToggled) {{
+            onlyCheckbox.checked = true;
+          }}
+        }} else {{
+          onlyLabel.title = `ระบุชื่อในฟอร์มผู้ขอเพื่อกรองเฉพาะของคุณ`;
+        }}
+      }}
       renderMyRequisitionsModal();
     }}
 
@@ -1595,6 +1885,8 @@ requester_html = f'''<!DOCTYPE html>
     }}
 
     function handleMyReqsSearch() {{
+      const onlyCheckbox = document.getElementById('onlyMyReqsCheckbox');
+      if (onlyCheckbox) onlyCheckbox.dataset.userToggled = "true";
       renderMyRequisitionsModal();
     }}
 
@@ -1602,7 +1894,16 @@ requester_html = f'''<!DOCTYPE html>
       const reqs = getReqsDB();
       const badge = document.getElementById('myReqsBadge');
       if (badge) {{
-        badge.innerText = reqs.length;
+        const reqName = (document.getElementById('requesterName')?.value || '').trim().toLowerCase();
+        let totalCount = reqs.length;
+        if (reqName) {{
+          const myCount = reqs.filter(r => (r.requester || '').toLowerCase().includes(reqName)).length;
+          badge.innerText = myCount > 0 ? myCount : totalCount;
+          badge.title = myCount > 0 ? `คำขอของคุณ ${myCount} รายการ (จากทั้งหมดในระบบ ${totalCount} รายการ)` : `คำขอทั้งหมด ${totalCount} รายการ`;
+        }} else {{
+          badge.innerText = totalCount;
+          badge.title = `คำขอทั้งหมด ${totalCount} รายการ`;
+        }}
       }}
     }}
 
@@ -1643,11 +1944,17 @@ requester_html = f'''<!DOCTYPE html>
       const listEl = document.getElementById('myRequisitionsList');
       const countEl = document.getElementById('myReqsModalCount');
       const searchVal = (document.getElementById('myReqsSearchInput')?.value || '').trim().toLowerCase();
+      const onlyMyReqs = document.getElementById('onlyMyReqsCheckbox')?.checked;
+      const currentRequester = (document.getElementById('requesterName')?.value || '').trim().toLowerCase();
       
       const reqs = getReqsDB();
 
       let filtered = reqs.filter(r => {{
         if (myReqsFilterStatus !== 'ALL' && r.status !== myReqsFilterStatus) return false;
+        if (onlyMyReqs && currentRequester) {{
+          const isMyReq = (r.requester || '').toLowerCase().includes(currentRequester);
+          if (!isMyReq) return false;
+        }}
         if (searchVal) {{
           const matchId = (r.id || '').toLowerCase().includes(searchVal);
           const matchName = (r.requester || '').toLowerCase().includes(searchVal);
@@ -1660,7 +1967,8 @@ requester_html = f'''<!DOCTYPE html>
       }});
 
       if (countEl) {{
-        countEl.innerText = `(พบ ${{filtered.length}} จาก ${{reqs.length}} รายการ)`;
+        const myFilterText = (onlyMyReqs && currentRequester) ? ' (เฉพาะของคุณ)' : '';
+        countEl.innerText = `(พบ ${{filtered.length}} จาก ${{reqs.length}} รายการ${{myFilterText}})`;
       }}
 
       if (filtered.length === 0) {{
@@ -1672,10 +1980,10 @@ requester_html = f'''<!DOCTYPE html>
             <h4 style="font-size: 1.05rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.25rem;">
               ไม่พบรายการคำขอเบิกพัสดุ
             </h4>
-            <p style="font-size: 0.85rem; color: var(--neutral-400); max-width: 360px; margin: 0 auto 1.25rem auto;">
-              ${{searchVal || myReqsFilterStatus !== 'ALL' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}}
+            <p style="font-size: 0.85rem; color: var(--neutral-400); max-width: 380px; margin: 0 auto 1.25rem auto;">
+              ${{searchVal || myReqsFilterStatus !== 'ALL' || (onlyMyReqs && currentRequester) ? 'ลองเปลี่ยนคำค้นหา หรือปลดติ๊ก "เฉพาะคำขอของฉัน"' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}}
             </p>
-            ${{!searchVal && myReqsFilterStatus === 'ALL' ? `
+            ${{!searchVal && myReqsFilterStatus === 'ALL' && !onlyMyReqs ? `
               <button class="btn btn-primary" onclick="closeMyRequisitionsModal()">
                 ${{vIcons.cart}} ไปที่แคตตาล็อกเลือกเบิกพัสดุ
               </button>
@@ -1707,13 +2015,31 @@ requester_html = f'''<!DOCTYPE html>
           let reqQty = it.qtyBoxes > 0 && it.qtyPieces > 0 ?
             it.qtyBoxes + ' ' + it.unitBox + ' + ' + it.qtyPieces + ' ' + it.unitPiece :
             (it.qtyBoxes > 0 ? it.qtyBoxes + ' ' + it.unitBox : it.qtyPieces + ' ' + it.unitPiece);
-          let appQty = it.approvedPieces !== undefined ? it.approvedPieces.toLocaleString() + ' ' + it.unitPiece : '-';
-          let appColor = (req.status === 'APPROVED' || req.status === 'COMPLETED') ? 'var(--accent)' : 'var(--neutral-600)';
+          
+          let appQtyHtml = '';
+          if (req.status === 'PENDING') {{
+            appQtyHtml = `<span class="req-badge-pending-status">${{vIcons.clock}} รอการพิจารณา</span>`;
+          }} else if (req.status === 'APPROVED' || req.status === 'COMPLETED') {{
+            let appPieces = it.approvedPieces !== undefined ? it.approvedPieces : it.totalPieces;
+            appQtyHtml = `<span class="req-badge-approved-status">${{vIcons.check}} ${{appPieces.toLocaleString()}} ${{it.unitPiece}}</span>`;
+          }} else if (req.status === 'REJECTED') {{
+            appQtyHtml = `<span class="req-status-pill pill-rejected">${{vIcons.x}} ไม่อนุมัติ</span>`;
+          }} else {{
+            appQtyHtml = '-';
+          }}
+
           return `
             <tr>
-              <td>${{it.name}}</td>
-              <td style="text-align: right; font-weight: 500;">${{reqQty}}</td>
-              <td style="text-align: right; font-weight: 600; color: ${{appColor}};">${{appQty}}</td>
+              <td>
+                <div class="req-item-name">
+                  <span class="req-item-dot"></span>
+                  <strong>${{it.name}}</strong>
+                </div>
+              </td>
+              <td style="text-align: right;">
+                <span class="req-qty-badge-requested">${{reqQty}}</span>
+              </td>
+              <td style="text-align: right;">${{appQtyHtml}}</td>
             </tr>
           `;
         }}).join('');
@@ -1722,32 +2048,30 @@ requester_html = f'''<!DOCTYPE html>
 
         return `
           <div class="req-card-item ${{borderClass}}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <div class="req-card-topbar">
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <span style="font-weight: 700; font-size: 1.05rem; color: var(--neutral-900); font-family: monospace; letter-spacing: 0.5px;">
-                  ${{req.id}}
-                </span>
-                <button class="btn btn-outline" style="padding: 2px 7px; font-size: 0.75rem;" onclick="copyDocNumber('${{req.id}}')" title="คัดลอกเลขที่เอกสาร">
+                <span class="req-doc-id-pill">${{req.id}}</span>
+                <button class="btn-copy-doc" onclick="copyDocNumber('${{req.id}}')" title="คัดลอกเลขที่เอกสาร">
                   ${{vIcons.clipboard}} คัดลอก
                 </button>
                 ${{statusBadge}}
               </div>
-              <div style="font-size: 0.8rem; color: var(--neutral-400); display: flex; align-items: center; gap: 4px;">
+              <div class="req-time-stamp">
                 ${{vIcons.clock}} ${{req.date}}
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; font-size: 0.85rem; color: var(--neutral-700); margin-bottom: 0.75rem; background: var(--neutral-50); padding: 0.75rem; border-radius: 8px;">
-              <div>
-                <span style="color: var(--neutral-400); font-size: 0.8rem;">ผู้ขอเบิก:</span><br>
+            <div class="req-meta-grid">
+              <div class="req-meta-item">
+                <span class="req-meta-item-label">ผู้ขอเบิก:</span>
                 <strong>${{req.requester}}</strong>${{phoneText}}
               </div>
-              <div>
-                <span style="color: var(--neutral-400); font-size: 0.8rem;">หน่วยงาน:</span><br>
+              <div class="req-meta-item">
+                <span class="req-meta-item-label">หน่วยงาน:</span>
                 <span>${{req.dept}}</span>
               </div>
-              <div style="grid-column: 1 / -1;">
-                <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
+              <div class="req-meta-purpose-box">
+                <span class="req-meta-item-label">วัตถุประสงค์:</span>
                 <span>${{req.purpose || '-'}}</span>
               </div>
             </div>
@@ -1757,7 +2081,7 @@ requester_html = f'''<!DOCTYPE html>
                 <tr>
                   <th>รายการพัสดุ</th>
                   <th style="width: 140px; text-align: right;">จำนวนที่ขอ</th>
-                  <th style="width: 140px; text-align: right;">อนุมัติจัดจ่าย</th>
+                  <th style="width: 160px; text-align: right;">ผลการจัดจ่าย</th>
                 </tr>
               </thead>
               <tbody>
@@ -1765,12 +2089,12 @@ requester_html = f'''<!DOCTYPE html>
               </tbody>
             </table>
 
-            <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="viewTrackingForDoc('${{req.id}}')">
-                ${{vIcons.search}} ติดตามไทม์ไลน์สถานะ
+            <div class="req-card-actions">
+              <button class="btn btn-outline req-btn-action" onclick="viewTrackingForDoc('${{req.id}}')">
+                ${{vIcons.search}} ติดตามสถานะ
               </button>
-              <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="openRequisitionPdf('${{req.id}}')">
-                ${{vIcons.file_text}} พิมพ์ใบเบิกพัสดุ (PDF)
+              <button class="btn btn-primary req-btn-action" onclick="openRequisitionPdf('${{req.id}}')">
+                ${{vIcons.file_text}} พิมพ์ใบเบิก PDF
               </button>
             </div>
           </div>
@@ -1908,6 +2232,11 @@ requester_html = f'''<!DOCTYPE html>
       getReqsDB();
       renderCatalog();
       updateMyReqsBadge();
+
+      // Dynamically sync requester badge when typing name
+      document.getElementById('requesterName')?.addEventListener('input', () => {{
+        updateMyReqsBadge();
+      }});
     }});
 
     // Real-time synchronization across tabs/windows
@@ -1967,6 +2296,9 @@ staff_html = f'''<!DOCTYPE html>
     }}
   </script>
   
+  <!-- SDU Stylesheet -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+
   <style>
 {common_css}
 
