@@ -1,0 +1,428 @@
+/**
+ * ==============================================================================
+ * Suan Dusit University - Stock Order SDU (Styles CSS)
+ * ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
+ * ==============================================================================
+ */
+
+:root {
+  --primary: #1e40af;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --primary-border: #bfdbfe;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --neutral-50: #f8fafc;
+  --neutral-100: #f1f5f9;
+  --neutral-200: #e2e8f0;
+  --neutral-300: #cbd5e1;
+  --neutral-400: #94a3b8;
+  --neutral-600: #475569;
+  --neutral-700: #334155;
+  --neutral-800: #1e293b;
+  --neutral-900: #0f172a;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius: 10px;
+}
+
+/* ==========================================================================
+   My Requisitions Modal & Modern Card CSS Styles
+   ========================================================================== */
+.req-modal-card {
+  max-width: 860px !important;
+  max-height: 90vh;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--neutral-200);
+  background: #f8fafc;
+}
+
+.req-modal-header {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+  color: white;
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.req-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: white;
+  margin: 0;
+}
+
+.req-modal-counter {
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  color: #eff6ff;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.2px;
+}
+
+.req-modal-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.req-modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+/* Filter Toolbar */
+.req-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.req-search-wrapper {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+}
+
+.req-search-icon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--neutral-400);
+  display: flex;
+  pointer-events: none;
+}
+
+.req-search-field {
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.4rem;
+  border: 1px solid var(--neutral-300);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  background: white;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.req-search-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+}
+
+.req-user-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: var(--neutral-700);
+  background: white;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--neutral-300);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.req-user-filter-toggle:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-light);
+}
+
+.req-user-filter-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+/* Filter Tabs */
+.req-filter-tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.15rem;
+}
+
+.req-tab-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--neutral-300);
+  background: white;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--neutral-600);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+}
+
+.req-tab-btn:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-800);
+  border-color: var(--neutral-400);
+}
+
+.req-tab-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 2px 5px rgba(30, 64, 175, 0.28);
+}
+
+/* Requisition Card Item */
+.req-card-item {
+  background: white;
+  border: 1px solid var(--neutral-200);
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+  border-left: 5px solid var(--primary);
+  position: relative;
+}
+
+.req-card-item:hover {
+  border-color: var(--primary-border);
+  box-shadow: 0 6px 14px -2px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.req-card-item.status-border-pending { border-left-color: #d97706; }
+.req-card-item.status-border-approved { border-left-color: #2563eb; }
+.req-card-item.status-border-completed { border-left-color: #059669; }
+.req-card-item.status-border-rejected { border-left-color: #dc2626; }
+
+.req-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--neutral-100);
+}
+
+.req-doc-id-pill {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.btn-copy-doc {
+  padding: 2px 8px;
+  font-size: 0.725rem;
+  border-radius: 5px;
+  border: 1px solid var(--neutral-300);
+  background: white;
+  color: var(--neutral-600);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.btn-copy-doc:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+}
+
+/* Status Pills */
+.req-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.pill-pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.pill-approved { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.pill-completed { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.pill-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+.req-time-stamp {
+  font-size: 0.8rem;
+  color: var(--neutral-400);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Meta Info Grid */
+.req-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.65rem;
+  font-size: 0.825rem;
+  color: var(--neutral-700);
+  margin-bottom: 0.85rem;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--neutral-200);
+}
+
+.req-meta-item-label {
+  font-size: 0.75rem;
+  color: var(--neutral-400);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.req-meta-item strong {
+  color: var(--neutral-900);
+}
+
+.req-meta-purpose-box {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  border-top: 1px dashed var(--neutral-200);
+  margin-top: 2px;
+}
+
+/* Items Table */
+.req-item-mini-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 0.75rem;
+  font-size: 0.825rem;
+  border: 1px solid var(--neutral-200);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.req-item-mini-table th {
+  background: #f1f5f9;
+  color: var(--neutral-700);
+  font-weight: 600;
+  text-align: left;
+  padding: 7px 12px;
+  font-size: 0.775rem;
+  border-bottom: 1px solid var(--neutral-200);
+}
+
+.req-item-mini-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--neutral-100);
+  color: var(--neutral-800);
+  vertical-align: middle;
+}
+
+.req-item-mini-table tr:last-child td {
+  border-bottom: none;
+}
+
+.req-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.req-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+
+.req-qty-badge-requested {
+  display: inline-block;
+  font-weight: 600;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+}
+
+.req-badge-pending-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 2px 7px;
+  border-radius: 5px;
+  border: 1px solid #fde68a;
+}
+
+.req-badge-approved-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #ecfdf5;
+  padding: 2px 8px;
+  border-radius: 5px;
+  border: 1px solid #a7f3d0;
+}
+
+.req-card-actions {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.req-btn-action {
+  font-size: 0.785rem;
+  padding: 0.35rem 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}

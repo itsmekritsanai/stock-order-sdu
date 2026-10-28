@@ -14,6 +14,27 @@
 
 ---
 
+> [!IMPORTANT]
+> ### 🚨 เอกสารบังคับที่ต้องอ่านก่อนเริ่มเขียนโค้ด "ทุกครั้ง" (Strict Mandatory Reading - Read Before Every Session)
+> **ข้อกำหนดเด็ดขาด:** นักพัฒนาและ AI Assistant **"ต้องอ่านและทำความเข้าใจเอกสารเหล่านี้ก่อนเริ่มลงมือเขียนหรือแก้ไขโค้ดทุกครั้งโดยไม่มีข้อยกเว้น"** เพื่อป้องกันความผิดพลาดและรักษามาตรฐานความปลอดภัย สถาปัตยกรรม และ Design System ของระบบ:
+>
+> 1. 🌐 **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) (สำคัญที่สุด - ต้องอ่านอันดับแรก):**
+>    * **Single Source of Truth (SSOT):** โค้ดของ `index.html` และ `staff.html` สร้างและควบคุมผ่าน [generate_separated_portals.py](generate_separated_portals.py)
+>    * **Zero-Build Runtime:** โค้ดทั้งหมดต้องเป็น Pure Semantic HTML5, Vanilla CSS3 และ Modern JavaScript (ES6+) รันแบบ Static ได้ทันทีโดยไม่ต้องผ่าน Build Tool / Node.js
+>    * **Design System & CSS Tokens:** อ้างอิงตัวแปร CSS ของระบบเท่านั้น (`var(--primary)`, `var(--accent)`, `var(--neutral-*)`)
+>    * **Strict No-Emoji Policy:** ห้ามใช้อีโมจิรูปภาพใน UI ทุกหน้า ให้ใช้ SVG Vector Icons (viewBox 24x24) จากชุดที่กำหนดไว้เท่านั้น
+>    * **Zero-Trust Portal Isolation:** แยกสิทธิ์เด็ดขาด ห้ามใส่ลิงก์เชื่อมต่อไปยัง `staff.html` จากหน้าผู้ขอเบิก
+> 2. 📄 **[system_requirements_specification.md](system_requirements_specification.md) (ข้อกำหนดเชิงระบบ SRS v1.1):**
+>    * เข้าใจ Business Logic กระบวนการขอเบิก (Requisition Workflow), การตัดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการแปลงหน่วยนับ (Multi-Unit Ratio)
+> 3. 🗄️ **[docs/SCHEMA.md](docs/SCHEMA.md) & 🔌 [docs/API_SPEC.md](docs/API_SPEC.md):**
+>    * รายละเอียดโครงสร้างข้อมูลใน `localStorage` (`inventory_items`, `inventory_requisitions`) และข้อกำหนด API สำหรับเชื่อมต่อ Google Apps Script Web App
+> 4. 🤖 **[.github/copilot-instructions.md](.github/copilot-instructions.md) / [.cursorrules](.cursorrules):**
+>    * กฎเหล็กและข้อกำหนดสไตล์การเขียนโค้ดสำหรับ AI Coding Assistant
+> 5. 📋 **[TASKS.md](TASKS.md):**
+>    * ตรวจสอบ Roadmap สถานะงานปัจจุบันและงานในเฟสถัดไปเพื่อป้องกันการทำงานซ้ำซ้อน
+
+---
+
 ## สถาปัตยกรรมการแยกระบบ (Architecture & Security Separation)
 
 ระบบแบ่งการเข้าถึงเป็น 2 พอร์ทัลอิสระ เพื่อความปลอดภัยสูงสุด:
@@ -119,7 +140,6 @@ stock-order-sdu/
 │
 ├── start.bat                            # สคริปต์ 1-Click เปิดระบบอัตโนมัติบน Windows
 ├── launch.py                            # สคริปต์ 1-Click รัน Local Server ด้วย Python
-├── run.bat                              # ทางลัดรันสคริปต์ start.bat
 │
 ├── .github/                             # การกำหนดค่า GitHub และ AI Assistant
 │   └── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
@@ -132,6 +152,8 @@ stock-order-sdu/
 │   ├── logo_sdu.png                     # ตราสัญลักษณ์ทางการ มหาวิทยาลัยสวนดุสิต
 │   ├── favicon.svg / favicon-*.png      # ไอคอน Favicon ขนาดต่างๆ
 │   ├── icon-192.png / icon-512.png      # ไอคอนสำหรับติดตั้งเป็น PWA App
+│   ├── css/                             # สไตล์ชีต CSS ของระบบ
+│   │   └── styles.css                   # สไตล์ชีตหลักตกแต่งระบบ Stock Order SDU
 │   ├── js/                              # ไลบรารี JavaScript ออฟไลน์
 │   │   └── sweetalert2.all.min.js       # SweetAlert2 Local Asset สำหรับการทำงานออฟไลน์
 │   └── images/                          # รูปภาพพัสดุจริงสกัดจากไฟล์สต๊อก (58 รายการ)
