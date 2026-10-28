@@ -5,13 +5,17 @@
 
 ## 1. ข้อมูลภาพรวม API (Overview & Conventions)
 
-* **Protocol:** HTTPS (RESTful JSON API over Google Apps Script Web App)
+* **Protocol:** HTTP / HTTPS (RESTful JSON API)
+* **Backend Architecture:**
+  * **Primary (Phase 5):** Backend REST API Service (Node.js Express / Python FastAPI) เชื่อมต่อกับ **PostgreSQL 16 Database** บน Docker
+  * **Alternative / Fallback:** Google Apps Script Web App สำหรับ Deployment แบบ Serverless
 * **Base Endpoint URL:**
-  ```text
-  https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
-  ```
-* **Content-Type:** `application/json` (หรือ `text/plain` เมื่อส่งผ่าน CORS จาก Static Web Pages)
-* **การจัดการ Concurrency:** ใช้ `LockService.getScriptLock()` รอคิวการเขียนสต๊อกสูงสุด 30 วินาที เพื่อป้องกัน Race Condition
+  * Local Dev (Docker / Node API): `http://localhost:3000/api` หรือ `http://localhost:8080/api`
+  * Google Apps Script: `https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec`
+* **Content-Type:** `application/json`
+* **การจัดการ Concurrency:**
+  * **PostgreSQL:** จัดการผ่าน Database Transaction ร่วมกับ Row-Level Locking (`SELECT ... FOR UPDATE`)
+  * **Google Apps Script:** ใช้ `LockService.getScriptLock()` รอคิวการเขียนสต๊อกสูงสุด 30 วินาที ป้องกัน Race Condition
 
 ---
 

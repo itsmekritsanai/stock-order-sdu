@@ -48,24 +48,20 @@
 
 ---
 
-## ✅ Phase 4: การจัดเตรียมฐานข้อมูล Google Sheets & โค้ดต้นแบบ Google Apps Script (Completed)
-- [x] **Task 4.1:** สร้างไฟล์โค้ดต้นแบบ **`backend/Code.gs`** รวบรวมฟังก์ชัน Google Apps Script ทั้งหมดตามที่ระบุใน [docs/API_SPEC.md](docs/API_SPEC.md) เพื่อให้สามารถคัดลอกไปวางใน Google Sheets Script Editor แล้วกด Deploy ใช้งานได้ทันทีใน 1 นาที (Completed)
-- [x] **Task 4.2:** ติดตั้งระบบ **`LockService.getScriptLock()`** ใน `Code.gs` เพื่อป้องกัน Concurrency Race Condition เมื่อมีคนกดเบิกพร้อมกันในเสี้ยววินาที (Completed)
-- [x] **Task 4.3:** จัดเตรียมโครงสร้าง Google Sheets ฐานข้อมูลหลัก (ชื่อ `SDU_Inventory_Database`): (Completed)
-  - แผ่นงาน `Items`: คลังพัสดุพร้อมข้อมูลแปลงหน่วยนับ (ดึงผ่าน API สำเร็จ 34 รายการ)
-  - แผ่นงาน `Requisitions`: ประวัติและคิวคำขอเบิกพัสดุ
-  - แผ่นงาน `Requisition_Items`: รายการพัสดุในแต่ละคำขอ
-  - แผ่นงาน `Departments`: ฐานข้อมูล 88+ หน่วยงาน
-- [x] **Task 4.4:** Deploy Google Apps Script เป็น **Web App** (Execute as: *Me*, Access: *Anyone*) พร้อมบันทึก Web App URL ลงใน `.env` และ `.env.example` (Completed)
+## ✅ Phase 4: การจัดเตรียมฐานข้อมูล PostgreSQL, pgAdmin และ Docker Environment (Completed)
+- [x] **Task 4.1:** สร้างไฟล์ **`docker-compose.yml`** กำหนด Service PostgreSQL 16 (Port 5432) และ pgAdmin 4 (Port 5050) สำหรับรันระบบฐานข้อมูลแบบ Containerized 1 คำสั่ง (Completed)
+- [x] **Task 4.2:** สร้างสคริปต์ DDL **`backend/database/init.sql`** กำหนดตารางสัมพันธ์ `departments`, `inventory_items`, `requisitions`, `requisition_items` พร้อม CHECK Constraints และ Indexes (Completed)
+- [x] **Task 4.3:** นำเข้าข้อมูลเริ่มต้น (Seed Data) รายการพัสดุ 58 รายการ และโครงสร้างหน่วยงาน มสด. อัตโนมัติ (Completed)
+- [x] **Task 4.4:** รองรับตัวเลือกสำรอง Google Sheets + Google Apps Script (`backend/Code.gs`) สำหรับกรณีไม่ต้องการโฮสต์ฐานข้อมูลเอง (Completed)
 
 ---
 
-## ⏳ Phase 5: เชื่อมต่อ Frontend เข้ากับ Google Sheets API & ระบบ Offline Fallback
-- [ ] **Task 5.1:** เพิ่มตัวแปร `GOOGLE_SCRIPT_API_URL` ใน `index.html` และ `staff.html` (อ่านจาก config หรือ runtime constant)
-- [ ] **Task 5.2:** ปรับปรุง `index.html` ให้โหลดรายการพัสดุสดจาก Google Sheets API ตอนเปิดหน้าเว็บ
-- [ ] **Task 5.3:** ปรับปรุงฟังก์ชัน `submitRequisition()` ใน `index.html` ให้ส่งข้อมูลคำขอผ่าน `fetch(..., {method: 'POST'})` เข้า Google Apps Script
-- [ ] **Task 5.4:** ปรับปรุง `staff.html` ให้ดึงคำขอรออนุมัติ และส่งคำสั่งตัดยอดสต๊อกเข้า Google Sheets ทันที
-- [ ] **Task 5.5:** สร้างระบบ **Offline & Network Fallback**: หากเชื่อมต่อ Google Sheets ไม่ได้หรือออฟไลน์ ให้สลับไปใช้ข้อมูลใน `localStorage` พร้อมแสดง SweetAlert2 แจ้งเตือนผู้ใช้
+## ⏳ Phase 5: พัฒนา REST API Controller เชื่อมต่อ PostgreSQL & ระบบ Offline Fallback
+- [ ] **Task 5.1:** พัฒนา Backend API Controller (Node.js Express / Python FastAPI) เชื่อมต่อ PostgreSQL ด้วย Connection Pool
+- [ ] **Task 5.2:** ติดตั้งระบบ **Row-Level Transaction Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันสต๊อกติดลบเมื่อเบิกพร้อมกัน
+- [ ] **Task 5.3:** ปรับปรุง `index.html` ให้โหลดรายการพัสดุสด และส่งคำขอเบิกผ่าน API เข้า PostgreSQL
+- [ ] **Task 5.4:** ปรับปรุง `staff.html` ให้ดึงคำขอรออนุมัติ และบันทึกคำสั่งอนุมัติ/ตัดยอดสต๊อกเข้า PostgreSQL พร้อมลายเซ็นดิจิทัล
+- [ ] **Task 5.5:** สร้างระบบ **Offline & Network Fallback**: หากเชื่อมต่อฐานข้อมูลไม่ได้ ให้สลับไปใช้ข้อมูลใน `localStorage` พร้อมแสดง SweetAlert2 แจ้งเตือนผู้ใช้
 
 ---
 

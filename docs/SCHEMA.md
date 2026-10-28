@@ -128,15 +128,89 @@ erDiagram
 
 ---
 
-## 3. การแมปเข้ากับ Google Sheets (Google Sheets Schema Mapping)
+## 3. สคริปต์โครงสร้างฐานข้อมูล PostgreSQL (PostgreSQL DDL & Constraints)
 
-เมื่อนำไปสร้างบน Google Sheets จะแบ่งเป็น 4 แผ่นงาน (Tabs) ดังนี้:
+ระบบรันบน **PostgreSQL 16 (Alpine)** จัดการผ่าน **pgAdmin 4** ด้วย Docker (`docker-compose.yml`):
 
-1. **Tab `Items`:**
-   * หัวตาราง (Row 1): `id | name | category | is_multi_unit | unit_box_name | unit_piece_name | pieces_per_box | on_hand_pieces | reserved_pieces | min_alert | image_piece | image_box`
-2. **Tab `Requisitions`:**
-   * หัวตาราง (Row 1): `id | date | requester | dept | phone | purpose | status | signature | reject_reason | created_at | updated_at`
-3. **Tab `Requisition_Items`:**
-   * หัวตาราง (Row 1): `requisition_id | item_id | name | qty_boxes | qty_pieces | total_pieces | unit_box | unit_piece | approved_pieces`
-4. **Tab `Departments`:**
-   * หัวตาราง (Row 1): `category | name | parent_name | full_label`
+```sql
+-- สร้างตารางหน่วยงาน (Departments)
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    category VARCHAR(100) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    parent_name VARCHAR(255),
+    full_label VARCHAR(300) GENERATED ALWAYS AS (
+        CASE 
+            WHEN parent_name IS NOT NULL AND parent_name <> '' 
+            THEN parent_name || ' - ' || name 
+            ELSE name 
+        END
+    ) STORED
+);
+
+-- สร้างตารางคลังพัสดุกลาง (Inventory Items)
+CREATE TABLE IF NOT EXISTS inventory_items (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    is_multi_unit BOOLEAN DEFAULT FALSE,
+    unit_box_name VARCHAR(50),
+    unit_piece_name VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
+    pieces_per_box INT NOT NULL DEFAULT 1 CHECK (pieces_per_box >= 1),
+    on_hand_pieces INT NOT NULL DEFAULT 0 CHECK (on_hand_pieces >= 0),
+    reserved_pieces INT NOT NULL DEFAULT 0 CHECK (reserved_pieces >= 0),
+    min_alert INT NOT NULL DEFAULT 0 CHECK (min_alert >= 0),
+    image_piece VARCHAR(255),
+    image_box VARCHAR(255),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- สร้างตารางใบคำขอเบิก (Requisitions)
+CREATE TABLE IF NOT EXISTS requisitions (
+    id VARCHAR(50) PRIMARY KEY,
+    dept VARCHAR(255) NOT NULL,
+    requester VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    purpose TEXT,
+    date_display VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'COMPLETED', 'REJECTED')),
+    signature TEXT,
+    reject_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- สร้างตารางรายการพัสดุในคำขอ (Requisition Items)
+CREATE TABLE IF NOT EXISTS requisition_items (
+    id SERIAL PRIMARY KEY,
+    requisition_id VARCHAR(50) NOT NULL REFERENCES requisitions(id) ON DELETE CASCADE,
+    item_id INT REFERENCES inventory_items(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    qty_boxes INT NOT NULL DEFAULT 0 CHECK (qty_boxes >= 0),
+    qty_pieces INT NOT NULL DEFAULT 0 CHECK (qty_pieces >= 0),
+    total_pieces INT NOT NULL CHECK (total_pieces > 0),
+    unit_box VARCHAR(50),
+    unit_piece VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
+    approved_pieces INT NOT NULL DEFAULT 0 CHECK (approved_pieces >= 0)
+);
+
+-- Indexes สำหรับเร่งความเร็วการค้นหา
+CREATE INDEX IF NOT EXISTS idx_inventory_items_category ON inventory_items(category);
+CREATE INDEX IF NOT EXISTS idx_requisitions_status ON requisitions(status);
+CREATE INDEX IF NOT EXISTS idx_requisitions_requester ON requisitions(requester);
+CREATE INDEX IF NOT EXISTS idx_requisition_items_req_id ON requisition_items(requisition_id);
+```
+
+---
+
+## 4. การจัดการผ่าน Docker & pgAdmin 4 (Container Environment)
+
+* **ไฟล์ควบคุม:** `docker-compose.yml` และ `backend/database/init.sql`
+* **พอร์ตบริการ:**
+  * **PostgreSQL:** `localhost:5432` (User: `sdu_admin`, Database: `sdu_stock_db`)
+  * **pgAdmin 4 Web UI:** `http://localhost:5050` (Email: `admin@dusit.ac.th`)
+* **คำสั่งเริ่มต้นใช้งาน:**
+  ```bash
+  docker compose up -d
+  ```

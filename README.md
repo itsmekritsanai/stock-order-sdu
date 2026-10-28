@@ -1,8 +1,10 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
-[![Version: 1.3.0](https://img.shields.io/badge/version-1.3.0-blue.svg)](docs/CHANGELOG.md)
+[![Version: 1.4.0](https://img.shields.io/badge/version-1.4.0-blue.svg)](docs/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![CSS3](https://img.shields.io/badge/CSS3-Vanilla-1572B6?style=flat&logo=css3&logoColor=white)](https://www.w3.org/Style/CSS/)
@@ -124,12 +126,11 @@ graph TD
 stock-order-sdu/
 │
 ├── .cursorrules                         # กฎเกณฑ์สำหรับ AI Assisted Coding (Cursor)
-├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
-├── TASKS.md                             # รายการขั้นตอนงานและแผนการพัฒนา (Roadmap)
 ├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
 ├── LICENSE                              # สัญญาอนุญาต MIT License
 ├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ API
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
+├── docker-compose.yml                   # Docker Compose สำหรับรัน PostgreSQL 16 และ pgAdmin 4
 │
 ├── portal.html                          # ศูนย์กลางเชื่อมต่อพอร์ทัลกลาง (Gateway Hub)
 ├── index.html                           # หน้าเว็บสำหรับผู้ขอเบิก (Public Requester Portal)
@@ -143,6 +144,10 @@ stock-order-sdu/
 │
 ├── .github/                             # การกำหนดค่า GitHub และ AI Assistant
 │   └── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
+│
+├── backend/                             # ซอร์สโค้ดและคอนฟิกฝั่ง Backend & Database
+│   └── database/
+│       └── init.sql                     # สคริปต์ DDL สร้างตารางและ Seed ข้อมูลเริ่มต้นใน PostgreSQL
 │
 ├── docs/                                # โฟลเดอร์รวมเอกสารข้อมูลและคู่มือระบบ (.md)
 │   ├── PROJECT_CONTEXT.md               # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
@@ -173,9 +178,23 @@ stock-order-sdu/
 
 ## วิธีการติดตั้งและรันโครงการ (Getting Started)
 
-ระบบถูกสร้างขึ้นโดยใช้มาตรฐาน **Pure HTML5 / Vanilla CSS / Modern JavaScript (ES6+)** จึงสามารถรันได้ทันทีโดยไม่ต้องติดตั้ง Library ภายนอกหรือ Node.js
+ระบบถูกสร้างขึ้นโดยใช้มาตรฐาน **Pure HTML5 / Vanilla CSS / Modern JavaScript (ES6+)** พร้อมฐานข้อมูล **PostgreSQL 16** และเครื่องมือจัดการ **pgAdmin 4** บน Docker
 
-### ขั้นตอนการรันด้วย Python Local Web Server:
+### 1. การเริ่มต้นฐานข้อมูล PostgreSQL & pgAdmin (Docker Compose):
+
+1. สั่งรัน Container ของฐานข้อมูลและ pgAdmin 4:
+   ```bash
+   docker compose up -d
+   ```
+
+2. ตรวจสอบสถานะและเข้าใช้งาน:
+   * **PostgreSQL Server:** รันที่พอร์ต `5432` (Host: `localhost`, Database: `sdu_stock_db`, User: `sdu_admin`, Password: `sdu_secure_pass123`)
+   * **pgAdmin 4 Web Interface:** เปิดเว็บเบราว์เซอร์ไปที่ [http://localhost:5050](http://localhost:5050)
+     * **Email:** `admin@dusit.ac.th`
+     * **Password:** `admin1234`
+   * *หมายเหตุ: สคริปต์ DDL และข้อมูลตัวอย่างจะถูกนำเข้าอัตโนมัติจาก `backend/database/init.sql`*
+
+### 2. ขั้นตอนการรันเว็บพอร์ทัล (Web Portals):
 
 1. เปิด Terminal หรือ PowerShell ในโฟลเดอร์ของโครงการ:
    ```bash
@@ -195,10 +214,12 @@ stock-order-sdu/
 
 ## ฐานข้อมูลและการจัดเก็บข้อมูล (Data Persistence)
 
-* **ปัจจุบัน (Local Mode):** ทั้งสองระบบเชื่อมต่อข้อมูลกันผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event):
-  * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (On-Hand), ยอดติดจอง (Reserved), เกณฑ์แจ้งเตือนสต๊อกต่ำ และภาพถ่าย
-  * **`inventory_requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร รายการที่อนุมัติ และภาพลายเซ็นดิจิทัล Base64
-* **แผนพัฒนาขั้นถัดไป (Cloud Database):** เชื่อมต่อฐานข้อมูลเข้ากับ **Google Sheets (ผ่าน Google Apps Script Web App)** เพื่อรองรับการเปิดใช้งานจริงข้ามอุปกรณ์ผ่าน **GitHub Pages** (ดูรายละเอียดใน [docs/TASKS.md](docs/TASKS.md) และ [docs/API_SPEC.md](docs/API_SPEC.md))
+* **ฐานข้อมูลหลัก (PostgreSQL on Docker):** ระบบจัดเก็บข้อมูลผ่าน **PostgreSQL 16** ร่วมกับ **pgAdmin 4** เพื่อความถูกต้องของข้อมูลตามมาตรฐาน Relational Database:
+  * **`departments`**: ข้อมูลรายชื่อคณะ/สำนัก/สถาบัน/โรงเรียน 90+ หน่วยงาน
+  * **`inventory_items`**: ข้อมูลรายการพัสดุ ยอดคงเหลือจริง (`on_hand_pieces`), ยอดติดจอง (`reserved_pieces`), จุดสั่งซื้อซ้ำ และรูปภาพพัสดุ พร้อม `CHECK constraint` ป้องกันสต๊อกติดลบ
+  * **`requisitions`**: ประวัติคำขอเบิก สถานะเอกสาร ข้อมูลผู้ขอเบิก และภาพถ่ายลายเซ็นดิจิทัล Base64
+  * **`requisition_items`**: รายการพัสดุที่ขอเบิกและจำนวนที่ได้รับการอนุมัติในแต่ละใบเบิก
+* **โหมดออฟไลน์ / สำรอง (Local Fallback):** ในระหว่างขั้นตอนการทดสอบส่วนหน้า Frontend ยังคงรองรับการทำงานแบบ Standalone ผ่าน Browser **`localStorage`** พร้อมระบบซิงค์ข้ามแท็บเรียลไทม์ (`storage` event) เพื่อความสะดวกรวดเร็วในการทดสอบ UI
 
 ---
 

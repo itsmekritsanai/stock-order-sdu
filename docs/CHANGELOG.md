@@ -20,8 +20,31 @@
 ## [Unreleased]
 
 ### Planned (Phase 5 - 6)
-- **Phase 5:** เชื่อมต่อ Frontend (`index.html`, `staff.html`) เข้ากับ Google Sheets API ผ่าน Google Apps Script Web App พร้อมระบบ Offline Fallback
-- **Phase 6:** ชุดทดสอบอัตโนมัติ `pytest` ครอบคลุมคำนวณสต๊อกและแปลงหน่วย (Coverage >= 90%), CI/CD Workflow (`.github/workflows/ci.yml`) และ GitHub Pages Deployment
+- **Phase 5:** พัฒนา Backend REST API Service (Node.js / Express หรือ Python FastAPI) เชื่อมต่อฐานข้อมูล PostgreSQL พร้อมระบบจัดการ Concurrency ผ่าน Transaction Row-Level Locking (`SELECT FOR UPDATE`)
+- **Phase 6:** ชุดทดสอบอัตโนมัติ (Automated Testing) ครอบคลุมคำนวณสต๊อกและแปลงหน่วย (Coverage >= 90%), CI/CD Workflow (`.github/workflows/ci.yml`) และ Docker Deployment
+
+---
+
+## [1.4.0] - 2026-10-28
+
+### Added
+- **Docker Compose Stack (`docker-compose.yml`):** บริการคอนเทนเนอร์สำหรับ PostgreSQL 16 Alpine (พอร์ต 5432) และ pgAdmin 4 Web GUI (พอร์ต 5050) พร้อม Healthcheck อัตโนมัติ
+- **PostgreSQL DDL & Seed Script (`backend/database/init.sql`):**
+  - ตาราง `departments`: โครงสร้างหน่วยงานพร้อมลำดับการแสดงผล
+  - ตาราง `inventory_items`: รายการพัสดุพร้อมกฎ `CHECK (on_hand_pieces >= 0)` และ `CHECK (reserved_pieces >= 0)` ป้องกันสต๊อกติดลบระดับฐานข้อมูล
+  - ตาราง `requisitions`: บันทึกใบขอเบิกพัสดุ สถานะการอนุมัติ ข้อมูลผู้เบิก และภาพลายเซ็น Base64
+  - ตาราง `requisition_items`: รายการพัสดุในแต่ละใบขอเบิก เชื่อมโยง Foreign Key แบบ `CASCADE`
+  - ดัชนี B-tree (`idx_inventory_sku`, `idx_requisitions_doc_no`, `idx_requisition_items_req`) เพื่อประสิทธิภาพการสืบค้น
+  - ข้อมูลตั้งต้น (Initial Seed Data) พัสดุและหน่วยงานตัวอย่าง
+- **pgAdmin 4 Integration:** คอนฟิกเว็บอินเทอร์เฟซบริหารจัดการฐานข้อมูลผ่านเบราว์เซอร์ที่พอร์ต 5050
+
+### Changed
+- **Database Architecture Migration:** ปรับเปลี่ยนแนวทางจัดเก็บข้อมูลหลักจาก Google Sheets เป็น PostgreSQL 16 บน Docker เพื่อความสมบูรณ์และถูกต้องของข้อมูลตามมาตรฐาน Relational Database
+- **Documentation Overhaul:**
+  - `docs/SCHEMA.md`: อัปเดตนิยามตาราง DDL, ความสัมพันธ์ Entity-Relationship, ชนิดข้อมูล SQL และตัวแปรสิ่งแวดล้อม Docker
+  - `docs/PROJECT_CONTEXT.md`: ปรับปรุงแผนภาพสถาปัตยกรรม Mermaid Diagram, Tech Stack และ Data Flow
+  - `docs/TASKS.md`: บันทึกเสร็จสิ้นงาน Phase 4 (Docker & PostgreSQL) และกำหนดทิศทาง Phase 5 สู่ REST API Controller
+  - `README.md`: เพิ่มตราสัญลักษณ์ PostgreSQL & Docker, ผังโครงสร้างโฟลเดอร์ใหม่ และคู่มือ Getting Started สำหรับ Docker Compose
 
 ---
 
