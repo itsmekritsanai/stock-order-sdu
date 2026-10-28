@@ -52,17 +52,19 @@ graph TD
         STAFF["Staff Portal (staff.html)<br/>- Authentication Gate<br/>- Dashboard Metrics<br/>- Approval Queue<br/>- Touchscreen E-Signature Pad<br/>- Official PDF Print Engine<br/>- Inventory Stock Manager"]
     end
 
-    subgraph "Persistence Layer"
-        LOCAL[("Browser localStorage<br/>+ Cross-Tab Storage Event Sync<br/>(inventory_items, inventory_requisitions)")]
-        SHEETS[("Google Sheets Database (Roadmap)<br/>- Items Sheet<br/>- Requisitions Sheet<br/>- Requisition_Items Sheet<br/>- Departments Sheet")]
-        GAS["Google Apps Script Web App (API)<br/>- LockService (Concurrency Control)<br/>- JSON REST API"]
+    subgraph "Persistence & Container Layer (Docker)"
+        LOCAL[("Browser localStorage (Local Dev/Demo)<br/>+ Cross-Tab Storage Event Sync<br/>(inventory_items, inventory_requisitions)")]
+        PG[("PostgreSQL 16 Database<br/>- inventory_items (Multi-Unit & Stocks)<br/>- requisitions (Statuses & Signatures)<br/>- requisition_items (Order Details)<br/>- departments (90+ SDU Units)")]
+        PGADMIN["pgAdmin 4 Web Console<br/>- Database GUI (Port 5050)<br/>- Query Tool & Visual Table Management"]
+        API["Backend API Controller<br/>- Row-level Locking (SELECT FOR UPDATE)<br/>- RESTful JSON Endpoints"]
     end
 
     REQ <-->|Sync Local| LOCAL
     STAFF <-->|Sync Local| LOCAL
-    REQ -.->|Fetch / POST (Phase 5)| GAS
-    STAFF -.->|Fetch / POST (Phase 5)| GAS
-    GAS <--> SHEETS
+    REQ -.->|Fetch / POST (Phase 5)| API
+    STAFF -.->|Fetch / POST (Phase 5)| API
+    API <-->|SQL & Transactions| PG
+    PGADMIN <-->|Admin Management| PG
 ```
 
 ### รายละเอียดส่วนประกอบทางเทคนิค:
@@ -73,9 +75,11 @@ graph TD
   * **Vector Icons:** 100% SVG Vector Icons (Stroke-based, viewBox 24x24) จากชุด `svg_icons` **(Strict No-Emoji Policy)**
   * **Canvas API:** แท่นลงนามดิจิทัล (E-Signature Pad) รองรับ Touchscreen, ปากกาสไตลัส และเมาส์
 * **Build & Code Generator:** Python 3.x (`generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
-* **Data Persistence:**
-  * ปัจจุบัน: Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event)
-  * แผนพัฒนา: Google Sheets API ผ่าน Google Apps Script Web App เพื่อรองรับ GitHub Pages
+* **Database & Containerization:**
+  * **Database Engine:** **PostgreSQL 16 (Alpine)** รองรับ ACID Transactions, Row-Level Locking (`FOR UPDATE`), CHECK Constraints
+  * **Database Administration UI:** **pgAdmin 4** (Web-based GUI บนพอร์ต 5050)
+  * **Container Orchestration:** **Docker & Docker Compose** (`docker-compose.yml`) 1-Command Startup
+  * **Local Dev Fallback:** Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event)
 
 ---
 
