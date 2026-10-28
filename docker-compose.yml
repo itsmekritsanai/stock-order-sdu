@@ -43,3 +43,4 @@ volumes:
     driver: local
   pgadmin_data:
     driver: local
+

@@ -22,6 +22,7 @@ erDiagram
         int on_hand_pieces "ยอดคงคลังจริง (ชิ้น)"
         int reserved_pieces "ยอดติดจองจากการอนุมัติ (ชิ้น)"
         int min_alert "เกณฑ์แจ้งเตือนสต๊อกต่ำ (ชิ้น)"
+        date expected_restock_date "วันที่คาดว่าพัสดุจะเข้าเมื่อหมด"
         string image_piece "Path/URL รูปภาพหน่วยย่อย"
         string image_box "Path/URL รูปภาพหน่วยกล่อง"
     }
@@ -36,6 +37,7 @@ erDiagram
         string status "สถานะ: PENDING, APPROVED, COMPLETED, REJECTED"
         string signature "Base64 DataURL ลายเซ็นผู้รับมอบ"
         string reject_reason "เหตุผลในกรณีไม่อนุมัติ"
+        timestamp disbursed_at "วันที่และเวลากดยืนยันจ่ายของจริง"
         string created_at "ISO Timestamp"
         string updated_at "ISO Timestamp"
     }
@@ -82,6 +84,7 @@ erDiagram
 | `on_hand_pieces` | `INTEGER` | ❌ No | `0` | ยอดสต๊อกคงเหลือจริงในห้องคลัง (ต้อง `>= 0`) |
 | `reserved_pieces` | `INTEGER` | ❌ No | `0` | ยอดที่ถูกล็อกไว้รอจ่ายหลังกดอนุมัติ (ต้อง `>= 0`) |
 | `min_alert` | `INTEGER` | ❌ No | `500` | เกณฑ์สต๊อกขั้นต่ำ หาก `Available < min_alert` จะแสดงสถานะเตือน |
+| `expected_restock_date` | `DATE` | ⚠️ Yes | `NULL` | วันที่คาดว่าพัสดุล็อตใหม่จะเข้าคลังเมื่อของหมด (สำหรับแจ้งผู้ขอเบิก) |
 | `image_piece` | `TEXT` | ⚠️ Yes | `NULL` | Relative Path หรือ URL รูปภาพแบบเดี่ยว/ชิ้น |
 | `image_box` | `TEXT` | ⚠️ Yes | `NULL` | Relative Path หรือ URL รูปภาพแบบกล่องบรรจุ |
 
@@ -102,6 +105,7 @@ erDiagram
 | `status` | `VARCHAR(30)` | ❌ No | `'PENDING'` | สถานะ: `'PENDING'`, `'APPROVED'`, `'COMPLETED'`, `'REJECTED'` |
 | `signature` | `MEDIUMTEXT` | ⚠️ Yes | `NULL` | Data URL ภาพลายเซ็น Base64 PNG ของผู้รับของ |
 | `reject_reason` | `TEXT` | ⚠️ Yes | `NULL` | เหตุผลในกรณีที่เจ้าหน้าที่ไม่อนุมัติ |
+| `disbursed_at` | `TIMESTAMPTZ` | ⚠️ Yes | `NULL` | วันที่และเวลาที่เจ้าหน้าที่กดยืนยันจ่ายของจริง (เมื่อสถานะเป็น `COMPLETED`) |
 | `created_at` | `TIMESTAMP` | ❌ No | `CURRENT_TIMESTAMP` | เวลาส่งคำขอตามมาตรฐานสากล |
 | `updated_at` | `TIMESTAMP` | ❌ No | `CURRENT_TIMESTAMP` | เวลาที่มีการเปลี่ยนสถานะล่าสุด |
 
@@ -160,6 +164,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     on_hand_pieces INT NOT NULL DEFAULT 0 CHECK (on_hand_pieces >= 0),
     reserved_pieces INT NOT NULL DEFAULT 0 CHECK (reserved_pieces >= 0),
     min_alert INT NOT NULL DEFAULT 0 CHECK (min_alert >= 0),
+    expected_restock_date DATE,
     image_piece VARCHAR(255),
     image_box VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -177,6 +182,7 @@ CREATE TABLE IF NOT EXISTS requisitions (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'COMPLETED', 'REJECTED')),
     signature TEXT,
     reject_reason TEXT,
+    disbursed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

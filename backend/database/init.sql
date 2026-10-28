@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS inventory_items (
     on_hand_pieces INT NOT NULL DEFAULT 0 CHECK (on_hand_pieces >= 0),
     reserved_pieces INT NOT NULL DEFAULT 0 CHECK (reserved_pieces >= 0),
     min_alert INT NOT NULL DEFAULT 0 CHECK (min_alert >= 0),
+    expected_restock_date DATE,
     image_piece VARCHAR(255),
     image_box VARCHAR(255),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -50,6 +51,7 @@ CREATE TABLE IF NOT EXISTS requisitions (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'COMPLETED', 'REJECTED')),
     signature TEXT,
     reject_reason TEXT,
+    disbursed_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
@@ -84,3 +86,4 @@ VALUES
 ('แฟ้มเสนอ', 'เครื่องเขียนและแฟ้ม', FALSE, 'เล่ม', 'เล่ม', 1, 15, 3, 5, 'assets/images/image5.jpeg', 'assets/images/image5.jpeg'),
 ('ซองเอกสารน้ำตาล (มสด) 9´12.3', 'ซองเอกสาร', TRUE, 'กล่อง', 'ซอง', 500, 1500, 0, 500, 'assets/images/image14.jpeg', 'assets/images/image15.jpeg')
 ON CONFLICT DO NOTHING;
+
