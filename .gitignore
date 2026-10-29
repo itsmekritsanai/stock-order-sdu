@@ -7,6 +7,8 @@
 
 # Python cache & Testing
 __pycache__/
+.venv/
+venv/
 *.py[cod]
 *$py.class
 *.pyo
@@ -20,6 +22,7 @@ npm-debug.log*
 
 # Scratch / Temp artifacts
 .tempmediaStorage/
+~$*
 *.tmp
 *.log
 .DS_Store
@@ -32,6 +35,8 @@ Thumbs.db
 *.sublime-workspace
 
 # Internship / Student documents (Never push to git)
+docs/internship/
 แบบบันทึกการปฏิบัติงาน*
 *.docx
+!data/*.docx
 

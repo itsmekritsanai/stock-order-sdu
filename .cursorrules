@@ -2,7 +2,7 @@
 # Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
 
 ## 1. Role & Identity
-You are an expert Senior Full-Stack Software Engineer and Enterprise Solutions Architect specializing in resilient web applications, data systems, and institutional digital transformation for Suan Dusit University (SDU).
+You are an expert Senior Full-Stack Software Engineer and Enterprise Solutions Architect specializing in resilient web applications, MySQL relational database systems, and institutional digital transformation for Suan Dusit University (SDU).
 
 ---
 
@@ -18,28 +18,29 @@ You are an expert Senior Full-Stack Software Engineer and Enterprise Solutions A
    - Approval of requisition (`APPROVED`) only increments `Reserved`. **DO NOT** deduct `On-Hand` during approval.
    - Physical stock deduction (`On-Hand`) occurs **ONLY** when the requester physically collects items and signs on the digital canvas pad (`COMPLETED`).
 4. **Single Source of Truth (SSOT):**
-   - Both `index.html` and `staff.html` are compiled and generated via `generate_separated_portals.py`.
-   - Edits to UI, styles, icons, and shared logic must be reflected in or generated from `generate_separated_portals.py`.
+   - Both `index.html` and `staff.html` are compiled and generated via `scripts/generate_separated_portals.py`.
+   - Edits to UI, styles, icons, and shared logic must be reflected in or generated from `scripts/generate_separated_portals.py`.
 5. **No Native Dialogs:**
    - **NEVER** use browser `alert()`, `confirm()`, or `prompt()`.
    - **ALWAYS** use SweetAlert2 (`Swal.fire()` / `Swal.mixin()`) styled with SDU theme (`#1e40af`, `#059669`, Prompt font, 14px rounded corners).
 6. **Strict No-Emoji Policy in UI:**
    - Do not use emoji characters in buttons, tables, badges, or headers.
    - **ALWAYS** use 100% Vector SVG Icons (Stroke-based, 24x24 viewBox) from the `svg_icons` registry.
-7. **Offline-First Resilience:**
+7. **Offline-First & MySQL Resilience:**
    - Always prioritize local assets (e.g. `assets/js/sweetalert2.all.min.js`) with automatic CDN fallback.
-   - Code must run in a standalone browser or local server without requiring an active external internet connection.
+   - Frontend portals sync with the MySQL REST API (`backend/server.py` at `/api`) and automatically fall back to `localStorage` when running offline.
 8. **บังคับกำหนดเลขเวอร์ชันและบันทึก CHANGELOG.md (Strict Versioning & Changelog Protocol):**
    - ทุกครั้งที่มีการแก้ไข ปรับปรุง หรือเพิ่มเติมโค้ดในระบบ **ต้องกำหนด/ปรับเลขเวอร์ชันตามหลัก Semantic Versioning (`MAJOR.MINOR.PATCH`) เสมอ**
    - **ต้องบันทึกรายละเอียดการเปลี่ยนแปลงลงใน `CHANGELOG.md` ทุกครั้ง** โดยระบุกลุ่มรายการชัดเจน (Added, Changed, Fixed, Security)
-   - ต้องอัปเดตตัวเลขเวอร์ชันในโค้ดระบบ (`SYSTEM_VERSION` ในตัวสร้างพอร์ทัล, Footer, และ `CONFIG.VERSION` ใน backend) ให้ตรงกันเสมอ
+   - ต้องอัปเดตตัวเลขเวอร์ชันในโค้ดระบบ (`SYSTEM_VERSION` ใน `scripts/generate_separated_portals.py`, Footer, และ `SYSTEM_VERSION` ใน `backend/server.py`) ให้ตรงกันเสมอ
 
 ---
 
 ## 3. Technology Stack Constraints
 - **Frontend Core:** Pure HTML5 (Semantic), Vanilla CSS3 (Custom Properties/Variables, Flexbox, CSS Grid), Modern Vanilla JavaScript (ES6+).
-- **No Heavy Frameworks:** No React, No Vue, No Angular, No TailwindCSS. Maintain 0ms compile overhead and zero build dependency for runtime.
-- **Python Automation:** Python 3.x for build/generator scripts, following **PEP 8** standards (4-space indentation, explicit UTF-8 file operations).
+- **No Heavy Frontend Frameworks:** No React, No Vue, No Angular, No TailwindCSS. Maintain 0ms compile overhead and zero build dependency for runtime.
+- **Database & Backend:** MySQL 8.0+ / MariaDB (`backend/schema.sql`) served by Python HTTP + REST API Server (`backend/server.py` using `PyMySQL` with ACID transactions and `SELECT ... FOR UPDATE` row-level locks).
+- **Python Automation:** Python 3.x for backend and build/generator scripts, following **PEP 8** standards (4-space indentation, explicit UTF-8 file operations).
 - **Testing:** `pytest` for Python scripts with **Coverage >= 90%**. JavaScript syntax validation via Node.js runtime parser.
 
 ---
@@ -64,4 +65,3 @@ You are an expert Senior Full-Stack Software Engineer and Enterprise Solutions A
 - [ ] Local web server responds with HTTP 200 and 0 missing assets.
 - [ ] อัปเดตเลขเวอร์ชันและบันทึกรายละเอียดการเปลี่ยนแปลงลงใน `CHANGELOG.md` เรียบร้อยแล้ว.
 - [ ] Git commits are informative and clearly scoped.
-

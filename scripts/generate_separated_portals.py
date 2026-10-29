@@ -1,40 +1,98 @@
 import json
+import os
 
-SYSTEM_VERSION = "1.3.0"
+SYSTEM_VERSION = "2.2.0"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
-# Read department options and structure
-with open('departments_structured.json', 'r', encoding='utf-8') as f:
-    depts_data = json.load(f)
+# Read API_BASE_URL (MySQL REST API endpoint) from .env if available
+MYSQL_API_URL = "/api"
+env_path = os.path.join(PROJECT_ROOT, '.env')
+if os.path.exists(env_path):
+    with open(env_path, 'r', encoding='utf-8') as ef:
+        for line in ef:
+            line = line.strip()
+            if line.startswith('API_BASE_URL='):
+                MYSQL_API_URL = line.split('=', 1)[1].strip().strip('"').strip("'")
 
-# Build department data array for JS
-dept_js_items = []
-for cat_name, parent_dict in depts_data.items():
-    cat_items = []
-    for parent_name, subs in parent_dict.items():
-        if subs:
-            cat_items.append({
-                "label": f"{parent_name} (ภาพรวม)",
-                "value": parent_name,
-                "sub": False
-            })
-            for s in subs:
-                cat_items.append({
-                    "label": f"{s} ({parent_name})",
-                    "value": f"{parent_name} - {s}",
-                    "sub": True
-                })
+def parse_docx_depts_and_users(docx_path):
+    import zipfile
+    import xml.etree.ElementTree as ET
+    units = []
+    users = []
+    with zipfile.ZipFile(docx_path, 'r') as z:
+        root = ET.fromstring(z.read('word/document.xml'))
+    ns = {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}
+    for tr in root.findall('.//w:tr', ns):
+        tcs = tr.findall('.//w:tc', ns)
+        if len(tcs) < 4:
+            continue
+        seq_txt = ''.join(tcs[0].itertext()).strip().rstrip('.')
+        if not seq_txt.isdigit():
+            continue
+        fname = ''.join(tcs[1].itertext()).strip()
+        lname = ''.join(tcs[2].itertext()).strip()
+        full_name = f"{fname} {lname}".strip()
+        paras = [''.join(p.itertext()).strip() for p in tcs[3].findall('.//w:p', ns) if ''.join(p.itertext()).strip()]
+        pos = paras[0] if paras else ''
+        sub = paras[1] if len(paras) > 1 else ''
+        if sub == 'และงานทะเบียน':
+            pos = pos + sub
+            sub = ''
+
+        if 'ผู้อำนวยการ' in pos and not pos.startswith('หัวหน้า'):
+            unit = 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน'
+        elif 'หัวหน้าสำนักงาน' in pos or 'หัวหน้าสำนักงาน' in sub:
+            unit = 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน'
+        elif pos.startswith('หัวหน้า'):
+            unit = pos.replace('หัวหน้า', '', 1).strip()
+        elif sub.startswith(('กลุ่มงาน', 'หน่วยงาน', 'สำนักงาน')):
+            unit = sub
         else:
-            cat_items.append({
-                "label": parent_name,
-                "value": parent_name,
-                "sub": False
+            unit = 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน'
+
+        if unit and unit not in units:
+            units.append(unit)
+
+        # User ตั้งต้นเอาเฉพาะ "หัวหน้าหน่วยงาน/กลุ่มงาน" (ส่วนคนอื่นให้ Staff เพิ่มทีหลังได้)
+        if pos.startswith('หัวหน้า'):
+            users.append({
+                "id": len(users) + 1,
+                "name": full_name,
+                "position": pos,
+                "dept": unit,
+                "phone": ""
             })
+
+    preferred_order = [
+        'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+        'กลุ่มงานส่งเสริมวิชาการ',
+        'กลุ่มงานบริการวิชาการ',
+        'กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ',
+        'หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต'
+    ]
+    ordered_units = [u for u in preferred_order if u in units] + [u for u in units if u not in preferred_order]
+    return {"สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)": ordered_units}, users
+
+depts_data, initial_users = parse_docx_depts_and_users(DEPT_DOCX_PATH)
+
+# Build department data array for JS (5 units from รายนามบุคลากร สวท.docx)
+dept_js_items = []
+for cat_name, unit_list in depts_data.items():
+    cat_items = []
+    for unit_name in unit_list:
+        cat_items.append({
+            "label": unit_name,
+            "value": unit_name,
+            "sub": False
+        })
     dept_js_items.append({
         "category": cat_name,
         "items": cat_items
     })
 
 dept_json_str = json.dumps(dept_js_items, ensure_ascii=False, indent=2)
+users_json_str = json.dumps(initial_users, ensure_ascii=False, indent=2)
 
 # Common SVG vector icons
 svg_icons = {
@@ -70,122 +128,78 @@ svg_icons = {
     "list": '<svg class="svg-icon" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>'
 }
 
-# Shared Database Initial Data
+# Shared Database Initial Data (34 Stock Items with 58 Real Images from ยอดสต๊อก ตค.xlsx)
 initial_items = [
-  {
-    "id": 1,
-    "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)",
-    "category": "ซองเอกสาร",
-    "is_multi_unit": True,
-    "unit_box_name": "กล่อง",
-    "unit_piece_name": "ซอง",
-    "pieces_per_box": 250,
-    "on_hand_pieces": 1750,
-    "reserved_pieces": 500,
-    "min_alert": 500,
-    "image_piece": "assets/images/image1.jpeg",
-    "image_box": "assets/images/image10.jpeg"
-  },
-  {
-    "id": 2,
-    "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)",
-    "category": "กระดาษและแบบฟอร์ม",
-    "is_multi_unit": True,
-    "unit_box_name": "กล่อง",
-    "unit_piece_name": "ใบ",
-    "pieces_per_box": 2000,
-    "on_hand_pieces": 34500,
-    "reserved_pieces": 2000,
-    "min_alert": 5000,
-    "image_piece": "assets/images/image2.jpeg",
-    "image_box": "assets/images/image11.jpeg"
-  },
-  {
-    "id": 3,
-    "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)",
-    "category": "ซองเอกสาร",
-    "is_multi_unit": True,
-    "unit_box_name": "กล่อง",
-    "unit_piece_name": "ซอง",
-    "pieces_per_box": 500,
-    "on_hand_pieces": 1000,
-    "reserved_pieces": 0,
-    "min_alert": 250,
-    "image_piece": "assets/images/image3.jpeg",
-    "image_box": "assets/images/image12.jpeg"
-  },
-  {
-    "id": 4,
-    "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)",
-    "category": "กระดาษและแบบฟอร์ม",
-    "is_multi_unit": True,
-    "unit_box_name": "ห่อ",
-    "unit_piece_name": "แผ่น",
-    "pieces_per_box": 500,
-    "on_hand_pieces": 23500,
-    "reserved_pieces": 0,
-    "min_alert": 1000,
-    "image_piece": "assets/images/image4.jpeg",
-    "image_box": "assets/images/image13.jpeg"
-  },
-  {
-    "id": 5,
-    "name": "แฟ้มเสนอ",
-    "category": "เครื่องเขียนและแฟ้ม",
-    "is_multi_unit": False,
-    "unit_box_name": "เล่ม",
-    "unit_piece_name": "เล่ม",
-    "pieces_per_box": 1,
-    "on_hand_pieces": 15,
-    "reserved_pieces": 3,
-    "min_alert": 5,
-    "image_piece": "assets/images/image5.jpeg",
-    "image_box": "assets/images/image5.jpeg"
-  },
-  {
-    "id": 6,
-    "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3",
-    "category": "ซองเอกสาร",
-    "is_multi_unit": True,
-    "unit_box_name": "กล่อง",
-    "unit_piece_name": "ซอง",
-    "pieces_per_box": 500,
-    "on_hand_pieces": 1500,
-    "reserved_pieces": 0,
-    "min_alert": 500,
-    "image_piece": "assets/images/image14.jpeg",
-    "image_box": "assets/images/image15.jpeg"
-  }
+  {"id": 1, "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1750, "reserved_pieces": 500, "min_alert": 500, "image_piece": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) กล่อง.jpeg"},
+  {"id": 2, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ใบ", "pieces_per_box": 2000, "on_hand_pieces": 34500, "reserved_pieces": 2000, "min_alert": 5000, "image_piece": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) ใบ.jpeg", "image_box": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) กล่อง.jpeg"},
+  {"id": 3, "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) กล่อง.jpeg"},
+  {"id": 4, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 23500, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) แผ่น.jpeg", "image_box": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) กล่อง.jpeg"},
+  {"id": 5, "name": "แฟ้มเสนอ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "เล่ม", "unit_piece_name": "เล่ม", "pieces_per_box": 1, "on_hand_pieces": 15, "reserved_pieces": 3, "min_alert": 5, "image_piece": "assets/images/แฟ้มเสนอ เล่ม.jpeg", "image_box": "assets/images/แฟ้มเสนอ เล่ม.jpeg"},
+  {"id": 6, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 ซอง.jpeg", "image_box": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 กล่อง.jpeg"},
+  {"id": 7, "name": "กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 4500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย แผ่น.jpeg", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย กล่อง.jpeg"},
+  {"id": 8, "name": "กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ กล่อง.jpeg"},
+  {"id": 9, "name": "กระดาษสติ๊กเกอร์ เต็มแผ่น", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 500, "reserved_pieces": 0, "min_alert": 100, "image_piece": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น กล่อง.jpeg"},
+  {"id": 10, "name": "แบบฟอร์มแก้ I", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ชิ้น", "pieces_per_box": 500, "on_hand_pieces": 2500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มแก้ I ชิ้น.jpeg", "image_box": "assets/images/แบบฟอร์มแก้ I กล่อง.jpeg"},
+  {"id": 11, "name": "ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด)", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 4000, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) ซอง.jpeg", "image_box": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) กล่อง.jpeg"},
+  {"id": 12, "name": "ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) กล่อง.jpeg"},
+  {"id": 13, "name": "แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"},
+  {"id": 14, "name": "แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"},
+  {"id": 15, "name": "ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 200, "image_piece": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ กล่อง.png"},
+  {"id": 16, "name": "ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ กล่อง.jpeg"},
+  {"id": 17, "name": "ใบรับรอง(ไทย)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 2000, "reserved_pieces": 0, "min_alert": 400, "image_piece": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ กล่อง.jpeg"},
+  {"id": 18, "name": "ใบรับรอง(อังกฤษ)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": True, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ กล่อง.png"},
+  {"id": 19, "name": "คลิปดำNO.108", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 72, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.108 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.108 ลัง.jpeg"},
+  {"id": 20, "name": "คลิปดำNO.110", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 60, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.110 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.110 ลัง.jpeg"},
+  {"id": 21, "name": "ไส้MAX 10 MM", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 10 MM กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 10 MM ลัง.jpeg"},
+  {"id": 22, "name": "ไส้MAX 12", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 12 กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 12 ลัง.jpeg"},
+  {"id": 23, "name": "ซองกันกระแทก 270´327", "category": "ซองเอกสาร", "is_multi_unit": True, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 80, "on_hand_pieces": 2400, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg", "image_box": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg"},
+  {"id": 24, "name": "แม็กเล็ก", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กเล็ก อัน.jpeg", "image_box": "assets/images/แม็กเล็ก กล่อง.jpeg"},
+  {"id": 25, "name": "แม็กใหญ่", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กใหญ่ อัน.jpeg", "image_box": "assets/images/แม็กใหญ่ กล่อง.png"},
+  {"id": 26, "name": "สก็อตเทปใส", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 24, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปใส ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปใส กล่อง.jpeg"},
+  {"id": 27, "name": "สก็อตเทปขุ่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 27, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปขุ่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปขุ่น กล่อง.png"},
+  {"id": 28, "name": "สก็อตเทปย่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": True, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 10, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปย่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปย่น กล่อง.jpeg"},
+  {"id": 29, "name": "กาวแท่ง", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "แท่ง", "pieces_per_box": 1, "on_hand_pieces": 22, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กาวแท่ง แท่ง.jpeg", "image_box": "assets/images/กาวแท่ง กล่อง.png"},
+  {"id": 30, "name": "กาวขวด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "ขวด", "pieces_per_box": 1, "on_hand_pieces": 6, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/กาวขวด ขวด.jpeg", "image_box": "assets/images/กาวขวด กล่อง.png"},
+  {"id": 31, "name": "กรรไกร", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กรรไกร อัน.jpeg", "image_box": "assets/images/กรรไกร กล่อง.png"},
+  {"id": 32, "name": "คัตเตอร์", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 12, "reserved_pieces": 0, "min_alert": 3, "image_piece": "assets/images/คัตเตอร์ อัน.jpeg", "image_box": "assets/images/คัตเตอร์ กล่อง.png"},
+  {"id": 33, "name": "เครื่องเจาะกระดาษ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "เครื่อง", "pieces_per_box": 1, "on_hand_pieces": 2, "reserved_pieces": 0, "min_alert": 1, "image_piece": "assets/images/เครื่องเจาะกระดาษ เครื่อง.jpeg", "image_box": "assets/images/เครื่องเจาะกระดาษ กล่อง.png"},
+  {"id": 34, "name": "ไม้บรรทัด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": False, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/ไม้บรรทัด อัน.jpeg", "image_box": "assets/images/ไม้บรรทัด กล่อง.png"}
 ]
 
 initial_requisitions = [
   {
     "id": "REQ-256910-0042",
-    "dept": "โรงเรียนการเรือน - เทคโนโลยีการประกอบอาหารและการบริการ",
-    "requester": "อ.สมชาย ใจดี",
+    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+    "requester": "นางสาววาสนา จันทร์จ่าย",
     "phone": "081-998-7766",
     "purpose": "ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ภาคเรียน 1/2569",
     "date": "21 ต.ค. 2569 10:15 น.",
     "status": "APPROVED",
     "signature": None,
+    "reject_reason": "",
+    "created_at": "2026-10-21T03:15:00.000Z",
+    "updated_at": "2026-10-21T03:30:00.000Z",
     "items": [
-      { "itemId": 1, "name": "ซองขยายข้างมีครุฑ 279´432", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500 },
-      { "itemId": 2, "name": "กระดาษคำตอบ", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 2000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 2000 },
-      { "itemId": 5, "name": "แฟ้มเสนอ", "qtyBoxes": 0, "qtyPieces": 3, "totalPieces": 3, "unitBox": "เล่ม", "unitPiece": "เล่ม", "approvedPieces": 3 }
+      { "itemId": 1, "name": "ซองขยายข้างมีครุฑ 279´432", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 250 },
+      { "itemId": 2, "name": "กระดาษคำตอบ", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 2000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 2000, "piecesPerBoxSnapshot": 2000 },
+      { "itemId": 5, "name": "แฟ้มเสนอ", "qtyBoxes": 0, "qtyPieces": 3, "totalPieces": 3, "unitBox": "เล่ม", "unitPiece": "เล่ม", "approvedPieces": 3, "piecesPerBoxSnapshot": 1 }
     ]
   },
   {
     "id": "REQ-256910-0043",
-    "dept": "คณะพยาบาลศาสตร์ - พยาบาลศาสตรบัณฑิต",
-    "requester": "คุณพรทิพย์ สุขขี",
+    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "requester": "นางสาวสินีนาฎ ลักษณะโยธิน",
     "phone": "089-112-3344",
-    "purpose": "เตรียมเอกสารปฐมนิเทศนักศึกษาฝึกปฏิบัติงานคลินิก",
+    "purpose": "เตรียมเอกสารรับรองและบริการการศึกษา ภาคเรียน 1/2569",
     "date": "21 ต.ค. 2569 10:45 น.",
     "status": "PENDING",
     "signature": None,
+    "reject_reason": "",
+    "created_at": "2026-10-21T03:45:00.000Z",
+    "updated_at": "2026-10-21T03:45:00.000Z",
     "items": [
-      { "itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500 },
-      { "itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000 }
+      { "itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500 },
+      { "itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000, "piecesPerBoxSnapshot": 500 }
     ]
   }
 ]
@@ -805,11 +819,11 @@ requester_html = f'''<!DOCTYPE html>
     <div class="requester-bar">
       <div class="form-group custom-combobox-wrapper" id="deptComboboxWrapper">
         <label for="deptSearchInput">
-          {svg_icons['building']} หน่วยงาน / คณะ / โรงเรียนที่สังกัด *
+          {svg_icons['building']} กลุ่มงาน / หน่วยงานที่สังกัด (สวท.) *
         </label>
         <div class="combobox-control" id="deptComboboxControl">
           <input type="text" id="deptSearchInput" class="form-control combobox-input" 
-                 placeholder="พิมพ์ค้นหาคณะ หรือหน่วยงาน... (เช่น การเรือน, คอม, กองคลัง)" 
+                 placeholder="พิมพ์ค้นหาหรือเลือกกลุ่มงาน... (เช่น ส่งเสริมวิชาการ, บริการวิชาการ, ทะเบียนนักศึกษา)" 
                  autocomplete="off" 
                  value=""
                  onfocus="openDeptDropdown()" 
@@ -823,11 +837,24 @@ requester_html = f'''<!DOCTYPE html>
           <!-- Populated and filtered by JS -->
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group custom-combobox-wrapper" id="userComboboxWrapper">
         <label for="requesterName">
-          {svg_icons['user']} ชื่อ-นามสกุล ผู้ขอเบิก *
+          {svg_icons['user']} ชื่อ-นามสกุล ผู้ขอเบิก (บุคลากร สวท.) *
         </label>
-        <input type="text" id="requesterName" class="form-control" placeholder="เช่น อ.สมชาย ใจดี" value="">
+        <div class="combobox-control" id="userComboboxControl">
+          <input type="text" id="requesterName" class="form-control combobox-input" 
+                 placeholder="คลิกเลือกหรือพิมพ์ค้นหาชื่อบุคลากร... (เช่น ณัฐชา, จุฑาธิป, วาสนา)" 
+                 autocomplete="off" 
+                 value=""
+                 onfocus="openUserDropdown()" 
+                 oninput="handleUserSearch(this.value)">
+          <button type="button" class="combobox-toggle-btn" onclick="toggleUserDropdown(event)" title="เปิด/ปิด รายชื่อบุคลากร">
+            {svg_icons['chevron_down']}
+          </button>
+        </div>
+        <div class="combobox-dropdown" id="userDropdownList">
+          <!-- Populated and filtered by JS -->
+        </div>
       </div>
       <div class="form-group">
         <label for="requesterPhone">
@@ -964,9 +991,9 @@ requester_html = f'''<!DOCTYPE html>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>ระบุเลขที่เอกสาร (เช่น REQ-256910-0042)</label>
+          <label>ระบุเลขที่เอกสาร หรือ ชื่อผู้ขอเบิก (เช่น REQ-256910-0042 หรือ สมชาย)</label>
           <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="trackingInput" class="form-control" placeholder="REQ-...">
+            <input type="text" id="trackingInput" class="form-control" placeholder="พิมพ์เลขที่เอกสาร REQ-... หรือชื่อผู้ขอเบิก">
             <button class="btn btn-primary" onclick="searchTracking()">ค้นหา</button>
           </div>
         </div>
@@ -1083,7 +1110,9 @@ requester_html = f'''<!DOCTYPE html>
   <!-- Scripts -->
   <script>
     const APP_VERSION = '{SYSTEM_VERSION}';
-    const departmentsData = {dept_json_str};
+    const MYSQL_API_URL = '{MYSQL_API_URL}';
+    const defaultDepts = {dept_json_str};
+    const defaultUsers = {users_json_str};
 
     const vIcons = {{
       box: `{svg_icons['box']}`,
@@ -1106,17 +1135,148 @@ requester_html = f'''<!DOCTYPE html>
     // SHARED LOCAL STORAGE DB INITIALIZATION
     const DB_ITEMS_KEY = 'inventory_items';
     const DB_REQS_KEY = 'inventory_requisitions';
+    const DB_USERS_KEY = 'inventory_users';
+    const DB_DEPTS_KEY = 'inventory_departments';
 
     const defaultItems = {json.dumps(initial_items, ensure_ascii=False)};
     const defaultReqs = {json.dumps(initial_requisitions, ensure_ascii=False)};
+
+    function getDeptsDB() {{
+      const data = localStorage.getItem(DB_DEPTS_KEY);
+      if (!data) {{
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }}
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].category && parsed[0].category.includes('สวท')) {{
+          return parsed;
+        }}
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }} catch (e) {{
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }}
+    }}
+
+    function saveDeptsDB(depts) {{
+      localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(depts));
+    }}
+
+    function getUsersDB() {{
+      const data = localStorage.getItem(DB_USERS_KEY);
+      if (!data) {{
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }}
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {{
+          // Auto-migrate if localStorage still had the old 29-user list (contains ผอ.อังค์ริสา)
+          if (parsed.some(u => u.name && u.name.includes('อังค์ริสา'))) {{
+            const customAdded = parsed.filter(u => Number(u.id) > 29);
+            const migrated = [
+              ...JSON.parse(JSON.stringify(defaultUsers)),
+              ...customAdded.map((u, idx) => ({{ ...u, id: defaultUsers.length + idx + 1 }}))
+            ];
+            localStorage.setItem(DB_USERS_KEY, JSON.stringify(migrated));
+            return migrated;
+          }}
+          return parsed;
+        }}
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }} catch (e) {{
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }}
+    }}
+
+    function saveUsersDB(users) {{
+      localStorage.setItem(DB_USERS_KEY, JSON.stringify(users));
+    }}
 
     function getItemsDB() {{
       const data = localStorage.getItem(DB_ITEMS_KEY);
       if (!data) {{
         localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
-        return defaultItems;
+        return JSON.parse(JSON.stringify(defaultItems));
       }}
-      return JSON.parse(data);
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {{
+          const defMap = new Map(defaultItems.map(i => [i.id, i]));
+          let needsSave = false;
+          const upgraded = parsed.map(ex => {{
+            const defItem = defMap.get(ex.id);
+            if (defItem && ex.image_piece && ex.image_piece.startsWith('assets/images/image')) {{
+              needsSave = true;
+              return {{ ...defItem, on_hand_pieces: ex.on_hand_pieces, reserved_pieces: ex.reserved_pieces }};
+            }}
+            return ex;
+          }});
+          if (needsSave) localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(upgraded));
+          return upgraded;
+        }}
+        return parsed;
+      }} catch (e) {{
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
+        return JSON.parse(JSON.stringify(defaultItems));
+      }}
+    }}
+
+    async function syncFromMySQLAPI() {{
+      if (!MYSQL_API_URL || !navigator.onLine) return;
+      try {{
+        const [itemsRes, reqsRes, usersRes, deptsRes] = await Promise.all([
+          fetch(`${{MYSQL_API_URL}}?action=getItems`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getRequisitions`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getUsers`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getDepartments`).then(r => r.json()).catch(() => null)
+        ]);
+        if (itemsRes && itemsRes.status === 'success' && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {{
+          saveItemsDB(itemsRes.data);
+          renderCatalog();
+        }}
+        if (reqsRes && reqsRes.status === 'success' && Array.isArray(reqsRes.data) && reqsRes.data.length > 0) {{
+          saveReqsDB(reqsRes.data);
+          updateMyReqsBadge();
+        }}
+        if (usersRes && usersRes.status === 'success' && Array.isArray(usersRes.data) && usersRes.data.length > 0) {{
+          saveUsersDB(usersRes.data);
+        }}
+        if (deptsRes && deptsRes.status === 'success' && Array.isArray(deptsRes.data) && deptsRes.data.length > 0) {{
+          const grouped = {{}};
+          deptsRes.data.forEach(d => {{
+            const cat = d.category || 'สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)';
+            const lbl = d.full_label || d.name;
+            if (!grouped[cat]) grouped[cat] = [];
+            if (lbl && !grouped[cat].some(x => x.value === lbl)) {{
+              grouped[cat].push({{ label: lbl, value: lbl, sub: false }});
+            }}
+          }});
+          const formattedDepts = Object.keys(grouped).map(k => ({{ category: k, items: grouped[k] }}));
+          if (formattedDepts.length > 0) saveDeptsDB(formattedDepts);
+        }}
+      }} catch (err) {{
+        console.warn('Offline fallback active (localStorage):', err);
+      }}
+    }}
+
+    async function postToMySQLAPI(action, payload) {{
+      if (!MYSQL_API_URL || !navigator.onLine) return null;
+      try {{
+        const res = await fetch(MYSQL_API_URL, {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'text/plain;charset=utf-8' }},
+          body: JSON.stringify({{ action, payload }})
+        }});
+        return await res.json();
+      }} catch (err) {{
+        console.warn('MySQL API unreachable, saved to localStorage fallback:', err);
+        return null;
+      }}
     }}
 
     function saveItemsDB(items) {{
@@ -1129,7 +1289,26 @@ requester_html = f'''<!DOCTYPE html>
         localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
         return defaultReqs;
       }}
-      return JSON.parse(data);
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {{
+          const defMap = new Map(defaultReqs.map(r => [r.id, r]));
+          let needsSave = false;
+          const updated = parsed.map(r => {{
+            const defReq = defMap.get(r.id);
+            if (defReq && (r.dept === 'โรงเรียนการเรือน' || r.dept === 'คณะพยาบาลศาสตร์')) {{
+              needsSave = true;
+              return {{ ...r, dept: defReq.dept, requester: defReq.requester, purpose: defReq.purpose }};
+            }}
+            return r;
+          }});
+          if (needsSave) localStorage.setItem(DB_REQS_KEY, JSON.stringify(updated));
+          return updated;
+        }}
+        return parsed;
+      }} catch (e) {{
+        return defaultReqs;
+      }}
     }}
 
     function saveReqsDB(reqs) {{
@@ -1139,15 +1318,16 @@ requester_html = f'''<!DOCTYPE html>
     let cart = [];
     let currentCategory = 'ALL';
 
-    // Combobox Logic
+    // Department Combobox Logic
     function renderDeptDropdown(filterText = "") {{
       const dropdown = document.getElementById('deptDropdownList');
       const cleanFilter = filterText.trim().toLowerCase();
       let totalMatches = 0;
       let html = "";
       const currentVal = document.getElementById('deptSelect').value;
+      const deptsData = getDeptsDB();
 
-      departmentsData.forEach(cat => {{
+      deptsData.forEach(cat => {{
         const matchedItems = cat.items.filter(item => 
           item.label.toLowerCase().includes(cleanFilter) || item.value.toLowerCase().includes(cleanFilter)
         );
@@ -1158,9 +1338,11 @@ requester_html = f'''<!DOCTYPE html>
           matchedItems.forEach(item => {{
             const isSelected = item.value === currentVal;
             const subClass = item.sub ? 'combobox-item-sub' : '';
+            const safeVal = item.value.replace(/'/g, "\\'");
+            const safeLbl = item.label.replace(/'/g, "\\'");
             html += `
               <div class="combobox-item ${{subClass}} ${{isSelected ? 'selected' : ''}}" 
-                   onclick="selectDepartment('${{item.value}}', '${{item.label}}')">
+                   onclick="selectDepartment('${{safeVal}}', '${{safeLbl}}')">
                 <span>${{item.label}}</span>
                 ${{isSelected ? `<span style="color: var(--primary); font-size: 0.8rem;">${{vIcons.check}}</span>` : ''}}
               </div>
@@ -1176,9 +1358,10 @@ requester_html = f'''<!DOCTYPE html>
     }}
 
     function openDeptDropdown() {{
+      closeUserDropdown();
       document.getElementById('deptDropdownList').classList.add('open');
       document.getElementById('deptComboboxControl').classList.add('open');
-      renderDeptDropdown(document.getElementById('deptSearchInput').value);
+      renderDeptDropdown("");
     }}
 
     function closeDeptDropdown() {{
@@ -1197,6 +1380,7 @@ requester_html = f'''<!DOCTYPE html>
     }}
 
     function handleDeptSearch(text) {{
+      document.getElementById('deptSelect').value = text.trim();
       openDeptDropdown();
       renderDeptDropdown(text);
     }}
@@ -1207,9 +1391,114 @@ requester_html = f'''<!DOCTYPE html>
       closeDeptDropdown();
     }}
 
+    // User (Personnel) Combobox Logic
+    function renderUserDropdown(filterText = "") {{
+      const dropdown = document.getElementById('userDropdownList');
+      const users = getUsersDB();
+      const currentName = document.getElementById('requesterName').value.trim();
+      const selectedDept = document.getElementById('deptSelect').value.trim();
+      // If filterText equals a known user's exact name, show all users so they can switch easily
+      const isExactSelectedName = users.some(u => u.name === filterText.trim());
+      const cleanFilter = isExactSelectedName ? "" : filterText.trim().toLowerCase();
+
+      const matched = users.filter(u =>
+        !cleanFilter ||
+        (u.name && u.name.toLowerCase().includes(cleanFilter)) ||
+        (u.position && u.position.toLowerCase().includes(cleanFilter)) ||
+        (u.dept && u.dept.toLowerCase().includes(cleanFilter))
+      );
+
+      if (matched.length === 0) {{
+        dropdown.innerHTML = `<div class="combobox-no-results">ไม่พบรายชื่อในระบบ (สามารถพิมพ์ชื่อ "${{filterText}}" เพื่อขอเบิกได้ทันที)</div>`;
+        return;
+      }}
+
+      let html = "";
+      // Group by department, putting selectedDept first if chosen
+      const groups = {{}};
+      matched.forEach(u => {{
+        const d = u.dept || 'ไม่ระบุกลุ่มงาน';
+        if (!groups[d]) groups[d] = [];
+        groups[d].push(u);
+      }});
+
+      const deptKeys = Object.keys(groups);
+      if (selectedDept && groups[selectedDept]) {{
+        deptKeys.sort((a, b) => (a === selectedDept ? -1 : b === selectedDept ? 1 : 0));
+      }}
+
+      deptKeys.forEach(deptName => {{
+        const isCurrentDept = deptName === selectedDept;
+        html += `<div class="combobox-group-title">${{deptName}}${{isCurrentDept ? ' (กลุ่มงานที่เลือก)' : ''}}</div>`;
+        groups[deptName].forEach(u => {{
+          const isSelected = u.name === currentName;
+          html += `
+            <div class="combobox-item ${{isSelected ? 'selected' : ''}}"
+                 onclick="selectRequesterUser(${{u.id}})"
+                 style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 500; color: var(--neutral-900);">${{u.name}}</span>
+                <span style="font-size: 0.75rem; color: var(--neutral-500);">${{u.position || '-'}}</span>
+              </div>
+              ${{isSelected ? `<span style="color: var(--primary); font-size: 0.8rem;">${{vIcons.check}}</span>` : ''}}
+            </div>
+          `;
+        }});
+      }});
+
+      dropdown.innerHTML = html;
+    }}
+
+    function openUserDropdown() {{
+      closeDeptDropdown();
+      document.getElementById('userDropdownList').classList.add('open');
+      document.getElementById('userComboboxControl').classList.add('open');
+      renderUserDropdown(document.getElementById('requesterName').value);
+    }}
+
+    function closeUserDropdown() {{
+      const dd = document.getElementById('userDropdownList');
+      const ctrl = document.getElementById('userComboboxControl');
+      if (dd) dd.classList.remove('open');
+      if (ctrl) ctrl.classList.remove('open');
+    }}
+
+    function toggleUserDropdown(e) {{
+      e.stopPropagation();
+      const dropdown = document.getElementById('userDropdownList');
+      if (dropdown.classList.contains('open')) closeUserDropdown();
+      else {{
+        document.getElementById('requesterName').focus();
+        openUserDropdown();
+      }}
+    }}
+
+    function handleUserSearch(text) {{
+      openUserDropdown();
+      renderUserDropdown(text);
+    }}
+
+    function selectRequesterUser(userId) {{
+      const users = getUsersDB();
+      const user = users.find(u => Number(u.id) === Number(userId));
+      if (user) {{
+        document.getElementById('requesterName').value = user.name;
+        if (user.dept) {{
+          document.getElementById('deptSelect').value = user.dept;
+          document.getElementById('deptSearchInput').value = user.dept;
+        }}
+        if (user.phone) {{
+          document.getElementById('requesterPhone').value = user.phone;
+        }}
+      }}
+      closeUserDropdown();
+    }}
+
     document.addEventListener('click', (e) => {{
-      const wrapper = document.getElementById('deptComboboxWrapper');
-      if (wrapper && !wrapper.contains(e.target)) closeDeptDropdown();
+      const deptWrapper = document.getElementById('deptComboboxWrapper');
+      if (deptWrapper && !deptWrapper.contains(e.target)) closeDeptDropdown();
+      const userWrapper = document.getElementById('userComboboxWrapper');
+      if (userWrapper && !userWrapper.contains(e.target)) closeUserDropdown();
     }});
 
     // Catalog Rendering
@@ -1250,7 +1539,7 @@ requester_html = f'''<!DOCTYPE html>
         return `
           <div class="item-card">
             <div class="item-image-wrapper">
-              <img src="${{imgSrc}}" class="item-img" alt="${{item.name}}" onerror="this.src='assets/images/image1.jpeg'">
+              <img src="${{imgSrc}}" class="item-img" alt="${{item.name}}" onerror="this.onerror=null; this.src='assets/logo_sdu.png'">
               ${{item.is_multi_unit ? `
                 <div class="image-toggle-pills">
                   <button class="img-pill-btn ${{item.current_img_mode !== 'box' ? 'active' : ''}}" 
@@ -1506,6 +1795,7 @@ requester_html = f'''<!DOCTYPE html>
           const randomNo = Math.floor(1000 + Math.random() * 9000);
           const newDocNo = `REQ-256910-${{randomNo}}`;
 
+          const nowIso = new Date().toISOString();
           const newReq = {{
             id: newDocNo,
             dept: dept,
@@ -1515,6 +1805,9 @@ requester_html = f'''<!DOCTYPE html>
             date: "21 ต.ค. 2569 " + new Date().toLocaleTimeString('th-TH', {{hour: '2-digit', minute:'2-digit'}}) + " น.",
             status: "PENDING",
             signature: null,
+            reject_reason: "",
+            created_at: nowIso,
+            updated_at: nowIso,
             items: cart.map(c => ({{
               itemId: c.itemId,
               name: c.name,
@@ -1527,10 +1820,11 @@ requester_html = f'''<!DOCTYPE html>
             }}))
           }};
 
-          // Save to shared localStorage DB
+          // Save to shared localStorage DB & sync to MySQL API
           const reqs = getReqsDB();
           reqs.unshift(newReq);
           saveReqsDB(reqs);
+          postToMySQLAPI('createRequisition', newReq);
 
           cart = [];
           document.getElementById('cartPurpose').value = '';
@@ -1750,6 +2044,11 @@ requester_html = f'''<!DOCTYPE html>
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
                 <span>${{req.purpose || '-'}}</span>
               </div>
+              ${{req.status === 'REJECTED' && (req.reject_reason || req.rejectReason) ? `
+              <div style="grid-column: 1 / -1; background: var(--danger-light); color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">
+                <strong>เหตุผลที่ไม่อนุมัติ:</strong> ${{req.reject_reason || req.rejectReason}}
+              </div>
+              ` : ''}}
             </div>
 
             <table class="req-item-mini-table">
@@ -1786,45 +2085,91 @@ requester_html = f'''<!DOCTYPE html>
       document.getElementById('trackingModal').classList.remove('open');
     }}
     function searchTracking() {{
-      const docNo = document.getElementById('trackingInput').value.trim();
+      const query = document.getElementById('trackingInput').value.trim();
       const area = document.getElementById('trackingResultArea');
+      if (!query) return;
       const reqs = getReqsDB();
-      const req = reqs.find(r => r.id.toLowerCase() === docNo.toLowerCase());
+      const qLower = query.toLowerCase();
+      const req = reqs.find(r =>
+        (r.id || '').toLowerCase() === qLower ||
+        (r.id || '').toLowerCase().includes(qLower) ||
+        (r.requester || '').toLowerCase().includes(qLower)
+      );
 
       if (!req) {{
         Swal.fire({{
           icon: 'error',
-          title: 'ไม่พบข้อมูลเอกสาร',
-          text: `ไม่พบข้อมูลคำขอเบิกเลขที่ "${{docNo}}" ในระบบ กรุณาตรวจสอบเลขที่เอกสารอีกครั้งครับ`,
+          title: 'ไม่พบข้อมูลคำขอเบิก',
+          text: `ไม่พบข้อมูลคำขอเบิกที่ตรงกับ "${{query}}" ในระบบ กรุณาตรวจสอบเลขที่เอกสารหรือชื่อผู้ขอเบิกอีกครั้งครับ`,
           confirmButtonColor: '#1e40af',
           confirmButtonText: 'ตกลง'
         }});
-        area.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 1rem;">ไม่พบข้อมูลเอกสารเลขที่ "${{docNo}}"</p>`;
+        area.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 1rem;">ไม่พบข้อมูลคำขอเบิกที่ตรงกับ "${{query}}"</p>`;
         return;
       }}
 
-      let statusBadge = '<span style="color: var(--warning); font-weight: bold;">[ รอเจ้าหน้าที่พัสดุอนุมัติ ]</span>';
-      if (req.status === 'APPROVED') statusBadge = '<span style="color: var(--primary); font-weight: bold;">[ อนุมัติแล้ว! เชิญมารับของที่ห้องพัสดุ ]</span>';
-      if (req.status === 'COMPLETED') statusBadge = '<span style="color: var(--accent); font-weight: bold;">[ รับพัสดุเรียบร้อยแล้ว ]</span>';
-      if (req.status === 'REJECTED') statusBadge = '<span style="color: var(--danger); font-weight: bold;">[ ไม่อนุมัติ ]</span>';
+      let statusBadge = '<span class="req-status-pill pill-pending">' + vIcons.clock + ' รอเจ้าหน้าที่พัสดุอนุมัติ</span>';
+      if (req.status === 'APPROVED') statusBadge = '<span class="req-status-pill pill-approved">' + vIcons.check + ' อนุมัติแล้ว (เชิญรับพัสดุ)</span>';
+      if (req.status === 'COMPLETED') statusBadge = '<span class="req-status-pill pill-completed">' + vIcons.check + ' รับมอบพัสดุสำเร็จแล้ว</span>';
+      if (req.status === 'REJECTED') statusBadge = '<span class="req-status-pill pill-rejected">' + vIcons.x + ' ไม่อนุมัติ</span>';
+
+      const step1Active = true;
+      const step2Active = req.status === 'APPROVED' || req.status === 'COMPLETED';
+      const step3Active = req.status === 'COMPLETED';
+      const isRejected = req.status === 'REJECTED';
+      const reasonText = req.reject_reason || req.rejectReason || 'ไม่ระบุเหตุผล';
+
+      const timelineHtml = isRejected ? `
+        <div class="tracking-timeline">
+          <div class="timeline-step active">
+            <div class="timeline-dot">${{vIcons.check}}</div>
+            <div class="timeline-title">1. ส่งคำขอเบิกพัสดุ (Pending)</div>
+            <div class="timeline-desc">บันทึกคำขอเบิกเข้าระบบเมื่อ ${{req.date}}</div>
+          </div>
+          <div class="timeline-step active">
+            <div class="timeline-dot" style="background: var(--danger); border-color: var(--danger);">${{vIcons.x}}</div>
+            <div class="timeline-title" style="color: var(--danger);">2. ไม่อนุมัติคำขอ / ยกเลิกรายการ (Rejected)</div>
+            <div class="timeline-desc" style="color: #991b1b;">เหตุผล: ${{reasonText}}</div>
+          </div>
+        </div>
+      ` : `
+        <div class="tracking-timeline">
+          <div class="timeline-step ${{step1Active ? 'active' : ''}}">
+            <div class="timeline-dot">${{step1Active ? vIcons.check : '1'}}</div>
+            <div class="timeline-title">1. ส่งคำขอเบิกพัสดุ (Pending)</div>
+            <div class="timeline-desc">บันทึกคำขอเบิกเข้าระบบเมื่อ ${{req.date}}</div>
+          </div>
+          <div class="timeline-step ${{step2Active ? 'active' : ''}}">
+            <div class="timeline-dot">${{step2Active ? vIcons.check : '2'}}</div>
+            <div class="timeline-title">2. อนุมัติและกันยอดสต๊อก (Approved)</div>
+            <div class="timeline-desc">${{step2Active ? 'เจ้าหน้าที่อนุมัติและกันสต๊อกเรียบร้อยแล้ว พร้อมให้มารับพัสดุ' : 'รอเจ้าหน้าที่คลังพัสดุตรวจสอบและอนุมัติ'}}</div>
+          </div>
+          <div class="timeline-step ${{step3Active ? 'active' : ''}}">
+            <div class="timeline-dot">${{step3Active ? vIcons.check : '3'}}</div>
+            <div class="timeline-title">3. ลงนามดิจิทัลและรับมอบพัสดุ (Completed)</div>
+            <div class="timeline-desc">${{step3Active ? 'ผู้เบิกลงนาม E-Signature รับของและตัดยอดสต๊อกจริงเรียบร้อยแล้ว' : 'รอผู้ขอเบิกเดินทางมารับของและเซ็นชื่อบนหน้าจอที่ห้องพัสดุ'}}</div>
+          </div>
+        </div>
+      `;
 
       area.innerHTML = `
-        <div style="background: var(--neutral-50); border: 1px solid var(--neutral-200); border-radius: 8px; padding: 1rem; margin-top: 1rem;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <strong>${{req.id}}</strong>
+        <div style="background: var(--neutral-50); border: 1px solid var(--neutral-200); border-radius: 8px; padding: 1.15rem; margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <strong style="font-size: 1.05rem; color: var(--primary); font-family: monospace;">${{req.id}}</strong>
             ${{statusBadge}}
           </div>
-          <div style="font-size: 0.85rem; color: var(--neutral-600); margin-bottom: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.user}} ผู้เบิก: ${{req.requester}} (${{req.dept}})</div>
-            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.clock}} วันที่: ${{req.date}}</div>
+          <div style="font-size: 0.85rem; color: var(--neutral-600); margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.user}} <strong>ผู้เบิก:</strong> ${{req.requester}} (${{req.dept}})</div>
+            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.clock}} <strong>วันที่ขอ:</strong> ${{req.date}}</div>
           </div>
-          <div style="font-size: 0.85rem; border-top: 1px dashed var(--neutral-200); padding-top: 0.5rem;">
-            <strong>รายการที่ขอ:</strong>
+          ${{timelineHtml}}
+          <div style="font-size: 0.85rem; border-top: 1px dashed var(--neutral-200); padding-top: 0.65rem;">
+            <strong>รายการพัสดุ:</strong>
             <ul style="padding-left: 1.25rem; margin-top: 4px;">
-              ${{req.items.map(i => `<li>${{i.name}}: ${{i.totalPieces.toLocaleString()}} ${{i.unitPiece}}</li>`).join('')}}
+              ${{req.items.map(i => `<li>${{i.name}}: ขอ ${{i.totalPieces.toLocaleString()}} ${{i.unitPiece}} (อนุมัติ ${{(i.approvedPieces ?? i.totalPieces).toLocaleString()}} ${{i.unitPiece}})</li>`).join('')}}
             </ul>
           </div>
-          <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+          <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end;">
             <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="openRequisitionPdf('${{req.id}}')">
               ${{vIcons.file_text}} พิมพ์ใบขอเบิกพัสดุ (PDF)
             </button>
@@ -1904,10 +2249,13 @@ requester_html = f'''<!DOCTYPE html>
 
     // Initial Load
     document.addEventListener('DOMContentLoaded', () => {{
+      getDeptsDB();
+      getUsersDB();
       getItemsDB();
       getReqsDB();
       renderCatalog();
       updateMyReqsBadge();
+      syncFromMySQLAPI();
     }});
 
     // Real-time synchronization across tabs/windows
@@ -1920,13 +2268,25 @@ requester_html = f'''<!DOCTYPE html>
           renderMyRequisitionsModal();
         }}
       }}
+      if (e.key === DB_USERS_KEY) {{
+        const userDd = document.getElementById('userDropdownList');
+        if (userDd && userDd.classList.contains('open')) {{
+          renderUserDropdown(document.getElementById('requesterName').value);
+        }}
+      }}
+      if (e.key === DB_DEPTS_KEY) {{
+        const deptDd = document.getElementById('deptDropdownList');
+        if (deptDd && deptDd.classList.contains('open')) {{
+          renderDeptDropdown(document.getElementById('deptSearchInput').value);
+        }}
+      }}
     }});
   </script>
 </body>
 </html>
 '''
 
-with open('index.html', 'w', encoding='utf-8') as f:
+with open(os.path.join(PROJECT_ROOT, 'index.html'), 'w', encoding='utf-8') as f:
     f.write(requester_html)
 
 print("Created index.html (Requester Only Portal)")
@@ -1999,6 +2359,7 @@ staff_html = f'''<!DOCTYPE html>
     .badge-pending {{ background: var(--warning-light); color: var(--warning); }}
     .badge-approved {{ background: #e0e7ff; color: #4338ca; }}
     .badge-completed {{ background: #dcfce7; color: #15803d; }}
+    .badge-rejected {{ background: var(--danger-light); color: var(--danger); }}
 
     .req-details-grid {{
       display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2099,6 +2460,9 @@ staff_html = f'''<!DOCTYPE html>
           <button class="view-btn" onclick="switchStaffView('inventory')">
             {svg_icons['chart']} สรุปยอดสต๊อกคลัง
           </button>
+          <button class="view-btn" onclick="switchStaffView('users')">
+            {svg_icons['user']} จัดการบุคลากร / หน่วยงาน <span class="count-tag" id="navUsersBadge">4</span>
+          </button>
         </nav>
 
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
@@ -2133,6 +2497,9 @@ staff_html = f'''<!DOCTYPE html>
             <button class="status-tab" onclick="filterStaffRequisitionStatus('COMPLETED', this)">
               จ่ายสำเร็จแล้ว <span class="count-tag" id="completedCount">0</span>
             </button>
+            <button class="status-tab" onclick="filterStaffRequisitionStatus('REJECTED', this)">
+              ไม่อนุมัติ / ยกเลิก <span class="count-tag" id="rejectedCount">0</span>
+            </button>
           </div>
         </div>
 
@@ -2146,7 +2513,7 @@ staff_html = f'''<!DOCTYPE html>
         <div class="metrics-row">
           <div class="metric-card">
             <div class="metric-header">{svg_icons['box']} รายการพัสดุทั้งหมดในระบบ</div>
-            <span class="metric-val" id="metricTotalItems">4,045 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small></span>
+            <span class="metric-val" id="metricTotalItems">34 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small></span>
           </div>
           <div class="metric-card">
             <div class="metric-header" style="color: var(--danger);">{svg_icons['alert_triangle']} พัสดุต่ำกว่าเกณฑ์ขั้นต่ำ (Reorder Alert)</div>
@@ -2165,12 +2532,18 @@ staff_html = f'''<!DOCTYPE html>
         <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง (On-Hand vs Available)</h3>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" onclick="simulateExcelImport()">
                 {svg_icons['upload']} นำเข้าจาก Excel
               </button>
-              <button class="btn btn-primary" onclick="openStockInModal()">
-                {svg_icons['plus']} บันทึกรับเข้าพัสดุ
+              <button class="btn btn-outline" onclick="openStockAdjustModal()">
+                {svg_icons['edit']} ปรับยอดสต๊อก (Adjustment)
+              </button>
+              <button class="btn btn-outline" onclick="openStockInModal()">
+                {svg_icons['plus']} บันทึกรับเข้าพัสดุ (เติมสต๊อก)
+              </button>
+              <button class="btn btn-primary" onclick="openItemModal()">
+                {svg_icons['plus']} เพิ่มรายการพัสดุใหม่
               </button>
             </div>
           </div>
@@ -2186,9 +2559,72 @@ staff_html = f'''<!DOCTYPE html>
                   <th>ยอดจอง (Reserved)</th>
                   <th>พร้อมเบิก (Available)</th>
                   <th>สถานะสต๊อก</th>
+                  <th style="width: 150px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: USER & DEPARTMENT MANAGEMENT (สวท.) -->
+      <section id="view-users" class="view-content">
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-header">{svg_icons['user']} บุคลากรผู้มีสิทธิ์เบิกทั้งหมด</div>
+            <span class="metric-val" id="metricTotalUsers">4 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ท่าน</small></span>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header" style="color: var(--primary);">{svg_icons['building']} กลุ่มงาน / หน่วยงานภายใน สวท.</div>
+            <span class="metric-val" style="color: var(--primary);" id="metricTotalDepts">5 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small></span>
+          </div>
+        </div>
+
+        <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 700;">ทำเนียบรายชื่อบุคลากรและกลุ่มงาน สวท.</h3>
+              <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข หรือลบรายชื่อบุคลากรและกลุ่มงานได้ตลอดเวลา</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-outline" onclick="openAddDeptModal()">
+                {svg_icons['building']} + เพิ่มกลุ่มงาน/หน่วยงาน
+              </button>
+              <button class="btn btn-primary" onclick="openUserModal()">
+                {svg_icons['plus']} เพิ่มรายชื่อบุคลากร (User)
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 240px;">
+              <input type="text" id="staffUserSearchInput" class="form-control"
+                     placeholder="พิมพ์ค้นหาชื่อ-นามสกุล, ตำแหน่ง หรือกลุ่มงาน..."
+                     oninput="renderStaffUsersTable()">
+            </div>
+            <div style="min-width: 240px;">
+              <select id="staffUserDeptFilter" class="form-control" onchange="renderStaffUsersTable()">
+                <option value="ALL">ทุกกลุ่มงาน / หน่วยงานทั้งหมด</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="req-table" style="font-size: 0.9rem;">
+              <thead>
+                <tr>
+                  <th style="width: 60px; text-align: center;">ลำดับ</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th>ตำแหน่ง</th>
+                  <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
+                  <th style="width: 140px;">เบอร์โทรศัพท์</th>
+                  <th style="width: 160px; text-align: right;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="staffUsersTableBody">
                 <!-- Rendered by JS -->
               </tbody>
             </table>
@@ -2218,14 +2654,14 @@ staff_html = f'''<!DOCTYPE html>
             <table class="pdf-meta-table">
               <tr>
                 <td style="width: 55%;"><strong>เลขที่เอกสาร:</strong> <span id="pdfDocNo">REQ-256910-0042</span></td>
-                <td><strong>วันที่ขอเบิก:</strong> 21 ตุลาคม 2569</td>
+                <td><strong>วันที่ขอเบิก:</strong> <span id="pdfDate">21 ต.ค. 2569</span></td>
               </tr>
               <tr>
-                <td><strong>หน่วยงาน/คณะ:</strong> <span id="pdfDept">โรงเรียนการเรือน</span></td>
-                <td><strong>ชื่อผู้ขอเบิก:</strong> <span id="pdfRequester">อ.สมชาย ใจดี</span></td>
+                <td><strong>หน่วยงาน/กลุ่มงาน:</strong> <span id="pdfDept">สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน</span></td>
+                <td><strong>ชื่อผู้ขอเบิก:</strong> <span id="pdfRequester">นางสาววาสนา จันทร์จ่าย</span></td>
               </tr>
               <tr>
-                <td colspan="2"><strong>วัตถุประสงค์ในการขอเบิก:</strong> <span id="pdfPurpose">ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569</span></td>
+                <td colspan="2"><strong>วัตถุประสงค์ในการขอเบิก:</strong> <span id="pdfPurpose">ใช้สำหรับจัดส่งเอกสารราชการและหนังสือสำคัญ ประจำภาคการศึกษา 1/2569</span></td>
               </tr>
             </table>
 
@@ -2252,7 +2688,7 @@ staff_html = f'''<!DOCTYPE html>
             <div class="pdf-signatures">
               <div class="sig-box">
                 <div class="sig-line"></div>
-                <div>( <span id="pdfSignRequester">อ.สมชาย ใจดี</span> )</div>
+                <div>( <span id="pdfSignRequester">นางสาววาสนา จันทร์จ่าย</span> )</div>
                 <div style="font-size: 0.75rem; color: #666;">ผู้ขอเบิกพัสดุ</div>
                 <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569</div>
               </div>
@@ -2270,7 +2706,7 @@ staff_html = f'''<!DOCTYPE html>
                   <!-- Signature will be placed here -->
                 </div>
                 <div class="sig-line"></div>
-                <div>( <span id="pdfReceiverName">อ.สมชาย ใจดี</span> )</div>
+                <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
                 <div style="font-size: 0.75rem; color: #666;">ผู้รับพัสดุ</div>
                 <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">21 ต.ค. 2569</div>
               </div>
@@ -2290,7 +2726,7 @@ staff_html = f'''<!DOCTYPE html>
       </div>
       <div class="modal-body">
         <p style="font-size: 0.875rem; color: var(--neutral-600);">
-          ผู้รับของ: <strong id="sigModalRequesterName" style="color: var(--neutral-900);">อ.สมชาย ใจดี</strong> 
+          ผู้รับของ: <strong id="sigModalRequesterName" style="color: var(--neutral-900);">นางสาววาสนา จันทร์จ่าย</strong> 
           (<span id="sigModalDocNo">REQ-256910-0042</span>)
         </p>
 
@@ -2325,6 +2761,7 @@ staff_html = f'''<!DOCTYPE html>
   <!-- Scripts -->
   <script>
     const APP_VERSION = '{SYSTEM_VERSION}';
+    const MYSQL_API_URL = '{MYSQL_API_URL}';
     const vIcons = {{
       box: `{svg_icons['box']}`,
       cart: `{svg_icons['cart']}`,
@@ -2344,17 +2781,91 @@ staff_html = f'''<!DOCTYPE html>
 
     const DB_ITEMS_KEY = 'inventory_items';
     const DB_REQS_KEY = 'inventory_requisitions';
+    const DB_USERS_KEY = 'inventory_users';
+    const DB_DEPTS_KEY = 'inventory_departments';
 
     const defaultItems = {json.dumps(initial_items, ensure_ascii=False)};
     const defaultReqs = {json.dumps(initial_requisitions, ensure_ascii=False)};
+    const defaultDepts = {dept_json_str};
+    const defaultUsers = {users_json_str};
+
+    function getDeptsDB() {{
+      const data = localStorage.getItem(DB_DEPTS_KEY);
+      if (!data) {{
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }}
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].category && parsed[0].category.includes('สวท')) {{
+          return parsed;
+        }}
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }} catch (e) {{
+        localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(defaultDepts));
+        return JSON.parse(JSON.stringify(defaultDepts));
+      }}
+    }}
+    function saveDeptsDB(depts) {{ localStorage.setItem(DB_DEPTS_KEY, JSON.stringify(depts)); }}
+
+    function getUsersDB() {{
+      const data = localStorage.getItem(DB_USERS_KEY);
+      if (!data) {{
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }}
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {{
+          // Auto-migrate if localStorage still had the old 29-user list (contains ผอ.อังค์ริสา)
+          if (parsed.some(u => u.name && u.name.includes('อังค์ริสา'))) {{
+            const customAdded = parsed.filter(u => Number(u.id) > 29);
+            const migrated = [
+              ...JSON.parse(JSON.stringify(defaultUsers)),
+              ...customAdded.map((u, idx) => ({{ ...u, id: defaultUsers.length + idx + 1 }}))
+            ];
+            localStorage.setItem(DB_USERS_KEY, JSON.stringify(migrated));
+            return migrated;
+          }}
+          return parsed;
+        }}
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }} catch (e) {{
+        localStorage.setItem(DB_USERS_KEY, JSON.stringify(defaultUsers));
+        return JSON.parse(JSON.stringify(defaultUsers));
+      }}
+    }}
+    function saveUsersDB(users) {{ localStorage.setItem(DB_USERS_KEY, JSON.stringify(users)); }}
 
     function getItemsDB() {{
       const data = localStorage.getItem(DB_ITEMS_KEY);
       if (!data) {{
         localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
-        return defaultItems;
+        return JSON.parse(JSON.stringify(defaultItems));
       }}
-      return JSON.parse(data);
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {{
+          const defMap = new Map(defaultItems.map(i => [i.id, i]));
+          let needsSave = false;
+          const upgraded = parsed.map(ex => {{
+            const defItem = defMap.get(ex.id);
+            if (defItem && ex.image_piece && ex.image_piece.startsWith('assets/images/image')) {{
+              needsSave = true;
+              return {{ ...defItem, on_hand_pieces: ex.on_hand_pieces, reserved_pieces: ex.reserved_pieces }};
+            }}
+            return ex;
+          }});
+          if (needsSave) localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(upgraded));
+          return upgraded;
+        }}
+        return parsed;
+      }} catch (e) {{
+        localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(defaultItems));
+        return JSON.parse(JSON.stringify(defaultItems));
+      }}
     }}
     function saveItemsDB(items) {{ localStorage.setItem(DB_ITEMS_KEY, JSON.stringify(items)); }}
 
@@ -2364,9 +2875,80 @@ staff_html = f'''<!DOCTYPE html>
         localStorage.setItem(DB_REQS_KEY, JSON.stringify(defaultReqs));
         return defaultReqs;
       }}
-      return JSON.parse(data);
+      try {{
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {{
+          const defMap = new Map(defaultReqs.map(r => [r.id, r]));
+          let needsSave = false;
+          const updated = parsed.map(r => {{
+            const defReq = defMap.get(r.id);
+            if (defReq && (r.dept === 'โรงเรียนการเรือน' || r.dept === 'คณะพยาบาลศาสตร์')) {{
+              needsSave = true;
+              return {{ ...r, dept: defReq.dept, requester: defReq.requester, purpose: defReq.purpose }};
+            }}
+            return r;
+          }});
+          if (needsSave) localStorage.setItem(DB_REQS_KEY, JSON.stringify(updated));
+          return updated;
+        }}
+        return parsed;
+      }} catch (e) {{
+        return defaultReqs;
+      }}
     }}
     function saveReqsDB(reqs) {{ localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs)); }}
+
+    async function syncFromMySQLAPI() {{
+      if (!MYSQL_API_URL || !navigator.onLine) return;
+      try {{
+        const [itemsRes, reqsRes, usersRes, deptsRes] = await Promise.all([
+          fetch(`${{MYSQL_API_URL}}?action=getItems`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getRequisitions`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getUsers`).then(r => r.json()).catch(() => null),
+          fetch(`${{MYSQL_API_URL}}?action=getDepartments`).then(r => r.json()).catch(() => null)
+        ]);
+        if (itemsRes && itemsRes.status === 'success' && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {{
+          saveItemsDB(itemsRes.data);
+        }}
+        if (reqsRes && reqsRes.status === 'success' && Array.isArray(reqsRes.data) && reqsRes.data.length > 0) {{
+          saveReqsDB(reqsRes.data);
+        }}
+        if (usersRes && usersRes.status === 'success' && Array.isArray(usersRes.data) && usersRes.data.length > 0) {{
+          saveUsersDB(usersRes.data);
+        }}
+        if (deptsRes && deptsRes.status === 'success' && Array.isArray(deptsRes.data) && deptsRes.data.length > 0) {{
+          const grouped = {{}};
+          deptsRes.data.forEach(d => {{
+            const cat = d.category || 'สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)';
+            const lbl = d.full_label || d.name;
+            if (!grouped[cat]) grouped[cat] = [];
+            if (lbl && !grouped[cat].some(x => x.value === lbl)) {{
+              grouped[cat].push({{ label: lbl, value: lbl, sub: false }});
+            }}
+          }});
+          const formattedDepts = Object.keys(grouped).map(k => ({{ category: k, items: grouped[k] }}));
+          if (formattedDepts.length > 0) saveDeptsDB(formattedDepts);
+        }}
+        loadStaffDashboard();
+      }} catch (err) {{
+        console.warn('Offline fallback active (localStorage):', err);
+      }}
+    }}
+
+    async function postToMySQLAPI(action, payload) {{
+      if (!MYSQL_API_URL || !navigator.onLine) return null;
+      try {{
+        const res = await fetch(MYSQL_API_URL, {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'text/plain;charset=utf-8' }},
+          body: JSON.stringify({{ action, payload }})
+        }});
+        return await res.json();
+      }} catch (err) {{
+        console.warn('MySQL API unreachable, saved to localStorage fallback:', err);
+        return null;
+      }}
+    }}
 
     // Auth Simulation
     function checkStaffAuth() {{
@@ -2416,6 +2998,7 @@ staff_html = f'''<!DOCTYPE html>
       const btns = document.querySelectorAll('.view-btn');
       if (viewName === 'requisitions' && btns[0]) btns[0].classList.add('active');
       if (viewName === 'inventory' && btns[1]) btns[1].classList.add('active');
+      if (viewName === 'users' && btns[2]) btns[2].classList.add('active');
     }}
 
     // Requisition Management Logic
@@ -2440,6 +3023,8 @@ staff_html = f'''<!DOCTYPE html>
       document.getElementById('navPendingBadge').innerText = pendingCount;
       document.getElementById('approvedCount').innerText = reqs.filter(r => r.status === 'APPROVED').length;
       document.getElementById('completedCount').innerText = reqs.filter(r => r.status === 'COMPLETED').length;
+      const rejectedEl = document.getElementById('rejectedCount');
+      if (rejectedEl) rejectedEl.innerText = reqs.filter(r => r.status === 'REJECTED').length;
 
       if (filtered.length === 0) {{
         container.innerHTML = `
@@ -2456,6 +3041,8 @@ staff_html = f'''<!DOCTYPE html>
         let badgeText = 'รออนุมัติ (Pending)';
         if (req.status === 'APPROVED') {{ badgeClass = 'badge-approved'; badgeText = 'อนุมัติแล้ว รอผู้เบิกมารับของ'; }}
         if (req.status === 'COMPLETED') {{ badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว (Completed)'; }}
+        if (req.status === 'REJECTED') {{ badgeClass = 'badge-rejected'; badgeText = 'ไม่อนุมัติ / ยกเลิก (Rejected)'; }}
+        const reasonStr = req.reject_reason || req.rejectReason || '';
 
         return `
           <div class="requisition-card">
@@ -2473,24 +3060,43 @@ staff_html = f'''<!DOCTYPE html>
               <div>${{vIcons.building}} <strong>หน่วยงาน:</strong> ${{req.dept}}</div>
               <div>${{vIcons.user}} <strong>ผู้ขอเบิก:</strong> ${{req.requester}} (${{req.phone || '-'}})</div>
               <div style="grid-column: 1 / -1;">${{vIcons.fileText}} <strong>วัตถุประสงค์:</strong> ${{req.purpose}}</div>
+              ${{req.status === 'REJECTED' && reasonStr ? `
+                <div style="grid-column: 1 / -1; background: var(--danger-light); color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">
+                  <strong>เหตุผลที่ไม่อนุมัติ / ยกเลิก:</strong> ${{reasonStr}}
+                </div>
+              ` : ''}}
             </div>
 
             <table class="req-table">
               <thead>
                 <tr>
                   <th>รายการพัสดุ</th>
-                  <th style="width: 140px;">จำนวนที่ขอ</th>
-                  <th style="width: 140px;">จำนวนจ่ายจริง</th>
-                  <th style="width: 100px;">สถานะ</th>
+                  <th style="width: 150px;">จำนวนที่ขอ</th>
+                  <th style="width: 170px;">จำนวนอนุมัติจ่ายจริง</th>
+                  <th style="width: 110px;">สถานะ</th>
                 </tr>
               </thead>
               <tbody>
                 ${{req.items.map(item => `
                   <tr>
                     <td><strong>${{item.name}}</strong></td>
-                    <td>${{item.qtyBoxes > 0 ? `${{item.qtyBoxes}} ${{item.unitBox}} ` : ''}}${{item.qtyPieces > 0 ? `${{item.qtyPieces}} ${{item.unitPiece}}` : ''}}</td>
-                    <td style="font-weight: 600; color: var(--accent);">${{item.approvedPieces.toLocaleString()}} ${{item.unitPiece}}</td>
-                    <td><span style="color: var(--accent);">พร้อมจ่าย</span></td>
+                    <td>${{item.qtyBoxes > 0 ? `${{item.qtyBoxes}} ${{item.unitBox}} ` : ''}}${{item.qtyPieces > 0 ? `${{item.qtyPieces}} ${{item.unitPiece}}` : ''}} (${{item.totalPieces.toLocaleString()}} ${{item.unitPiece}})</td>
+                    <td style="font-weight: 600; color: var(--accent);">
+                      ${{req.status === 'PENDING' ? `
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <input type="number" id="approve-qty-${{req.id}}-${{item.itemId}}"
+                                 value="${{item.approvedPieces ?? item.totalPieces}}"
+                                 min="0" max="${{item.totalPieces}}"
+                                 style="width: 85px; padding: 4px 6px; border: 1px solid var(--neutral-300); border-radius: 6px; font-family: inherit; font-weight: 600; text-align: right;">
+                          <span>${{item.unitPiece}}</span>
+                        </div>
+                      ` : `${{(item.approvedPieces ?? item.totalPieces).toLocaleString()}} ${{item.unitPiece}}`}}
+                    </td>
+                    <td>
+                      ${{req.status === 'REJECTED'
+                        ? `<span style="color: var(--danger);">ยกเลิก</span>`
+                        : `<span style="color: var(--accent);">พร้อมจ่าย</span>`}}
+                    </td>
                   </tr>
                 `).join('')}}
               </tbody>
@@ -2507,6 +3113,9 @@ staff_html = f'''<!DOCTYPE html>
               ` : ''}}
 
               ${{req.status === 'APPROVED' ? `
+                <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${{req.id}}')">
+                  ${{vIcons.x}} ยกเลิก / คืนสต๊อกจอง
+                </button>
                 <button class="btn btn-outline" onclick="previewDocInPdf('${{req.id}}')">
                   ${{vIcons.eye}} ดูตัวอย่างใบเบิก PDF
                 </button>
@@ -2518,6 +3127,12 @@ staff_html = f'''<!DOCTYPE html>
               ${{req.status === 'COMPLETED' ? `
                 <button class="btn btn-outline" onclick="previewDocInPdf('${{req.id}}')">
                   ${{vIcons.printer}} พิมพ์ใบเบิก PDF (มีลายเซ็นแล้ว)
+                </button>
+              ` : ''}}
+
+              ${{req.status === 'REJECTED' ? `
+                <button class="btn btn-outline" onclick="previewDocInPdf('${{req.id}}')">
+                  ${{vIcons.eye}} ดูใบคำขอ PDF
                 </button>
               ` : ''}}
             </div>
@@ -2532,6 +3147,32 @@ staff_html = f'''<!DOCTYPE html>
       const req = reqs.find(r => r.id === docNo);
       if (!req) return;
 
+      // Read partial or full approved quantities from inputs
+      const updatedItems = req.items.map(i => {{
+        const inputEl = document.getElementById(`approve-qty-${{docNo}}-${{i.itemId}}`);
+        const val = inputEl ? parseInt(inputEl.value, 10) : (i.approvedPieces ?? i.totalPieces);
+        const cleanVal = isNaN(val) || val < 0 ? 0 : val;
+        return {{ ...i, approvedPieces: cleanVal }};
+      }});
+
+      // Validate stock availability before locking Reserved
+      for (const i of updatedItems) {{
+        const itm = items.find(si => si.id === i.itemId);
+        if (itm) {{
+          const avail = Math.max(0, itm.on_hand_pieces - itm.reserved_pieces);
+          if (i.approvedPieces > avail) {{
+            Swal.fire({{
+              icon: 'error',
+              title: 'สต๊อกพร้อมเบิกไม่เพียงพอ',
+              html: `รายการ <b>${{itm.name}}</b> มีพร้อมเบิกเพียง <b>${{avail.toLocaleString()}} ${{itm.unit_piece_name}}</b> (ต้องการอนุมัติ ${{i.approvedPieces.toLocaleString()}} ${{itm.unit_piece_name}})`,
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            }});
+            return;
+          }}
+        }}
+      }}
+
       Swal.fire({{
         title: 'ยืนยันการอนุมัติคำขอเบิก?',
         html: `
@@ -2540,7 +3181,7 @@ staff_html = f'''<!DOCTYPE html>
             <p><strong>ผู้ขอเบิก:</strong> ${{req.requester}} (${{req.dept}})</p>
             <p><strong>จำนวนพัสดุ:</strong> ${{req.items.length}} รายการ</p>
             <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.85rem;">
-              • ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ทันที
+              • ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ตามจำนวนที่อนุมัติทันที
             </div>
           </div>
         `,
@@ -2553,13 +3194,19 @@ staff_html = f'''<!DOCTYPE html>
       }}).then((result) => {{
         if (result.isConfirmed) {{
           req.status = 'APPROVED';
+          req.updated_at = new Date().toISOString();
+          req.items = updatedItems;
           req.items.forEach(i => {{
             const itm = items.find(si => si.id === i.itemId);
             if (itm) itm.reserved_pieces += i.approvedPieces;
           }});
           saveReqsDB(reqs);
           saveItemsDB(items);
-          renderStaffRequisitions('PENDING');
+          postToMySQLAPI('approveRequisition', {{
+            docNo: docNo,
+            items: req.items.map(i => ({{ itemId: i.itemId, approvedPieces: i.approvedPieces }}))
+          }});
+          renderStaffRequisitions(currentStaffStatus);
           renderInventoryTable();
 
           Swal.fire({{
@@ -2574,36 +3221,55 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     function rejectRequisition(docNo) {{
+      const reqs = getReqsDB();
+      const targetReq = reqs.find(r => r.id === docNo);
+      if (!targetReq) return;
+      const wasApproved = targetReq.status === 'APPROVED';
+
       Swal.fire({{
-        title: 'ปฏิเสธคำขอเบิกพัสดุ',
-        text: `ระบุเหตุผลในการไม่อนุมัติคำขอเลขที่ ${{docNo}}:`,
+        title: wasApproved ? 'ยกเลิกคำขอและคืนสต๊อกจอง' : 'ปฏิเสธคำขอเบิกพัสดุ',
+        text: `ระบุเหตุผลในการ${{wasApproved ? 'ยกเลิกและคืนยอดจอง' : 'ไม่อนุมัติ'}}คำขอเลขที่ ${{docNo}}:`,
         input: 'textarea',
-        inputPlaceholder: 'เช่น พัสดุในคลังไม่เพียงพอ, รายละเอียดไม่ชัดเจน...',
-        inputValue: 'พัสดุในคลังไม่เพียงพอสำหรับรอบการเบิกนี้',
+        inputPlaceholder: 'เช่น พัสดุในคลังไม่เพียงพอ, ผู้เบิกขอยกเลิก, เกินกำหนดเวลารับของ...',
+        inputValue: wasApproved ? 'ผู้ขอเบิกขอยกเลิกรายการ / เกินกำหนดเวลารับพัสดุ (คืนยอดจองเข้าคลัง)' : 'พัสดุในคลังไม่เพียงพอสำหรับรอบการเบิกนี้',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'ยืนยันปฏิเสธคำขอ',
+        confirmButtonText: wasApproved ? 'ยืนยันยกเลิกและคืนสต๊อก' : 'ยืนยันปฏิเสธคำขอ',
         cancelButtonText: 'ยกเลิก',
         inputValidator: (val) => {{
           if (!val || !val.trim()) {{
-            return 'กรุณาระบุเหตุผลในการปฏิเสธคำขอครับ!';
+            return 'กรุณาระบุเหตุผลครับ!';
           }}
         }}
       }}).then((result) => {{
         if (result.isConfirmed && result.value) {{
-          const reqs = getReqsDB();
+          const items = getItemsDB();
           const req = reqs.find(r => r.id === docNo);
           if (req) {{
+            // If previously APPROVED, release reserved_pieces back to stock
+            if (req.status === 'APPROVED') {{
+              req.items.forEach(i => {{
+                const itm = items.find(si => si.id === i.itemId);
+                if (itm) {{
+                  itm.reserved_pieces = Math.max(0, itm.reserved_pieces - (i.approvedPieces ?? i.totalPieces));
+                }}
+              }});
+              saveItemsDB(items);
+            }}
             req.status = 'REJECTED';
+            req.reject_reason = result.value.trim();
             req.rejectReason = result.value.trim();
+            req.updated_at = new Date().toISOString();
             saveReqsDB(reqs);
-            renderStaffRequisitions('PENDING');
+            postToMySQLAPI('rejectRequisition', {{ docNo: docNo, reason: req.reject_reason }});
+            renderStaffRequisitions(currentStaffStatus);
+            renderInventoryTable();
 
             Swal.fire({{
               icon: 'warning',
-              title: 'ปฏิเสธคำขอเรียบร้อยแล้ว',
-              text: `คำขอ ${{docNo}} ถูกปฏิเสธเรียบร้อยแล้ว`,
+              title: wasApproved ? 'ยกเลิกและคืนยอดสต๊อกเรียบร้อยแล้ว' : 'ปฏิเสธคำขอเรียบร้อยแล้ว',
+              text: `คำขอ ${{docNo}} ถูกเปลี่ยนสถานะเป็นไม่อนุมัติ/ยกเลิกเรียบร้อยแล้ว`,
               confirmButtonColor: '#1e40af',
               confirmButtonText: 'ตกลง'
             }});
@@ -2613,7 +3279,7 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     // E-Signature
-    let canvas, ctx, isDrawing = false;
+    let canvas, ctx, isDrawing = false, hasDrawnSignature = false;
     function initSignaturePad() {{
       canvas = document.getElementById('signaturePad');
       ctx = canvas.getContext('2d');
@@ -2633,7 +3299,7 @@ staff_html = f'''<!DOCTYPE html>
         return {{ x: clientX - r.left, y: clientY - r.top }};
       }}
       function startDraw(e) {{
-        e.preventDefault(); isDrawing = true;
+        e.preventDefault(); isDrawing = true; hasDrawnSignature = true;
         const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
         document.getElementById('sigPlaceholder').style.display = 'none';
       }}
@@ -2643,13 +3309,13 @@ staff_html = f'''<!DOCTYPE html>
       }}
       function stopDraw(e) {{ if (isDrawing) {{ isDrawing = false; ctx.closePath(); }} }}
 
-      canvas.addEventListener('mousedown', startDraw);
-      canvas.addEventListener('mousemove', draw);
-      canvas.addEventListener('mouseup', stopDraw);
-      canvas.addEventListener('mouseleave', stopDraw);
-      canvas.addEventListener('touchstart', startDraw, {{ passive: false }});
-      canvas.addEventListener('touchmove', draw, {{ passive: false }});
-      canvas.addEventListener('touchend', stopDraw);
+      canvas.onmousedown = startDraw;
+      canvas.onmousemove = draw;
+      canvas.onmouseup = stopDraw;
+      canvas.onmouseleave = stopDraw;
+      canvas.ontouchstart = startDraw;
+      canvas.ontouchmove = draw;
+      canvas.ontouchend = stopDraw;
     }}
 
     function openSignatureModal(docNo) {{
@@ -2672,6 +3338,7 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     function clearSignature() {{
+      hasDrawnSignature = false;
       if (ctx && canvas) {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         document.getElementById('sigPlaceholder').style.display = 'block';
@@ -2680,6 +3347,16 @@ staff_html = f'''<!DOCTYPE html>
 
     function confirmSignatureAndComplete() {{
       if (!currentActiveReqForSig) return;
+      if (!hasDrawnSignature) {{
+        Swal.fire({{
+          icon: 'warning',
+          title: 'กรุณาลงลายมือชื่อ',
+          text: 'กรุณาให้ผู้รับพัสดุเซ็นชื่อบนกรอบกระดานดิจิทัลก่อนกดยืนยันการจ่ายของครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        }});
+        return;
+      }}
       const sigDataUrl = canvas.toDataURL('image/png');
       const reqs = getReqsDB();
       const items = getItemsDB();
@@ -2688,18 +3365,24 @@ staff_html = f'''<!DOCTYPE html>
       if (req) {{
         req.signature = sigDataUrl;
         req.status = 'COMPLETED';
+        req.updated_at = new Date().toISOString();
 
-        // Deduct permanently
+        // Deduct permanently from On-Hand and release Reserved
         req.items.forEach(i => {{
           const itm = items.find(si => si.id === i.itemId);
           if (itm) {{
-            itm.on_hand_pieces -= i.approvedPieces;
-            itm.reserved_pieces -= i.approvedPieces;
+            const deductQty = i.approvedPieces ?? i.totalPieces;
+            itm.on_hand_pieces = Math.max(0, itm.on_hand_pieces - deductQty);
+            itm.reserved_pieces = Math.max(0, itm.reserved_pieces - deductQty);
           }}
         }});
 
         saveReqsDB(reqs);
         saveItemsDB(items);
+        postToMySQLAPI('completeRequisition', {{
+          docNo: req.id,
+          signature: sigDataUrl
+        }});
       }}
 
       closeSignatureModal();
@@ -2722,15 +3405,16 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     function simulateExcelImport() {{
+      const items = getItemsDB();
       Swal.fire({{
-        title: 'นำเข้าข้อมูลจาก Excel',
+        title: 'นำเข้าข้อมูลสต๊อกจาก Excel',
         html: `
           <div style="text-align: left; margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
-            <p style="margin-bottom: 0.5rem;">กำลังประมวลผลไฟล์ <b>"ยอดสต๊อก ตค.xlsx"</b>...</p>
+            <p style="margin-bottom: 0.5rem;">ตรวจสอบฐานข้อมูลจากไฟล์ <b>"data/ยอดสต๊อก ตค.xlsx"</b>:</p>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #334155; line-height: 1.6;">
-              • จำนวนพัสดุในไฟล์: <b>4,045 รายการ</b><br>
-              • สถานะการซิงค์: <b>นำเข้าข้อมูลสต๊อกสมบูรณ์</b><br>
-              • เชื่อมโยงหมวดหมู่: <b>สำนักงาน, งานบ้าน, ไฟฟ้า, คอมพิวเตอร์</b>
+              • รายการพัสดุที่นำเข้าสำเร็จ: <b>${{items.length}} รายการ (58 รูปภาพพัสดุจริง)</b><br>
+              • สถานะการซิงค์: <b>ข้อมูลสต๊อกและอัตราส่วนแปลงหน่วยพร้อมใช้งาน 100%</b><br>
+              • หมวดหมู่: <b>ซองเอกสาร, กระดาษและแบบฟอร์ม, เครื่องเขียนและแฟ้ม</b>
             </div>
           </div>
         `,
@@ -2742,10 +3426,13 @@ staff_html = f'''<!DOCTYPE html>
 
     function openStockInModal() {{
       const items = getItemsDB();
-      const options = items.map(i => `<option value="${{i.id}}">${{i.name}} (คงเหลือ: ${{i.on_hand_pieces.toLocaleString()}} ${{i.unit_piece_name}})</option>`).join('');
+      const options = items.map(i => {{
+        const ratioTxt = i.is_multi_unit ? ` [1 ${{i.unit_box_name}} = ${{i.pieces_per_box}} ${{i.unit_piece_name}}]` : '';
+        return `<option value="${{i.id}}">${{i.name}}${{ratioTxt}} (คงเหลือ: ${{i.on_hand_pieces.toLocaleString()}} ${{i.unit_piece_name}})</option>`;
+      }}).join('');
 
       Swal.fire({{
-        title: 'บันทึกรับเข้าพัสดุใหม่',
+        title: 'บันทึกรับเข้าพัสดุใหม่ (Stock-In)',
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
             <div>
@@ -2754,44 +3441,123 @@ staff_html = f'''<!DOCTYPE html>
                 ${{options}}
               </select>
             </div>
-            <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนที่รับเข้า (ชิ้น):</label>
-              <input type="number" id="swalStockQty" min="1" placeholder="ระบุจำนวน" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนหน่วยใหญ่ (กล่อง/ห่อ):</label>
+                <input type="number" id="swalStockBoxes" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนหน่วยย่อย (ชิ้น/ซอง/ใบ):</label>
+                <input type="number" id="swalStockQty" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+              </div>
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">หมายเหตุ / เลขที่ใบส่งของ (ถ้ามี):</label>
-              <input type="text" id="swalStockNote" placeholder="เช่น PO-2569-001 หรือ ใบส่งของ..." class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 0.9rem; border-radius: 8px;">
+              <input type="text" id="swalStockNote" placeholder="เช่น PO-2569-001 หรือ รับเข้าประจำเดือน..." class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 0.9rem; border-radius: 8px;">
             </div>
           </div>
         `,
         showCancelButton: true,
         confirmButtonColor: '#1e40af',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'ยืนยันรับเข้า',
+        confirmButtonText: 'ยืนยันรับเข้าคลัง',
         cancelButtonText: 'ยกเลิก',
         preConfirm: () => {{
-          const itemId = parseInt(document.getElementById('swalStockItem').value);
-          const qty = parseInt(document.getElementById('swalStockQty').value) || 0;
-          if (qty <= 0) {{
-            Swal.showValidationMessage('กรุณาระบุจำนวนที่รับเข้ามากกว่า 0 ครับ');
+          const itemId = parseInt(document.getElementById('swalStockItem').value, 10);
+          const boxes = parseInt(document.getElementById('swalStockBoxes').value, 10) || 0;
+          const pieces = parseInt(document.getElementById('swalStockQty').value, 10) || 0;
+          if (boxes <= 0 && pieces <= 0) {{
+            Swal.showValidationMessage('กรุณาระบุจำนวนที่รับเข้าอย่างน้อย 1 กล่องหรือ 1 ชิ้นครับ');
             return false;
           }}
-          return {{ itemId, qty }};
+          return {{ itemId, boxes, pieces }};
         }}
       }}).then((res) => {{
         if (res.isConfirmed && res.value) {{
-          const {{ itemId, qty }} = res.value;
+          const {{ itemId, boxes, pieces }} = res.value;
           const items = getItemsDB();
           const itm = items.find(i => i.id === itemId);
           if (itm) {{
-            itm.on_hand_pieces += qty;
+            const ratio = itm.is_multi_unit ? (itm.pieces_per_box || 1) : 1;
+            const totalAdded = (boxes * ratio) + pieces;
+            itm.on_hand_pieces += totalAdded;
             saveItemsDB(items);
+            postToMySQLAPI('restockItem', {{ itemId: itm.id, quantityPieces: totalAdded }});
             renderInventoryTable();
 
             Swal.fire({{
               icon: 'success',
               title: 'รับเข้าพัสดุสำเร็จ!',
-              text: `เพิ่ม ${{itm.name}} จำนวน ${{qty.toLocaleString()}} ${{itm.unit_piece_name}} เข้าสต๊อกเรียบร้อย`,
+              text: `เพิ่ม "${{itm.name}}" รวม ${{totalAdded.toLocaleString()}} ${{itm.unit_piece_name}} เข้าสต๊อกเรียบร้อยแล้ว`,
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            }});
+          }}
+        }}
+      }});
+    }}
+
+    function openStockAdjustModal() {{
+      const items = getItemsDB();
+      const options = items.map(i => `<option value="${{i.id}}">${{i.name}} (คงคลังปัจจุบัน: ${{i.on_hand_pieces.toLocaleString()}} ${{i.unit_piece_name}})</option>`).join('');
+
+      Swal.fire({{
+        title: 'ปรับยอดสต๊อกจริง (Stock Adjustment)',
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เลือกรายการพัสดุ:</label>
+              <select id="swalAdjItem" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+                ${{options}}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">ยอดคงคลังจริงที่ตรวจนับได้ (หน่วยย่อย):</label>
+              <input type="number" id="swalAdjNewQty" min="0" placeholder="ระบุยอดคงคลังจริงจากการตรวจนับ" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เหตุผลในการปรับยอดสต๊อก *:</label>
+              <select id="swalAdjReason" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <option value="ตรวจนับสต๊อกประจำงวดบัญชี">ตรวจนับสต๊อกประจำงวดบัญชี</option>
+                <option value="พัสดุชำรุด / เสื่อมสภาพ">พัสดุชำรุด / เสื่อมสภาพ</option>
+                <option value="พัสดุสูญหาย / คลาดเคลื่อน">พัสดุสูญหาย / คลาดเคลื่อน</option>
+                <option value="ปรับปรุงยอดยกมาต้นงวด">ปรับปรุงยอดยกมาต้นงวด</option>
+              </select>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'บันทึกการปรับยอด',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {{
+          const itemId = parseInt(document.getElementById('swalAdjItem').value, 10);
+          const rawVal = document.getElementById('swalAdjNewQty').value;
+          const newQty = parseInt(rawVal, 10);
+          const reason = document.getElementById('swalAdjReason').value;
+          if (rawVal === '' || isNaN(newQty) || newQty < 0) {{
+            Swal.showValidationMessage('กรุณาระบุยอดคงคลังจริงที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป) ครับ');
+            return false;
+          }}
+          return {{ itemId, newQty, reason }};
+        }}
+      }}).then((res) => {{
+        if (res.isConfirmed && res.value) {{
+          const {{ itemId, newQty, reason }} = res.value;
+          const items = getItemsDB();
+          const itm = items.find(i => i.id === itemId);
+          if (itm) {{
+            const oldQty = itm.on_hand_pieces;
+            itm.on_hand_pieces = newQty;
+            saveItemsDB(items);
+            postToMySQLAPI('adjustStock', {{ itemId: itm.id, newQty: newQty, reason: reason }});
+            renderInventoryTable();
+
+            Swal.fire({{
+              icon: 'success',
+              title: 'ปรับปรุงยอดสต๊อกสำเร็จ!',
+              html: `รายการ <b>${{itm.name}}</b><br>ปรับยอดจาก ${{oldQty.toLocaleString()}} เป็น <b>${{newQty.toLocaleString()}} ${{itm.unit_piece_name}}</b><br><small style="color:#64748b;">เหตุผล: ${{reason}}</small>`,
               confirmButtonColor: '#1e40af',
               confirmButtonText: 'ตกลง'
             }});
@@ -2807,8 +3573,10 @@ staff_html = f'''<!DOCTYPE html>
       if (!req) return;
 
       document.getElementById('pdfDocNo').innerText = req.id;
+      const pdfDateEl = document.getElementById('pdfDate');
+      if (pdfDateEl) pdfDateEl.innerText = req.date || '21 ต.ค. 2569';
       document.getElementById('pdfDept').innerText = req.dept;
-      document.getElementById('pdfRequester').innerText = req.requester;
+      document.getElementById('pdfRequester').innerText = req.requester + (req.phone ? ` (โทร ${{req.phone}})` : '');
       document.getElementById('pdfPurpose').innerText = req.purpose;
       document.getElementById('pdfSignRequester').innerText = req.requester;
       document.getElementById('pdfReceiverName').innerText = req.requester;
@@ -2819,15 +3587,15 @@ staff_html = f'''<!DOCTYPE html>
           <td style="text-align: center;">${{idx + 1}}</td>
           <td>${{item.name}}</td>
           <td style="text-align: center;">${{item.qtyBoxes > 0 ? `${{item.qtyBoxes}} ${{item.unitBox}} ` : ''}}${{item.qtyPieces > 0 ? `${{item.qtyPieces}} ${{item.unitPiece}}` : ''}}</td>
-          <td style="text-align: center; font-weight: bold; color: #166534;">${{item.approvedPieces.toLocaleString()}} ${{item.unitPiece}}</td>
-          <td style="text-align: center;">ครบถ้วน</td>
+          <td style="text-align: center; font-weight: bold; color: #166534;">${{(item.approvedPieces ?? item.totalPieces).toLocaleString()}} ${{item.unitPiece}}</td>
+          <td style="text-align: center;">${{req.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'ครบถ้วน'}}</td>
         </tr>
       `).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
       if (req.signature) {{
         sigArea.innerHTML = `<img src="${{req.signature}}" class="sig-img-preview" alt="ลายเซ็นดิจิทัล">`;
-        document.getElementById('pdfReceiveTime').innerText = `เซ็นรับเมื่อ: 21 ต.ค. 2569 (E-Signature)`;
+        document.getElementById('pdfReceiveTime').innerText = `เซ็นรับเมื่อ: ${{req.date || '21 ต.ค. 2569'}} (E-Signature)`;
       }} else {{
         sigArea.innerHTML = `<div style="height: 50px; display: flex; align-items: center; justify-content: center; color: #999; font-style: italic;">[ ยังไม่ได้เซ็นรับของ ]</div>`;
         document.getElementById('pdfReceiveTime').innerText = `วันที่รับของจริง: .......................................`;
@@ -2879,30 +3647,501 @@ staff_html = f'''<!DOCTYPE html>
                 </span>
               `}}
             </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openItemModal(${{item.id}})">
+                แก้ไข
+              </button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: var(--danger);" onclick="deleteInventoryItem(${{item.id}})">
+                ลบ
+              </button>
+            </td>
           </tr>
         `;
       }}).join('');
 
+      const totalItemsEl = document.getElementById('metricTotalItems');
+      if (totalItemsEl) {{
+        totalItemsEl.innerHTML = `${{items.length.toLocaleString()}} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small>`;
+      }}
       document.getElementById('metricReserved').innerHTML = `${{totalReserved.toLocaleString()}} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small>`;
       document.getElementById('metricLowStock').innerHTML = `${{lowStockCount}} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small>`;
+    }}
+
+    function readFileAsDataURL(fileInput) {{
+      return new Promise((resolve) => {{
+        if (!fileInput || !fileInput.files || !fileInput.files[0]) {{
+          resolve(null);
+          return;
+        }}
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(fileInput.files[0]);
+      }});
+    }}
+
+    function openItemModal(itemId = null) {{
+      const items = getItemsDB();
+      const existing = itemId !== null ? items.find(i => Number(i.id) === Number(itemId)) : null;
+      const categories = ['ซองเอกสาร', 'กระดาษและแบบฟอร์ม', 'เครื่องเขียนและแฟ้ม'];
+      const catOptions = categories.map(c =>
+        `<option value="${{c}}" ${{existing && existing.category === c ? 'selected' : ''}}>${{c}}</option>`
+      ).join('');
+      const isMulti = existing ? Boolean(existing.is_multi_unit) : true;
+
+      Swal.fire({{
+        title: existing ? 'แก้ไขรายการพัสดุ' : 'เพิ่มรายการพัสดุใหม่เข้าคลัง',
+        width: 600,
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; font-size: 0.9rem;">
+            <div>
+              <label style="font-size: 0.825rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อรายการพัสดุ *</label>
+              <input id="swal-item-name" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.925rem;" placeholder="เช่น กระดาษ A4 80 แกรม (ห่อละ 500 แผ่น)" value="${{existing ? existing.name : ''}}">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.825rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">หมวดหมู่พัสดุ *</label>
+                <select id="swal-item-cat" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                  ${{catOptions}}
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.825rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รูปแบบหน่วยนับ</label>
+                <select id="swal-item-multi" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;"
+                        onchange="document.getElementById('swal-multi-box-wrap').style.display = this.value === '1' ? 'grid' : 'none';">
+                  <option value="1" ${{isMulti ? 'selected' : ''}}>2 หน่วยนับ (เช่น กล่อง/ซอง)</option>
+                  <option value="0" ${{!isMulti ? 'selected' : ''}}>หน่วยนับเดี่ยว (เช่น อัน, เล่ม)</option>
+                </select>
+              </div>
+            </div>
+            <div id="swal-multi-box-wrap" style="display: ${{isMulti ? 'grid' : 'none'}}; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: #f8fafc; padding: 0.65rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">ชื่อหน่วยใหญ่ (เช่น กล่อง/ห่อ)</label>
+                <input id="swal-item-unit-box" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น กล่อง, ห่อ, แพ็ค" value="${{existing ? (existing.unit_box_name || 'กล่อง') : 'กล่อง'}}">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำนวนหน่วยย่อยต่อ 1 หน่วยใหญ่</label>
+                <input type="number" id="swal-item-ratio" min="1" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น 500" value="${{existing ? (existing.pieces_per_box || 1) : 500}}">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อหน่วยย่อย *</label>
+                <input id="swal-item-unit-piece" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น ชิ้น, ซอง, ใบ" value="${{existing ? (existing.unit_piece_name || 'ชิ้น') : 'ชิ้น'}}">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ยอดคงคลัง (หน่วยย่อย)</label>
+                <input type="number" id="swal-item-onhand" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${{existing ? existing.on_hand_pieces : 100}}">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เกณฑ์เตือนขั้นต่ำ</label>
+                <input type="number" id="swal-item-min" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${{existing ? existing.min_alert : 20}}">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รูปภาพหน่วยย่อย (อัปโหลดหรือระบุไฟล์)</label>
+                <input type="file" id="swal-item-file-piece" accept="image/*" style="font-size: 0.75rem; width: 100%; margin-bottom: 4px;">
+                <input id="swal-item-img-piece" class="swal2-input" style="margin: 0; width: 100%; height: 34px; font-size: 0.8rem;" placeholder="assets/images/..." value="${{existing ? (existing.image_piece || '') : ''}}">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รูปภาพหน่วยใหญ่/กล่อง</label>
+                <input type="file" id="swal-item-file-box" accept="image/*" style="font-size: 0.75rem; width: 100%; margin-bottom: 4px;">
+                <input id="swal-item-img-box" class="swal2-input" style="margin: 0; width: 100%; height: 34px; font-size: 0.8rem;" placeholder="assets/images/..." value="${{existing ? (existing.image_box || '') : ''}}">
+              </div>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: existing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการพัสดุ',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: async () => {{
+          const name = document.getElementById('swal-item-name').value.trim();
+          const category = document.getElementById('swal-item-cat').value;
+          const is_multi_unit = document.getElementById('swal-item-multi').value === '1';
+          const unit_piece_name = document.getElementById('swal-item-unit-piece').value.trim() || 'ชิ้น';
+          const unit_box_name = is_multi_unit
+            ? (document.getElementById('swal-item-unit-box').value.trim() || 'กล่อง')
+            : unit_piece_name;
+          const pieces_per_box = is_multi_unit
+            ? Math.max(1, parseInt(document.getElementById('swal-item-ratio').value, 10) || 1)
+            : 1;
+          const on_hand_pieces = Math.max(0, parseInt(document.getElementById('swal-item-onhand').value, 10) || 0);
+          const min_alert = Math.max(0, parseInt(document.getElementById('swal-item-min').value, 10) || 0);
+
+          if (!name) {{
+            Swal.showValidationMessage('กรุณาระบุชื่อรายการพัสดุ');
+            return false;
+          }}
+
+          const uploadedPiece = await readFileAsDataURL(document.getElementById('swal-item-file-piece'));
+          const uploadedBox = await readFileAsDataURL(document.getElementById('swal-item-file-box'));
+          const defaultFallbackImg = 'assets/images/แฟ้มเสนอ เล่ม.jpeg';
+          const image_piece = uploadedPiece || document.getElementById('swal-item-img-piece').value.trim() || defaultFallbackImg;
+          const image_box = uploadedBox || document.getElementById('swal-item-img-box').value.trim() || image_piece;
+
+          return {{
+            name,
+            category,
+            is_multi_unit,
+            unit_box_name,
+            unit_piece_name,
+            pieces_per_box,
+            on_hand_pieces,
+            min_alert,
+            image_piece,
+            image_box
+          }};
+        }}
+      }}).then((result) => {{
+        if (!result.isConfirmed || !result.value) return;
+        const val = result.value;
+        const currentItems = getItemsDB();
+        let savedItem = null;
+
+        if (existing) {{
+          const idx = currentItems.findIndex(i => Number(i.id) === Number(existing.id));
+          if (idx !== -1) {{
+            currentItems[idx] = {{ ...currentItems[idx], ...val }};
+            savedItem = currentItems[idx];
+          }}
+        }} else {{
+          const maxId = currentItems.reduce((m, i) => Math.max(m, Number(i.id) || 0), 0);
+          savedItem = {{
+            id: maxId + 1,
+            ...val,
+            reserved_pieces: 0
+          }};
+          currentItems.push(savedItem);
+        }}
+
+        saveItemsDB(currentItems);
+        if (savedItem) postToMySQLAPI('saveItem', savedItem);
+        renderInventoryTable();
+
+        Swal.fire({{
+          icon: 'success',
+          title: existing ? 'แก้ไขรายการพัสดุสำเร็จ' : 'เพิ่มรายการพัสดุใหม่สำเร็จ',
+          text: `"${{val.name}}" พร้อมให้เบิกใช้งานในหน้าแคตตาล็อกทันที`,
+          timer: 2000,
+          showConfirmButton: false
+        }});
+      }});
+    }}
+
+    function deleteInventoryItem(itemId) {{
+      const items = getItemsDB();
+      const target = items.find(i => Number(i.id) === Number(itemId));
+      if (!target) return;
+
+      Swal.fire({{
+        title: 'ยืนยันการลบรายการพัสดุ?',
+        text: `ต้องการลบ "${{target.name}}" ออกจากคลังพัสดุใช่หรือไม่`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ลบรายการพัสดุ',
+        cancelButtonText: 'ยกเลิก'
+      }}).then((result) => {{
+        if (!result.isConfirmed) return;
+        const updated = items.filter(i => Number(i.id) !== Number(itemId));
+        saveItemsDB(updated);
+        postToMySQLAPI('deleteItem', {{ id: itemId }});
+        renderInventoryTable();
+        Swal.fire({{
+          icon: 'success',
+          title: 'ลบรายการพัสดุเรียบร้อยแล้ว',
+          timer: 1500,
+          showConfirmButton: false
+        }});
+      }});
+    }}
+
+    // User & Department Management (Staff Portal)
+    function getAllDeptNames() {{
+      const deptsData = getDeptsDB();
+      const names = [];
+      deptsData.forEach(cat => {{
+        (cat.items || []).forEach(it => {{
+          if (it.value && !names.includes(it.value)) names.push(it.value);
+        }});
+      }});
+      return names;
+    }}
+
+    function ensureDeptExists(deptName) {{
+      const clean = (deptName || '').trim();
+      if (!clean) return;
+      const deptsData = getDeptsDB();
+      if (deptsData.length === 0) {{
+        deptsData.push({{ category: 'สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)', items: [] }});
+      }}
+      const exists = deptsData.some(c => (c.items || []).some(it => it.value === clean));
+      if (!exists) {{
+        deptsData[0].items.push({{ label: clean, value: clean, sub: false }});
+        saveDeptsDB(deptsData);
+        postToMySQLAPI('addDepartment', {{ category: deptsData[0].category, name: clean }});
+      }}
+    }}
+
+    function renderStaffUsersTable() {{
+      const users = getUsersDB();
+      const deptNames = getAllDeptNames();
+
+      const navUsersBadge = document.getElementById('navUsersBadge');
+      if (navUsersBadge) navUsersBadge.innerText = users.length;
+
+      const totalUsersEl = document.getElementById('metricTotalUsers');
+      if (totalUsersEl) {{
+        totalUsersEl.innerHTML = `${{users.length.toLocaleString()}} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ท่าน</small>`;
+      }}
+      const totalDeptsEl = document.getElementById('metricTotalDepts');
+      if (totalDeptsEl) {{
+        totalDeptsEl.innerHTML = `${{deptNames.length.toLocaleString()}} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small>`;
+      }}
+
+      const filterSelect = document.getElementById('staffUserDeptFilter');
+      if (filterSelect) {{
+        const prevVal = filterSelect.value || 'ALL';
+        filterSelect.innerHTML = `<option value="ALL">ทุกกลุ่มงาน / หน่วยงานทั้งหมด (${{deptNames.length}})</option>` +
+          deptNames.map(d => `<option value="${{d}}">${{d}}</option>`).join('');
+        if (deptNames.includes(prevVal)) filterSelect.value = prevVal;
+      }}
+
+      const searchEl = document.getElementById('staffUserSearchInput');
+      const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+      const deptFilter = filterSelect ? filterSelect.value : 'ALL';
+
+      const filtered = users.filter(u => {{
+        const matchDept = deptFilter === 'ALL' || u.dept === deptFilter;
+        const matchSearch = !q ||
+          (u.name && u.name.toLowerCase().includes(q)) ||
+          (u.position && u.position.toLowerCase().includes(q)) ||
+          (u.dept && u.dept.toLowerCase().includes(q)) ||
+          (u.phone && u.phone.toLowerCase().includes(q));
+        return matchDept && matchSearch;
+      }});
+
+      const tbody = document.getElementById('staffUsersTableBody');
+      if (!tbody) return;
+
+      if (filtered.length === 0) {{
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
+              ไม่พบรายชื่อบุคลากรที่ตรงกับเงื่อนไขการค้นหา
+            </td>
+          </tr>
+        `;
+        return;
+      }}
+
+      tbody.innerHTML = filtered.map((u, idx) => `
+        <tr>
+          <td style="text-align: center; color: var(--neutral-600);">${{idx + 1}}</td>
+          <td><strong>${{u.name}}</strong></td>
+          <td style="color: var(--neutral-700);">${{u.position || '-'}}</td>
+          <td>
+            <span style="background: var(--primary-light); color: var(--primary); font-size: 0.775rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--primary-border); display: inline-block;">
+              ${{u.dept || '-'}}
+            </span>
+          </td>
+          <td style="color: var(--neutral-600);">${{u.phone || '-'}}</td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openUserModal(${{u.id}})">
+              แก้ไข
+            </button>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: var(--danger);" onclick="deleteStaffUser(${{u.id}})">
+              ลบ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }}
+
+    function openUserModal(userId = null) {{
+      const users = getUsersDB();
+      const existing = userId !== null ? users.find(u => Number(u.id) === Number(userId)) : null;
+      const deptNames = getAllDeptNames();
+
+      const deptOptionsHtml = deptNames.map(d =>
+        `<option value="${{d}}" ${{existing && existing.dept === d ? 'selected' : ''}}>${{d}}</option>`
+      ).join('') + `<option value="__NEW__">+ เพิ่มกลุ่มงาน / หน่วยงานใหม่...</option>`;
+
+      Swal.fire({{
+        title: existing ? 'แก้ไขข้อมูลบุคลากร (User)' : 'เพิ่มรายชื่อบุคลากรใหม่ (User)',
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อ-นามสกุล บุคลากร *</label>
+              <input id="swal-user-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น นางสาวสมศรี ใจดี" value="${{existing ? existing.name : ''}}">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ตำแหน่ง</label>
+              <input id="swal-user-pos" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น เจ้าหน้าบริการการศึกษา, เจ้าหน้าที่สำนักงาน (บริหารงานทั่วไป)" value="${{existing ? (existing.position || '') : ''}}">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">กลุ่มงาน / หน่วยงานที่สังกัด (สวท.) *</label>
+              <select id="swal-user-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.9rem;" onchange="document.getElementById('swal-new-dept-wrap').style.display = this.value === '__NEW__' ? 'block' : 'none';">
+                ${{deptOptionsHtml}}
+              </select>
+            </div>
+            <div id="swal-new-dept-wrap" style="display: none;">
+              <label style="font-size: 0.85rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">ระบุชื่อกลุ่มงาน / หน่วยงานใหม่ *</label>
+              <input id="swal-user-new-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น กลุ่มงานพัฒนาวิชาการ">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เบอร์โทรศัพท์ติดต่อ</label>
+              <input id="swal-user-phone" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น 081-234-5678" value="${{existing ? (existing.phone || '') : ''}}">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: existing ? 'บันทึกการแก้ไข' : 'เพิ่มรายชื่อบุคลากร',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {{
+          const name = document.getElementById('swal-user-name').value.trim();
+          const position = document.getElementById('swal-user-pos').value.trim();
+          const deptSel = document.getElementById('swal-user-dept').value;
+          const newDept = document.getElementById('swal-user-new-dept').value.trim();
+          const phone = document.getElementById('swal-user-phone').value.trim();
+          const finalDept = deptSel === '__NEW__' ? newDept : deptSel;
+
+          if (!name) {{
+            Swal.showValidationMessage('กรุณาระบุชื่อ-นามสกุล บุคลากร');
+            return false;
+          }}
+          if (!finalDept) {{
+            Swal.showValidationMessage('กรุณาระบุกลุ่มงาน / หน่วยงานที่สังกัด');
+            return false;
+          }}
+          return {{ name, position, dept: finalDept, phone }};
+        }}
+      }}).then((result) => {{
+        if (!result.isConfirmed || !result.value) return;
+        const val = result.value;
+        ensureDeptExists(val.dept);
+
+        const currentUsers = getUsersDB();
+        let savedUser = null;
+        if (existing) {{
+          const idx = currentUsers.findIndex(u => Number(u.id) === Number(existing.id));
+          if (idx !== -1) {{
+            currentUsers[idx] = {{ ...currentUsers[idx], ...val }};
+            savedUser = currentUsers[idx];
+          }}
+        }} else {{
+          const maxId = currentUsers.reduce((m, u) => Math.max(m, Number(u.id) || 0), 0);
+          savedUser = {{
+            id: maxId + 1,
+            name: val.name,
+            position: val.position,
+            dept: val.dept,
+            phone: val.phone
+          }};
+          currentUsers.push(savedUser);
+        }}
+
+        saveUsersDB(currentUsers);
+        if (savedUser) postToMySQLAPI('saveUser', savedUser);
+        renderStaffUsersTable();
+
+        Swal.fire({{
+          icon: 'success',
+          title: existing ? 'อัปเดตข้อมูลบุคลากรสำเร็จ' : 'เพิ่มรายชื่อบุคลากรสำเร็จ',
+          text: `${{val.name}} (${{val.dept}}) พร้อมให้เลือกใช้งานในหน้าขอเบิกพัสดุทันที`,
+          timer: 2000,
+          showConfirmButton: false
+        }});
+      }});
+    }}
+
+    function deleteStaffUser(userId) {{
+      const users = getUsersDB();
+      const target = users.find(u => Number(u.id) === Number(userId));
+      if (!target) return;
+
+      Swal.fire({{
+        title: 'ยืนยันการลบรายชื่อบุคลากร?',
+        text: `ต้องการลบ "${{target.name}}" (${{target.dept}}) ออกจากระบบใช่หรือไม่`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ลบรายชื่อ',
+        cancelButtonText: 'ยกเลิก'
+      }}).then((result) => {{
+        if (!result.isConfirmed) return;
+        const updated = users.filter(u => Number(u.id) !== Number(userId));
+        saveUsersDB(updated);
+        postToMySQLAPI('deleteUser', {{ id: userId }});
+        renderStaffUsersTable();
+        Swal.fire({{
+          icon: 'success',
+          title: 'ลบรายชื่อเรียบร้อยแล้ว',
+          timer: 1500,
+          showConfirmButton: false
+        }});
+      }});
+    }}
+
+    function openAddDeptModal() {{
+      Swal.fire({{
+        title: 'เพิ่มกลุ่มงาน / หน่วยงานใหม่ (สวท.)',
+        html: `
+          <div style="text-align: left; margin-top: 0.5rem;">
+            <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 6px;">ชื่อกลุ่มงาน / หน่วยงาน *</label>
+            <input id="swal-dept-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น กลุ่มงานพัฒนาวิชาการ">
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'เพิ่มหน่วยงาน',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {{
+          const name = document.getElementById('swal-dept-name').value.trim();
+          if (!name) {{
+            Swal.showValidationMessage('กรุณาระบุชื่อกลุ่มงาน / หน่วยงาน');
+            return false;
+          }}
+          return name;
+        }}
+      }}).then((result) => {{
+        if (!result.isConfirmed || !result.value) return;
+        ensureDeptExists(result.value);
+        renderStaffUsersTable();
+        Swal.fire({{
+          icon: 'success',
+          title: 'เพิ่มกลุ่มงาน/หน่วยงานสำเร็จ',
+          text: `เพิ่ม "${{result.value}}" เข้าสู่ระบบเรียบร้อยแล้ว`,
+          timer: 1800,
+          showConfirmButton: false
+        }});
+      }});
     }}
 
     function loadStaffDashboard() {{
       renderStaffRequisitions(currentStaffStatus);
       renderInventoryTable();
+      renderStaffUsersTable();
     }}
 
     document.addEventListener('DOMContentLoaded', () => {{
-      // Auto authenticate for demo or check session
-      if (!sessionStorage.getItem('staff_auth')) {{
-        sessionStorage.setItem('staff_auth', 'true'); // Default logged in for immediate preview
-      }}
+      getDeptsDB();
+      getUsersDB();
       checkStaffAuth();
+      syncFromMySQLAPI();
     }});
 
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {{
-      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY) {{
+      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY) {{
         loadStaffDashboard();
       }}
     }});
@@ -2911,7 +4150,7 @@ staff_html = f'''<!DOCTYPE html>
 </html>
 '''
 
-with open('staff.html', 'w', encoding='utf-8') as f:
+with open(os.path.join(PROJECT_ROOT, 'staff.html'), 'w', encoding='utf-8') as f:
     f.write(staff_html)
 
 print("Created staff.html (Inventory Staff & Admin Portal)")

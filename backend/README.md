@@ -1,85 +1,94 @@
-# Google Apps Script Backend (backend/Code.gs)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU)
+# MySQL Database & REST API Backend (`backend/`)
+### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v2.2.0)
 
 ---
 
-## 📖 ภาพรวมระบบ (Overview)
+## 📖 ภาพรวมระบบส่วนหลังบ้าน (Backend Overview)
 
-ไฟล์ [`backend/Code.gs`](file:///c:/Users/Sho/Downloads/project%20stock/backend/Code.gs) เป็นโค้ดต้นแบบ **Google Apps Script (GAS) Web App** สำหรับทำหน้าที่เป็น RESTful JSON API และ Database Controller เชื่อมต่อระหว่างหน้าเว็บฝั่งผู้ขอเบิก (`index.html`) และหน้าเว็บฝั่งเจ้าหน้าที่คลัง (`staff.html`) เข้ากับฐานข้อมูล **Google Sheets**
+ระบบส่วนหลังบ้านของ **Stock Order SDU (v2.2.0)** ใช้ฐานข้อมูลเชิงสัมพันธ์ **MySQL 8.0+ / MariaDB 10.5+ (`InnoDB`, `utf8mb4_unicode_ci`)** ร่วมกับ **Python REST API Server ([`backend/server.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/server.py))** เพื่อความเสถียร ความปลอดภัย และรองรับการทำธุรกรรมแบบ **ACID Transactions** พร้อมการล็อกแถวข้อมูลระดับฐานข้อมูล (**`SELECT ... FOR UPDATE`**) ป้องกันปัญหาการเบิกพัสดุชนกัน (Race Condition) ได้ 100%
+
+### ไฟล์สำคัญในโฟลเดอร์ `backend/`:
+1. **[`backend/schema.sql`](file:///c:/Users/Sho/Downloads/project%20stock/backend/schema.sql):** สคริปต์ SQL สำหรับสร้างฐานข้อมูล `sdu_inventory` พร้อมตารางทั้ง 6 ตาราง (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`) และข้อมูลตั้งต้นครบชุด (5 กลุ่มงาน สวท., 4 หัวหน้าหน่วยงาน, 34 รายการพัสดุ 66 รูปภาพภาษาไทย, และตัวอย่างใบคำขอเบิก)
+2. **[`backend/init_db.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/init_db.py):** สคริปต์ Python สำหรับสั่งสร้างฐานข้อมูลและนำเข้า `schema.sql` อัตโนมัติในคำสั่งเดียว
+3. **[`backend/server.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/server.py):** เซิร์ฟเวอร์รวม (Unified Web & MySQL REST API Server) ที่ให้บริการทั้งหน้าเว็บ (`index.html`, `staff.html`, `portal.html`) และ REST API ที่ `/api` บนพอร์ต `8080`
 
 ---
 
-## ⚡ ขั้นตอนการนำไปติดตั้งใช้งานจริงใน 1 นาที (1-Minute Quickstart)
+## ⚡ ขั้นตอนการติดตั้งและเชื่อมต่อ MySQL (Quickstart Guide)
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as ผู้ดูแลระบบ / เจ้าหน้าที่
-    participant GS as Google Spreadsheet
-    participant Script as Apps Script Editor
-    participant Web as Web App Deployment
-    participant Frontend as Frontend Web Portals
+    actor Admin as ผู้ดูแลระบบ / นักพัฒนา
+    participant Env as ไฟล์ .env
+    participant Init as backend/init_db.py
+    participant MySQL as MySQL Server (sdu_inventory)
+    participant Server as backend/server.py (Port 8080)
+    participant Web as Frontend (index.html / staff.html)
 
-    Admin->>GS: สร้าง Spreadsheet ใหม่ "SDU_Inventory_Database"
-    Admin->>Script: เปิด Extensions > Apps Script แล้ววางโค้ด backend/Code.gs
-    Admin->>Script: รันฟังก์ชัน "setupDatabase" ครั้งแรก
-    Script-->>GS: สร้าง 4 แผ่นงาน + หัวตาราง SDU Blue + ข้อมูลตั้งต้น
-    Admin->>Web: คลิก Deploy > New deployment (Web app, Anyone)
-    Web-->>Admin: ได้ Web App URL (exec URL)
-    Admin->>Frontend: นำ URL ไปใส่ใน .env (VITE_GOOGLE_SCRIPT_API_URL)
+    Admin->>Env: ตั้งค่า DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+    Admin->>Init: รันคำสั่ง python backend/init_db.py (หรือนำเข้า schema.sql)
+    Init-->>MySQL: สร้างฐานข้อมูล sdu_inventory + 5 ตาราง + Seed Data
+    Admin->>Server: รัน start.bat หรือ python backend/server.py
+    Web->>Server: เรียกใช้งาน GET/POST /api
+    Server->>MySQL: ประมวลผล SQL ภายใต้ ACID Transaction (SELECT ... FOR UPDATE)
+    MySQL-->>Server: ส่งคืนผลลัพธ์
+    Server-->>Web: ส่งคืนข้อมูล JSON
 ```
 
-### รายละเอียดขั้นตอน:
-1. **สร้าง Google Spreadsheet:**
-   * เปิด [Google Sheets](https://sheets.new) และตั้งชื่อไฟล์ เช่น `SDU_Inventory_Database`
-2. **เปิด Script Editor:**
-   * ไปที่เมนู **ส่วนขยาย (Extensions)** > **Apps Script**
-3. **วางโค้ด:**
-   * ลบโค้ดเดิมใน `Code.gs` ทั้งหมด แล้วคัดลอกโค้ดจาก [`backend/Code.gs`](file:///c:/Users/Sho/Downloads/project%20stock/backend/Code.gs) ไปวาง
-   * กดบันทึก (Ctrl + S)
-4. **สร้างโครงสร้างฐานข้อมูลอัตโนมัติ (1-Click Database Setup):**
-   * ที่แถบเมนูด้านบน เลือกฟังก์ชัน **`setupDatabase`** แล้วกดปุ่ม **เรียกใช้ (Run)**
-   * ยอมรับการให้สิทธิ์เข้าถึง (Grant Permissions)
-   * ระบบจะสร้าง 4 แผ่นงานพร้อมตกแต่งสไตล์ SDU Blue `#1e40af` และใส่ข้อมูลตั้งต้น:
-     * `Items` (พัสดุคงคลัง 58 รายการ)
-     * `Requisitions` (ประวัติและคิวคำขอ)
-     * `Requisition_Items` (รายการพัสดุในแต่ละคำขอ)
-     * `Departments` (รายชื่อ 90+ หน่วยงาน)
-5. **Deploy เป็น Web App:**
-   * คลิกปุ่มสีน้ำเงิน **ทำให้ใช้งานได้ (Deploy)** > **การทำให้ใช้งานได้รายการใหม่ (New deployment)**
-   * คลิกรูปฟันเฟืองเลือกประเภท: **เว็บแอป (Web app)**
-   * คำอธิบาย: `SDU Stock Order API v1.0`
-   * การเข้าถึง (Execute as): **ฉัน (Me)**
-   * ผู้มีสิทธิ์เข้าถึง (Who has access): **ทุกคน (Anyone)**
-   * กด **ทำให้ใช้งานได้ (Deploy)**
-6. **บันทึก URL:**
-   * คัดลอก **URL เว็บแอป (Web App URL)** ที่ลงท้ายด้วย `/exec`
-   * นำไปใส่ในไฟล์ `.env` ของโครงการ:
-     ```env
-     VITE_GOOGLE_SCRIPT_API_URL="https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYMENT_ID_HERE/exec"
-     ```
+### 1. ตั้งค่าการเชื่อมต่อในไฟล์ [`.env`](file:///c:/Users/Sho/Downloads/project%20stock/.env)
+ตรวจสอบหรือแก้ไขค่าตัวแปรการเชื่อมต่อ MySQL ในไฟล์ `.env` ที่ Root ของโปรเจกต์:
+```env
+DB_HOST="127.0.0.1"
+DB_PORT=3306
+DB_USER="root"
+DB_PASSWORD=""
+DB_NAME="sdu_inventory"
+PORT=8080
+API_BASE_URL="/api"
+```
+
+### 2. สร้างฐานข้อมูลและตารางเริ่มต้น (เลือกวิธีใดวิธีหนึ่ง)
+* **วิธีที่ 1: รันผ่านสคริปต์ Python อัตโนมัติ**
+  ```bash
+  python backend/init_db.py
+  ```
+* **วิธีที่ 2: นำเข้าไฟล์ [`backend/schema.sql`](file:///c:/Users/Sho/Downloads/project%20stock/backend/schema.sql) ผ่าน MySQL CLI / phpMyAdmin / MySQL Workbench / DBeaver**
+  ```bash
+  mysql -u root -p < backend/schema.sql
+  ```
+
+### 3. เปิดใช้งานเซิร์ฟเวอร์
+ดับเบิลคลิกไฟล์ [`start.bat`](file:///c:/Users/Sho/Downloads/project%20stock/start.bat) หรือรันคำสั่ง:
+```bash
+python backend/server.py
+```
+จากนั้นเปิดเบราว์เซอร์ไปที่ `http://localhost:8080/portal.html`
 
 ---
 
-## 🛠️ รายการ Endpoints ที่รองรับ (API Endpoints Reference)
+## 🛠️ รายการ Endpoints ที่รองรับ (MySQL REST API Reference)
 
-| Method | Action Parameter / Body | รายละเอียด | สิทธิ์เข้าถึง |
+| Method | Endpoint / Action | รายละเอียดการทำงาน | การควบคุม Transaction |
 | :---: | :--- | :--- | :---: |
-| `GET` | `?action=getItems [&category=...]` | ดึงรายการพัสดุและยอดพร้อมเบิกจริง (`Available = On-Hand - Reserved`) | สาธารณะ |
-| `GET` | `?action=getRequisitions [&status=...]` | ดึงประวัติและคิวคำขอเบิกทั้งหมด พร้อมรายการพัสดุเชื่อมโยง | ทั่วไป/เจ้าหน้าที่ |
-| `GET` | `?action=trackRequisition&docNo=REQ-...` | ค้นหาและติดตามสถานะคำขอรายเอกสาร | สาธารณะ |
-| `GET` | `?action=getDepartments` | ดึงข้อมูล 90+ คณะ/โรงเรียน/กอง | สาธารณะ |
-| `POST` | `action: "createRequisition"` | ส่งคำขอเบิกพัสดุใหม่ (ตรวจสอบสต๊อกพร้อมเบิกก่อนบันทึก) | สาธารณะ |
-| `POST` | `action: "approveRequisition"` | เจ้าหน้าที่อนุมัติคำขอ และล็อกยอดพัสดุติดจอง (`reserved_pieces`) | เจ้าหน้าที่ |
-| `POST` | `action: "completeRequisition"` | บันทึกรับของสำเร็จ บันทึกลายเซ็นดิจิทัล และตัดยอดคงคลังจริง | เจ้าหน้าที่ |
-| `POST` | `action: "rejectRequisition"` | ปฏิเสธคำขอ คืนยอดติดจอง และบันทึกเหตุผล | เจ้าหน้าที่ |
-| `POST` | `action: "restockItem"` | บันทึกรับพัสดุเข้าคลังเพิ่มยอดคงคลัง | เจ้าหน้าที่ |
+| `GET` | `/api?action=getItems [&category=...]` | ดึงรายการพัสดุคงคลังทั้งหมดพร้อมคำนวณ `Available = On-Hand - Reserved` | Read |
+| `GET` | `/api?action=getRequisitions [&status=...]` | ดึงประวัติและคิวคำขอเบิกทั้งหมด เชื่อมโยงกับตาราง `requisition_items` | Read |
+| `GET` | `/api?action=trackRequisition&docNo=...` | ค้นหาและติดตามสถานะคำขอตามเลขที่เอกสารหรือชื่อผู้ขอเบิก | Read |
+| `GET` | `/api?action=getDepartments` | ดึงรายชื่อ 5 กลุ่มงาน/หน่วยงานภายใน สวท. จากตาราง `departments` | Read |
+| `GET` | `/api?action=getUsers` | ดึงรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิกจากตาราง `users` | Read |
+| `POST` | `action: "createRequisition"` | สร้างใบคำขอเบิกใหม่ ตรวจสอบยอดพร้อมเบิกก่อนบันทึก | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "approveRequisition"` | อนุมัติคำขอ (เต็มจำนวนหรือบางส่วน) และล็อกยอด `reserved_pieces` | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "completeRequisition"` | บันทึกลายเซ็นดิจิทัล ตัดยอด `on_hand_pieces` คืนยอดจอง และบันทึก `stock_transactions` | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "rejectRequisition"` | ปฏิเสธ/ยกเลิกคำขอ คืนยอด `reserved_pieces` (หากเคยอนุมัติ) และบันทึกเหตุผล | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "restockItem"` | รับพัสดุเข้าคลัง เพิ่ม `on_hand_pieces` และบันทึกประวัติ `IN` ลง `stock_transactions` | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "adjustStock"` | ปรับปรุงยอดคงคลังจริงจากการตรวจนับ และบันทึกประวัติ `ADJUST` ลง `stock_transactions` | `SELECT ... FOR UPDATE` + ACID Commit |
+| `POST` | `action: "saveItem"` / `"deleteItem"` | เพิ่ม/แก้ไข หรือลบรายการพัสดุในคลัง พร้อมบันทึก `stock_transactions` | ACID Commit |
+| `POST` | `action: "saveUser"` / `"deleteUser"` | เพิ่ม/แก้ไข หรือลบรายชื่อบุคลากรในตาราง `users` | ACID Commit |
+| `POST` | `action: "addDepartment"` | เพิ่มกลุ่มงาน/หน่วยงานใหม่เข้าสู่ตาราง `departments` | ACID Commit |
 
 ---
 
-## 🔒 ระบบรักษาความปลอดภัยและการจัดการ Concurrency
+## 🔒 ระบบป้องกันการเบิกชนกัน (Concurrency & ACID Transaction Control)
 
-* **LockService Prevention:** 
-  โค้ดใน `doPost(e)` มีการเรียกใช้ `LockService.getScriptLock()` พร้อมตั้งเวลารอคิวสูงสุด 30 วินาที (`lock.tryLock(30000)`) เพื่อป้องกันปัญหา Race Condition กรณีมีอาจารย์หรือเจ้าหน้าที่กดยืนยันเบิกพัสดุพร้อมกันในเสี้ยววินาที
-* **Atomic Deductions:** 
-  การตัดยอดสต๊อกและการคืนยอดพัสดุจะเกิดขึ้นใน Scope ภายใต้ Lock เสมอ มั่นใจได้ว่ายอดคงคลังจะไม่มีการติดลบอย่างแน่นอน
+* **Row-Level Locking (`SELECT ... FOR UPDATE`):** ทุกครั้งที่มีการสร้างคำขอ อนุมัติ ตัดจ่าย หรือปรับสต๊อก เซิร์ฟเวอร์ [`backend/server.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/server.py) จะล็อกแถวข้อมูลพัสดุใน InnoDB จนกว่าจะ `COMMIT` สำเร็จ ป้องกันปัญหาสต๊อกติดลบเมื่อมีผู้ใช้งานกดเบิกพร้อมกัน
+* **Hybrid Offline-First Fallback:** หากเซิร์ฟเวอร์ MySQL ยังไม่ได้เปิดใช้งาน หน้าเว็บ [`index.html`](file:///c:/Users/Sho/Downloads/project%20stock/index.html) และ [`staff.html`](file:///c:/Users/Sho/Downloads/project%20stock/staff.html) จะสลับไปใช้ฐานข้อมูลจำลองใน `localStorage` โดยอัตโนมัติเพื่อให้ระบบยังคงทำงานได้อย่างต่อเนื่อง 100%

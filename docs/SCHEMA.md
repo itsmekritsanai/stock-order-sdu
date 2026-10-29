@@ -7,9 +7,20 @@
 
 ```mermaid
 erDiagram
+    DEPARTMENTS ||--o{ USERS : belongs_to
     DEPARTMENTS ||--o{ REQUISITIONS : submits
+    USERS ||--o{ REQUISITIONS : requests
     REQUISITIONS ||--|{ REQUISITION_ITEMS : contains
     INVENTORY_ITEMS ||--o{ REQUISITION_ITEMS : referenced_in
+    INVENTORY_ITEMS ||--o{ STOCK_TRANSACTIONS : logs
+
+    USERS {
+        int id PK "รหัสบุคลากร"
+        string name "ชื่อ-นามสกุล บุคลากร"
+        string position "ตำแหน่ง (เช่น หัวหน้ากลุ่มงาน...)"
+        string dept "กลุ่มงาน/หน่วยงานที่สังกัด"
+        string phone "เบอร์โทรศัพท์ติดต่อ"
+    }
 
     INVENTORY_ITEMS {
         int id PK "รหัสพัสดุ"
@@ -22,15 +33,15 @@ erDiagram
         int on_hand_pieces "ยอดคงคลังจริง (ชิ้น)"
         int reserved_pieces "ยอดติดจองจากการอนุมัติ (ชิ้น)"
         int min_alert "เกณฑ์แจ้งเตือนสต๊อกต่ำ (ชิ้น)"
-        string image_piece "Path/URL รูปภาพหน่วยย่อย"
-        string image_box "Path/URL รูปภาพหน่วยกล่อง"
+        string image_piece "Path/DataURL รูปภาพหน่วยย่อย"
+        string image_box "Path/DataURL รูปภาพหน่วยกล่อง"
     }
 
     REQUISITIONS {
         string id PK "เลขที่เอกสารคำขอ เช่น REQ-256910-0042"
         string date "วันที่และเวลาที่ส่งคำขอ"
         string requester "ชื่อ-นามสกุล ผู้ขอเบิก"
-        string dept "หน่วยงาน/คณะ/โรงเรียนที่สังกัด"
+        string dept "กลุ่มงาน/หน่วยงานที่สังกัด"
         string phone "เบอร์โทรศัพท์ติดต่อ"
         string purpose "วัตถุประสงค์ในการขอเบิกใช้งาน"
         string status "สถานะ: PENDING, APPROVED, COMPLETED, REJECTED"
@@ -55,9 +66,9 @@ erDiagram
 
     DEPARTMENTS {
         int id PK "รหัสหน่วยงาน"
-        string category "ประเภท: คณะ/โรงเรียน, สถาบัน/สำนัก, กอง"
-        string name "ชื่อหน่วยงานย่อย/หลักสูตร"
-        string parent_name "ชื่อคณะหรือหน่วยงานต้นสังกัด"
+        string category "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)"
+        string name "ชื่อกลุ่มงาน/หน่วยงานภายใน สวท."
+        string parent_name "สำนักส่งเสริมวิชาการและงานทะเบียน"
         string full_label "ชื่อเต็มสำหรับแสดงผลค้นหา"
     }
 ```
@@ -128,15 +139,38 @@ erDiagram
 
 ---
 
-## 3. การแมปเข้ากับ Google Sheets (Google Sheets Schema Mapping)
+### 2.4 ตาราง `users` (ทำเนียบบุคลากรผู้ขอเบิก)
+* **คีย์หลัก (Primary Key):** `id` (Auto-increment Integer)
+* **วัตถุประสงค์:** จัดเก็บรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิกพัสดุ (เริ่มต้นด้วยหัวหน้าหน่วยงาน 4 ท่านจากไฟล์ `รายนามบุคลากร สวท.docx` และรองรับการเพิ่มรายชื่อเพิ่มเติมโดยเจ้าหน้าที่พัสดุ)
 
-เมื่อนำไปสร้างบน Google Sheets จะแบ่งเป็น 4 แผ่นงาน (Tabs) ดังนี้:
+| ชื่อฟิลด์ | ชนิดข้อมูล (Data Type) | Nullable | ค่าเริ่มต้น (Default) | คำอธิบายและข้อจำกัด |
+| :--- | :--- | :---: | :---: | :--- |
+| `id` | `INT UNSIGNED` | ❌ No | Auto | รหัสประจำตัวบุคลากร |
+| `name` | `VARCHAR(150)` | ❌ No | - | ชื่อ-นามสกุล บุคลากร |
+| `position` | `VARCHAR(255)` | ❌ No | `''` | ตำแหน่ง เช่น `หัวหน้ากลุ่มงานบริการวิชาการ` |
+| `dept` | `VARCHAR(255)` | ❌ No | - | กลุ่มงาน/หน่วยงานภายใน สวท. ที่สังกัด |
+| `phone` | `VARCHAR(50)` | ❌ No | `''` | เบอร์โทรศัพท์ติดต่อ |
+| `created_at` | `TIMESTAMP` | ❌ No | `CURRENT_TIMESTAMP` | เวลาที่เพิ่มข้อมูล |
+| `updated_at` | `TIMESTAMP` | ❌ No | `CURRENT_TIMESTAMP` | เวลาที่แก้ไขข้อมูลล่าสุด |
 
-1. **Tab `Items`:**
-   * หัวตาราง (Row 1): `id | name | category | is_multi_unit | unit_box_name | unit_piece_name | pieces_per_box | on_hand_pieces | reserved_pieces | min_alert | image_piece | image_box`
-2. **Tab `Requisitions`:**
-   * หัวตาราง (Row 1): `id | date | requester | dept | phone | purpose | status | signature | reject_reason | created_at | updated_at`
-3. **Tab `Requisition_Items`:**
-   * หัวตาราง (Row 1): `requisition_id | item_id | name | qty_boxes | qty_pieces | total_pieces | unit_box | unit_piece | approved_pieces`
-4. **Tab `Departments`:**
-   * หัวตาราง (Row 1): `category | name | parent_name | full_label`
+---
+
+## 3. การติดตั้งและการจัดการฐานข้อมูล MySQL (`backend/schema.sql`)
+
+ฐานข้อมูลหลักใช้ **MySQL 8.0+ / MariaDB 10.5+** (Storage Engine: `InnoDB`, Character Set: `utf8mb4`, Collation: `utf8mb4_unicode_ci`) โดยประกอบด้วย 6 ตารางหลักในฐานข้อมูล `sdu_inventory`:
+
+1. **ตาราง `departments`:** เก็บข้อมูลกลุ่มงาน/หน่วยงานภายในสำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) ทั้ง 5 หน่วยงานหลัก
+2. **ตาราง `users`:** เก็บข้อมูลรายชื่อหัวหน้าหน่วยงานตั้งต้น 4 ท่านจาก `รายนามบุคลากร สวท.docx` และรายชื่อที่เจ้าหน้าที่เพิ่มภายหลัง
+3. **ตาราง `inventory_items`:** เก็บข้อมูลพัสดุคงคลัง 34 รายการ (66 รูปภาพภาษาไทย รองรับ `LONGTEXT` สำหรับ DataURL) พร้อมดัชนีค้นหาชื่อพัสดุ (`INDEX idx_items_name`)
+4. **ตาราง `requisitions`:** เก็บข้อมูลหัวเอกสารใบขอเบิก สถานะ และลายเซ็นดิจิทัล Base64 (`LONGTEXT`)
+5. **ตาราง `requisition_items`:** เก็บรายการพัสดุย่อยในแต่ละใบคำขอ ผูก Foreign Key (`ON DELETE CASCADE`) กับ `requisitions.id` และ `inventory_items.id`
+6. **ตาราง `stock_transactions`:** บันทึกประวัติการเคลื่อนไหวสต๊อกทุกธุรกรรม (`IN`, `OUT`, `ADJUST`) พร้อมยอดคงเหลือหลังทำรายการ (`balance_after`) เพื่อการตรวจสอบย้อนหลัง (Audit Trail)
+
+### คำสั่งติดตั้งฐานข้อมูล:
+```bash
+# วิธีที่ 1: รันผ่านสคริปต์ Python อัตโนมัติ
+python backend/init_db.py
+
+# วิธีที่ 2: รันผ่าน MySQL CLI
+mysql -u root -p < backend/schema.sql
+```
