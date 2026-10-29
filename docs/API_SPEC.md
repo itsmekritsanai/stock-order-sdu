@@ -5,13 +5,13 @@
 
 ## 1. ข้อมูลภาพรวม API (Overview & Conventions)
 
-* **Protocol:** HTTPS (RESTful JSON API over Google Apps Script Web App)
+* **Protocol:** HTTP / HTTPS (RESTful JSON API ให้บริการโดย Python MySQL Server [`backend/server.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/server.py))
 * **Base Endpoint URL:**
   ```text
-  https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
+  http://localhost:8080/api
   ```
-* **Content-Type:** `application/json` (หรือ `text/plain` เมื่อส่งผ่าน CORS จาก Static Web Pages)
-* **การจัดการ Concurrency:** ใช้ `LockService.getScriptLock()` รอคิวการเขียนสต๊อกสูงสุด 30 วินาที เพื่อป้องกัน Race Condition
+* **Content-Type:** `application/json; charset=utf-8`
+* **การจัดการ Concurrency & Database Transaction:** ใช้ฐานข้อมูล **MySQL (`InnoDB`)** ทำงานภายใต้ **ACID Transaction (`BEGIN` / `COMMIT` / `ROLLBACK`)** ร่วมกับ **Row-Level Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันปัญหา Race Condition เมื่อมีการขอเบิกหรือตัดสต๊อกพร้อมกัน
 
 ---
 
@@ -22,18 +22,25 @@
 | `GET` | `?action=getItems` | `getItems` | สาธารณะ | ดึงรายการพัสดุและยอดคงคลังทั้งหมด |
 | `GET` | `?action=getRequisitions` | `getRequisitions` | เจ้าหน้าที่/ทั่วไป | ดึงประวัติและคิวคำขอทั้งหมด |
 | `GET` | `?action=trackRequisition&docNo=...`| `trackRequisition` | สาธารณะ | ติดตามสถานะคำขอรายเอกสาร |
-| `GET` | `?action=getDepartments` | `getDepartments` | สาธารณะ | ดึงรายชื่อ 90+ หน่วยงาน |
+| `GET` | `?action=getDepartments` | `getDepartments` | สาธารณะ | ดึงรายชื่อกลุ่มงาน/หน่วยงานภายใน สวท. |
+| `GET` | `?action=getUsers` | `getUsers` | สาธารณะ | ดึงรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (เริ่มต้นด้วยหัวหน้าหน่วยงาน 4 ท่าน) |
 | `POST`| Payload `action: "createRequisition"`| `createRequisition` | สาธารณะ | ส่งคำขอเบิกพัสดุใหม่ |
 | `POST`| Payload `action: "approveRequisition"`| `approveRequisition` | เจ้าหน้าที่ | อนุมัติคำขอและล็อกยอดติดจอง |
 | `POST`| Payload `action: "completeRequisition"`| `completeRequisition`| เจ้าหน้าที่ | บันทึกลายเซ็นและตัดยอดสต๊อกจริง |
 | `POST`| Payload `action: "rejectRequisition"` | `rejectRequisition` | เจ้าหน้าที่ | ไม่อนุมัติคำขอและคืนสิทธิ์ |
 | `POST`| Payload `action: "restockItem"` | `restockItem` | เจ้าหน้าที่ | รับพัสดุเข้าคลัง |
+| `POST`| Payload `action: "adjustStock"` | `adjustStock` | เจ้าหน้าที่ | ปรับปรุงยอดสต๊อกจริงจากการตรวจนับ |
+| `POST`| Payload `action: "saveItem"` | `saveItem` | เจ้าหน้าที่ | เพิ่มหรือแก้ไขรายการพัสดุในคลัง (พร้อมรูปภาพ) |
+| `POST`| Payload `action: "deleteItem"` | `deleteItem` | เจ้าหน้าที่ | ลบรายการพัสดุออกจากคลัง |
+| `POST`| Payload `action: "saveUser"` | `saveUser` | เจ้าหน้าที่ | เพิ่มหรือแก้ไขรายชื่อบุคลากร (User) |
+| `POST`| Payload `action: "deleteUser"` | `deleteUser` | เจ้าหน้าที่ | ลบรายชื่อบุคลากรออกจากระบบ |
+| `POST`| Payload `action: "addDepartment"` | `addDepartment` | เจ้าหน้าที่ | เพิ่มกลุ่มงาน/หน่วยงานใหม่เข้าสู่ตาราง `departments` |
 
 ---
 
 ## 3. รายละเอียด Endpoints แบบเจาะลึก (Endpoint Details)
 
-### 3.1 `GET /exec?action=getItems`
+### 3.1 `GET /api?action=getItems`
 ดึงรายการพัสดุคงคลังทั้งหมด พร้อมยอดคงเหลือจริง (`on_hand_pieces`), ยอดติดจอง (`reserved_pieces`) และยอดพร้อมเบิก (`available_pieces`)
 
 * **Query Parameters:**
@@ -67,7 +74,7 @@
 
 ---
 
-### 3.2 `GET /exec?action=trackRequisition&docNo={DOC_NO}`
+### 3.2 `GET /api?action=trackRequisition&docNo={DOC_NO}`
 ค้นหาสถานะของคำขอตามเลขที่เอกสาร
 
 * **Query Parameters:**
@@ -114,7 +121,7 @@
 
 ---
 
-### 3.3 `POST /exec` — ส่งคำขอเบิกพัสดุ (`createRequisition`)
+### 3.3 `POST /api` — ส่งคำขอเบิกพัสดุ (`createRequisition`)
 สร้างใบคำขอเบิกใหม่เข้าสู่ระบบในสถานะ `PENDING`
 
 * **Request Headers:**
@@ -170,7 +177,7 @@
 
 ---
 
-### 3.4 `POST /exec` — อนุมัติคำขอ (`approveRequisition`)
+### 3.4 `POST /api` — อนุมัติคำขอ (`approveRequisition`)
 เจ้าหน้าที่กดอนุมัติคำขอ ระบบจะเปลี่ยนสถานะเป็น `APPROVED` และเพิ่มยอดล็อกใน `reserved_pieces`
 
 * **Request Body:**
@@ -201,7 +208,7 @@
 
 ---
 
-### 3.5 `POST /exec` — บันทึกรับของสำเร็จและตัดสต๊อกจริง (`completeRequisition`)
+### 3.5 `POST /api` — บันทึกรับของสำเร็จและตัดสต๊อกจริง (`completeRequisition`)
 ผู้ขอเบิกเดินทางมารับของและเซ็นชื่อผ่านแท่นดิจิทัล ระบบจะตัดยอด `on_hand_pieces` และคืน `reserved_pieces`
 
 * **Request Body:**
@@ -227,7 +234,7 @@
 
 ---
 
-### 3.6 `POST /exec` — ไม่อนุมัติคำขอ (`rejectRequisition`)
+### 3.6 `POST /api` — ไม่อนุมัติคำขอ (`rejectRequisition`)
 เจ้าหน้าที่ปฏิเสธคำขอ คืนยอดที่เคยล็อกไว้ (ถ้ามี) และบันทึกเหตุผล
 
 * **Request Body:**

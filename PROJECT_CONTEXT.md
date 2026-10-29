@@ -11,10 +11,10 @@
 * **GitHub Repository:** [itsmekritsanai/stock-order-sdu](https://github.com/itsmekritsanai/stock-order-sdu)
 * **วัตถุประสงค์หลัก:**
   1. **Paperless & Digital Transformation:** ยกระดับกระบวนการขอเบิกพัสดุสำนักงานของมหาวิทยาลัยจากกระดาษสู่ระบบดิจิทัล 100%
-  2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*)
+  2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการล็อกแถวระดับฐานข้อมูล MySQL (`SELECT ... FOR UPDATE`)
   3. **Multi-Unit Intelligence:** คำนวณการแปลงหน่วยอัตโนมัติระหว่างหน่วยบรรจุใหญ่ (กล่อง/ห่อ) และหน่วยย่อย (ชิ้น/ซอง/ใบ/แผ่น)
-  4. **Strict Security Separation:** แยกสิทธิ์การใช้งานระหว่างผู้ขอเบิก (อาจารย์/บุคลากร 90+ หน่วยงาน) และเจ้าหน้าที่คลังพัสดุออกจากกันอย่างเด็ดขาด
-  5. **Audit Trail & Digital Signatures:** มีระบบลงนามรับของผ่านหน้าจอสัมผัส (E-Signature Pad) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) ตามระเบียบพัสดุ
+  4. **Strict Security Separation:** แยกสิทธิ์การใช้งานระหว่างผู้ขอเบิก (หัวหน้าหน่วยงานและบุคลากร 5 กลุ่มงานภายใน สวท.) และเจ้าหน้าที่คลังพัสดุออกจากกันอย่างเด็ดขาด
+  5. **Audit Trail & Digital Signatures:** มีระบบลงนามรับของผ่านหน้าจอสัมผัส (E-Signature Pad), บันทึกประวัติความเคลื่อนไหวสต๊อก (`stock_transactions`) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) ตามระเบียบพัสดุ
 
 ---
 
@@ -23,8 +23,8 @@
 ```mermaid
 graph LR
     subgraph "กลุ่มผู้ใช้งานระบบ"
-        U1["อาจารย์และบุคลากร<br/>(90+ คณะ/โรงเรียน/กอง)"]
-        U2["เจ้าหน้าที่คลังพัสดุกลาง<br/>(ผู้ดูแลการจัดจ่าย)"]
+        U1["หัวหน้าหน่วยงานและบุคลากร สวท.<br/>(5 กลุ่มงาน/หน่วยงานภายใน สวท.)"]
+        U2["เจ้าหน้าที่คลังพัสดุกลาง<br/>(ผู้ดูแลการจัดจ่าย & เพิ่มรายการ)"]
         U3["หัวหน้าฝ่ายพัสดุ / ผู้บริหาร<br/>(ตรวจสอบรายงาน & ตรวจนับ)"]
     end
     U1 -->|เข้าใช้งานผ่านลิงก์สาธารณะ| P1["index.html (Requester Portal)"]
@@ -33,12 +33,12 @@ graph LR
 ```
 
 1. **ผู้ขอเบิก (Requester):**
-   * **ใคร:** อาจารย์, นักวิจัย, เจ้าหน้าที่ธุรการ, บุคลากรจาก 90+ หน่วยงาน (เช่น โรงเรียนการเรือน, คณะวิทยาศาสตร์, กองคลัง, สำนักวิทยบริการ)
-   * **พฤติกรรม:** ต้องการความรวดเร็ว ไม่ต้องการขั้นตอนล็อกอินที่ซับซ้อน ค้นหาพัสดุด้วยชื่อภาษาไทย (ไม่ต้องจำรหัส SKU) ตรวจสอบยอดคงเหลือได้ทันที
+   * **ใคร:** หัวหน้าหน่วยงานทั้ง 4 ท่าน (และบุคลากรที่เจ้าหน้าที่เพิ่มภายหลัง) จาก 5 กลุ่มงานภายในสำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) ตามไฟล์ `data/รายนามบุคลากร สวท.docx`
+   * **พฤติกรรม:** ต้องการความรวดเร็ว ไม่ต้องการขั้นตอนล็อกอินที่ซับซ้อน คลิกเลือกชื่อผู้ขอเบิกเพื่อเติมกลุ่มงานและเบอร์โทรอัตโนมัติ ค้นหาพัสดุด้วยชื่อภาษาไทย (ไม่ต้องจำรหัส SKU) ตรวจสอบยอดคงเหลือได้ทันที
    * **ช่องทางเข้าใช้งาน:** `index.html`
 2. **เจ้าหน้าที่คลังพัสดุ (Staff / Warehouse Manager):**
-   * **ใคร:** เจ้าหน้าที่ฝ่ายพัสดุและคลังพัสดุกลาง มหาวิทยาลัยสวนดุสิต
-   * **พฤติกรรม:** ตรวจสอบคำขอที่ส่งเข้ามา, จัดเตรียมของ, อนุมัติปรับยอด, ให้ผู้มารับเซ็นชื่อบนหน้าจอ, ตัดสต๊อกจริง, และพิมพ์ใบเบิกทางการ
+   * **ใคร:** เจ้าหน้าที่ฝ่ายพัสดุและคลังพัสดุ สำนักส่งเสริมวิชาการและงานทะเบียน มหาวิทยาลัยสวนดุสิต
+   * **พฤติกรรม:** ตรวจสอบคำขอที่ส่งเข้ามา, จัดเตรียมของ, อนุมัติปรับยอด, ให้ผู้มารับเซ็นชื่อบนหน้าจอ, ตัดสต๊อกจริง, พิมพ์ใบเบิกทางการ, เพิ่ม/แก้ไข/ลบรายการพัสดุในคลัง, และจัดการรายชื่อบุคลากร (User) / กลุ่มงาน
    * **ช่องทางเข้าใช้งาน:** `staff.html` (มีระบบรหัสผ่านยืนยันสิทธิ์)
 
 ---
@@ -48,21 +48,21 @@ graph LR
 ```mermaid
 graph TD
     subgraph "Client Layer (Zero-Build Frontend)"
-        REQ["Requester Portal (index.html)<br/>- Searchable Dept Combobox (90+)<br/>- Live Catalog & Multi-Unit Ratio<br/>- Cart Drawer<br/>- My Requisitions Modal<br/>- Tracking Timeline"]
-        STAFF["Staff Portal (staff.html)<br/>- Authentication Gate<br/>- Dashboard Metrics<br/>- Approval Queue<br/>- Touchscreen E-Signature Pad<br/>- Official PDF Print Engine<br/>- Inventory Stock Manager"]
+        REQ["Requester Portal (index.html)<br/>- Searchable User Combobox (Auto-fill)<br/>- Searchable Dept Combobox (5 กลุ่มงาน สวท.)<br/>- Live Catalog & Multi-Unit Ratio<br/>- Cart Drawer<br/>- My Requisitions Modal<br/>- Tracking Timeline"]
+        STAFF["Staff Portal (staff.html)<br/>- Authentication Gate<br/>- Dashboard Metrics<br/>- Approval Queue<br/>- Touchscreen E-Signature Pad<br/>- Official PDF Print Engine<br/>- Inventory & Item CRUD Manager<br/>- User & Department Manager"]
     end
 
-    subgraph "Persistence Layer"
-        LOCAL[("Browser localStorage<br/>+ Cross-Tab Storage Event Sync<br/>(inventory_items, inventory_requisitions)")]
-        SHEETS[("Google Sheets Database (Roadmap)<br/>- Items Sheet<br/>- Requisitions Sheet<br/>- Requisition_Items Sheet<br/>- Departments Sheet")]
-        GAS["Google Apps Script Web App (API)<br/>- LockService (Concurrency Control)<br/>- JSON REST API"]
+    subgraph "Persistence & API Layer"
+        API["Python MySQL REST API (backend/server.py)<br/>- ACID Transactions<br/>- Row-Level Locking (SELECT ... FOR UPDATE)<br/>- JSON REST API (/api)"]
+        MYSQL[("MySQL 8.0+ / MariaDB (sdu_inventory)<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
+        LOCAL[("Browser localStorage<br/>+ Cross-Tab Storage Event Sync<br/>(Offline Fallback)")]
     end
 
-    REQ <-->|Sync Local| LOCAL
-    STAFF <-->|Sync Local| LOCAL
-    REQ -.->|Fetch / POST (Phase 5)| GAS
-    STAFF -.->|Fetch / POST (Phase 5)| GAS
-    GAS <--> SHEETS
+    REQ <-->|GET / POST /api| API
+    STAFF <-->|GET / POST /api| API
+    API <--> MYSQL
+    REQ <-->|Sync & Fallback| LOCAL
+    STAFF <-->|Sync & Fallback| LOCAL
 ```
 
 ### รายละเอียดส่วนประกอบทางเทคนิค:
@@ -72,16 +72,17 @@ graph TD
   * **Typography:** Google Fonts `Prompt` (สำหรับ UI ทั่วไป) และ `Sarabun` (สำหรับแบบฟอร์มเอกสารทางการ)
   * **Vector Icons:** 100% SVG Vector Icons (Stroke-based, viewBox 24x24) จากชุด `svg_icons` **(Strict No-Emoji Policy)**
   * **Canvas API:** แท่นลงนามดิจิทัล (E-Signature Pad) รองรับ Touchscreen, ปากกาสไตลัส และเมาส์
-* **Build & Code Generator:** Python 3.x (`generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
-* **Data Persistence:**
-  * ปัจจุบัน: Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event)
-  * แผนพัฒนา: Google Sheets API ผ่าน Google Apps Script Web App เพื่อรองรับ GitHub Pages
+* **Build & Code Generator:** Python 3.x (`scripts/generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
+* **Backend & Database Architecture:**
+  * **MySQL 8.0+ / MariaDB 10.6+ (`sdu_inventory`):** โครงสร้างตารางเชิงสัมพันธ์ (`backend/schema.sql`) ใช้เอนจิน `InnoDB` และชุดอักขระ `utf8mb4_unicode_ci`
+  * **Python REST API Server (`backend/server.py`):** ให้บริการทั้งไฟล์หน้าเว็บและ REST API (`/api`) ที่พอร์ต `8080` เชื่อมต่อผ่าน `PyMySQL` พร้อมระบบ初始化ฐานข้อมูลอัตโนมัติ (`backend/init_db.py`)
+  * **Offline Fallback:** Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event) รองรับการใช้งานแม้ในสภาวะออฟไลน์
 
 ---
 
 ## 🎨 4. รูปแบบการเขียนโค้ดและมาตรฐาน (Coding Style & Guidelines)
 
-1. **Zero-Build Runtime:** โค้ดทั้งหมดต้องสามารถเปิดทำงานผ่านเบราว์เซอร์หรือเว็บเซิร์ฟเวอร์แบบ Static ได้ทันทีโดยไม่ต้องผ่านกระบวนการ build
+1. **Zero-Build Runtime:** โค้ดหน้าเว็บทั้งหมดต้องสามารถเปิดทำงานผ่านเบราว์เซอร์หรือเว็บเซิร์ฟเวอร์ได้ทันทีโดยไม่ต้องผ่านกระบวนการ bundle
 2. **Indentation:**
    * HTML, CSS, JavaScript: เว้นวรรค 2 spaces
    * Python: เว้นวรรค 4 spaces ยึดตามมาตรฐาน **PEP 8**
@@ -113,6 +114,7 @@ stateDiagram-v2
     PENDING --> APPROVED: เจ้าหน้าที่อนุมัติ (staff.html)<br/>[กันยอด Reserved]
     PENDING --> REJECTED: เจ้าหน้าที่ไม่อนุมัติ (staff.html)<br/>[ระบุเหตุผล]
     APPROVED --> COMPLETED: ผู้เบิกมารับของ + เซ็นชื่อดิจิทัล<br/>[ตัดยอด On-Hand จริง & คืน Reserved]
+    APPROVED --> REJECTED: เจ้าหน้าที่ยกเลิกใบเบิก<br/>[คืนยอด Reserved]
     REJECTED --> [*]
     COMPLETED --> [*]: พิมพ์ใบเบิกทางการ (Official PDF)
 ```
@@ -122,13 +124,14 @@ stateDiagram-v2
 2. **ตรรกะ 2 หน่วยนับ (Multi-Unit Ratio Calculation):**
    $$\text{Total Requested Pieces} = (\text{Requested Boxes} \times \text{Pieces Per Box}) + \text{Requested Pieces}$$
 3. **ขั้นตอนการตัดสต๊อก (Inventory Lifecycle):**
-   * **เมื่อผู้เบิกส่งคำขอ (`PENDING`):** ตรวจสอบว่า `Total Requested <= Available` หากผ่าน จะสร้างเลขที่คำขอ `REQ-YYYYMM-XXXX` (ยังไม่มีการตัดสต๊อก)
+   * **เมื่อผู้เบิกส่งคำขอ (`PENDING`):** ตรวจสอบว่า `Total Requested <= Available` หากผ่าน จะสร้างเลขที่คำขอ `REQ-YYYYMM-XXXX` ลงในตาราง `requisitions` และ `requisition_items` (ยังไม่มีการตัดสต๊อก)
    * **เมื่อเจ้าหน้าที่อนุมัติ (`APPROVED`):** เพิ่มยอด `reserved_pieces += approved_pieces` เพื่อล็อกยอดไว้ไม่ให้ผู้อื่นเบิกซ้ำ
    * **เมื่อลงนามรับมอบสำเร็จ (`COMPLETED`):**
      * ลดสต๊อกจริง: `on_hand_pieces -= approved_pieces`
      * คืนยอดกันจอง: `reserved_pieces -= approved_pieces`
+     * บันทึกประวัติการจ่ายออกลงในตาราง `stock_transactions` (`transaction_type = 'OUT'`)
      * แนบภาพลายเซ็น Base64 เข้ากับเอกสารคำขอ
-   * **กรณีปฏิเสธคำขอ (`REJECTED`):** หากคำขอนั้นเคยถูกกันยอดไว้ จะคืนยอด `reserved_pieces` กลับสู่สต๊อก
+   * **กรณีปฏิเสธคำขอหรือยกเลิก (`REJECTED`):** หากคำขอนั้นเคยถูกกันยอดไว้ จะคืนยอด `reserved_pieces` กลับสู่สต๊อกพร้อมเบิก
 
 ---
 
@@ -143,8 +146,9 @@ stateDiagram-v2
     ```
     ต้องผ่าน 100% โดยไม่มีข้อผิดพลาด (0 Syntax Errors)
   * ตรวจสอบว่าไม่มีการหลงเหลือคำสั่ง `alert(`, `confirm(`, หรือ `prompt(` ในโค้ด
-* **HTTP Server Verification:**
+* **HTTP & API Server Verification:**
   * หน้าเว็บทั้ง `index.html` และ `staff.html` ต้องส่งคืนรหัสสถานะ `HTTP 200`
+  * API Endpoint `/api?action=health` ต้องตอบกลับสถานะระบบและฐานข้อมูล MySQL ได้อย่างถูกต้อง
   * ตรวจสอบว่าไม่มี Asset ขาดหาย (0 Missing Assets / No 404s)
 * **Device & Responsive Testing:**
   * รองรับการแสดงผลทุกหน้าจอตลอดช่วง Viewport (Mobile 360px จนถึง Desktop 1920px)
@@ -159,7 +163,7 @@ stateDiagram-v2
    * ห้ามรวม `index.html` และ `staff.html` เข้าด้วยกันเด็ดขาด
    * หน้า `index.html` ต้องไม่มีโค้ด ส่วนติดต่อ หรือสิทธิ์ในการอนุมัติคำขอ การตัดสต๊อก หรือการล็อกอินเจ้าหน้าที่
 3. **Single Source of Truth (SSOT):**
-   * การแก้ไขหรือเพิ่มฟีเจอร์หลักในหน้าเว็บ ควรทำผ่านสคริปต์ `generate_separated_portals.py` แล้วสั่งคอมไพล์ เพื่อป้องกันปัญหาโค้ดของทั้งสองหน้าไม่ตรงกัน
+   * การแก้ไขหรือเพิ่มฟีเจอร์หลักในหน้าเว็บ ควรทำผ่านสคริปต์ `scripts/generate_separated_portals.py` แล้วสั่งคอมไพล์ เพื่อป้องกันปัญหาโค้ดของทั้งสองหน้าไม่ตรงกัน
 4. **ป้องกันข้อมูลสูญหาย (Accidental Data Loss Prevention):**
    * ห้ามสั่งรันคำสั่งที่ลบฐานข้อมูล ล้างข้อมูลพัสดุตั้งต้น หรือทำลายไฟล์รูปภาพโดยเด็ดขาด
 5. **ห้ามตัดยอดสต๊อก On-Hand ก่อนการลงนามรับของจริง:**
@@ -167,5 +171,4 @@ stateDiagram-v2
 6. **การควบคุมเวอร์ชันและบันทึกประวัติ (Strict Versioning & CHANGELOG Protocol):**
    * ทุกครั้งที่มีการพัฒนา เพิ่มฟีเจอร์ หรือแก้ไขโค้ด จะต้องปรับเพิ่มเลขเวอร์ชันตามมาตรฐาน Semantic Versioning (`MAJOR.MINOR.PATCH`)
    * บันทึกรายละเอียดการเปลี่ยนแปลงทั้งหมดลงในไฟล์ `CHANGELOG.md` ทุกครั้ง
-   * ซิงก์ตัวเลขเวอร์ชัน (`SYSTEM_VERSION`, Footer, `backend/Code.gs`) ให้ตรงกันเสมอ
-
+   * ซิงก์ตัวเลขเวอร์ชัน (`SYSTEM_VERSION` ใน `scripts/generate_separated_portals.py`, Footer, และ `SYSTEM_VERSION` ใน `backend/server.py`) ให้ตรงกันเสมอ
