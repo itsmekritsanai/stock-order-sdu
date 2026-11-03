@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.1"
+SYSTEM_VERSION = "3.0.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -664,22 +664,6 @@ requester_html = f'''<!DOCTYPE html>
     }}
     .btn-submit-requisition:hover {{ background: var(--accent-hover); }}
 
-    /* Requester Status Tracking Modal */
-    .tracking-timeline {{
-      display: flex; flex-direction: column; gap: 1rem; position: relative; padding-left: 2rem; margin: 1rem 0;
-    }}
-    .tracking-timeline::before {{
-      content: ''; position: absolute; left: 11px; top: 8px; bottom: 8px; width: 2px; background: var(--neutral-200);
-    }}
-    .timeline-step {{ position: relative; display: flex; flex-direction: column; gap: 0.2rem; }}
-    .timeline-dot {{
-      position: absolute; left: -2rem; top: 3px; width: 24px; height: 24px; border-radius: 999px;
-      background: white; border: 2px solid var(--neutral-300); display: flex; align-items: center; justify-content: center; font-size: 0.7rem;
-    }}
-    .timeline-step.active .timeline-dot {{ background: var(--accent); border-color: var(--accent); color: white; }}
-    .timeline-title {{ font-size: 0.9rem; font-weight: 600; color: var(--neutral-800); }}
-    .timeline-desc {{ font-size: 0.8rem; color: var(--neutral-600); }}
-
     /* My Requisitions Modal & Card Styles */
     .req-modal-card {{
       max-width: 840px !important;
@@ -799,10 +783,6 @@ requester_html = f'''<!DOCTYPE html>
         <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
           {svg_icons['clipboard']} รายการคำขอของฉัน
           <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
-        </button>
-
-        <button class="btn btn-outline" onclick="openTrackingModal()">
-          {svg_icons['search']} ติดตามสถานะคำขอ
         </button>
 
         <button class="cart-trigger" onclick="toggleCartDrawer()">
@@ -930,6 +910,9 @@ requester_html = f'''<!DOCTYPE html>
         </p>
       </div>
       <div class="modal-footer" style="justify-content: center; gap: 1rem;">
+        <button class="btn btn-outline" onclick="closeSuccessModal(); openMyRequisitionsModal();">
+          {svg_icons['clipboard']} ดูรายการคำขอของฉัน
+        </button>
         <button class="btn btn-primary" onclick="closeSuccessModal()">ตกลง / เบิกรายการอื่นต่อ</button>
       </div>
     </div>
@@ -978,34 +961,6 @@ requester_html = f'''<!DOCTYPE html>
           {svg_icons['info']} ข้อมูลอัปเดตแบบเรียลไทม์ ซิงค์กับระบบคลังพัสดุ
         </span>
         <button class="btn btn-outline" onclick="closeMyRequisitionsModal()">ปิดหน้าต่าง</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Tracking Modal -->
-  <div class="modal-overlay" id="trackingModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>{svg_icons['search']} ติดตามสถานะคำขอเบิก</h3>
-        <button class="close-btn" onclick="closeTrackingModal()">{svg_icons['x']}</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label>ระบุเลขที่เอกสาร หรือ ชื่อผู้ขอเบิก (เช่น REQ-256910-0042 หรือ สมชาย)</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="trackingInput" class="form-control" placeholder="พิมพ์เลขที่เอกสาร REQ-... หรือชื่อผู้ขอเบิก">
-            <button class="btn btn-primary" onclick="searchTracking()">ค้นหา</button>
-          </div>
-        </div>
-
-        <div id="trackingResultArea">
-          <p style="font-size: 0.85rem; color: var(--neutral-400); text-align: center; padding: 1.5rem 0;">
-            กรุณาระบุเลขที่เอกสารเพื่อดูสถานะการอนุมัติ
-          </p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeTrackingModal()">ปิด</button>
       </div>
     </div>
   </div>
@@ -1923,16 +1878,6 @@ requester_html = f'''<!DOCTYPE html>
       }});
     }}
 
-    function viewTrackingForDoc(docNo) {{
-      closeMyRequisitionsModal();
-      openTrackingModal();
-      const trackInput = document.getElementById('trackingInput');
-      if (trackInput) {{
-        trackInput.value = docNo;
-        searchTracking();
-      }}
-    }}
-
     function renderMyRequisitionsModal() {{
       const listEl = document.getElementById('myRequisitionsList');
       const countEl = document.getElementById('myReqsModalCount');
@@ -2065,9 +2010,6 @@ requester_html = f'''<!DOCTYPE html>
             </table>
 
             <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="viewTrackingForDoc('${{req.id}}')">
-                ${{vIcons.search}} ติดตามไทม์ไลน์สถานะ
-              </button>
               <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="openRequisitionPdf('${{req.id}}')">
                 ${{vIcons.file_text}} พิมพ์ใบเบิกพัสดุ (PDF)
               </button>
@@ -2075,107 +2017,6 @@ requester_html = f'''<!DOCTYPE html>
           </div>
         `;
       }}).join('');
-    }}
-
-    // Tracking Modal
-    function openTrackingModal() {{
-      document.getElementById('trackingModal').classList.add('open');
-    }}
-    function closeTrackingModal() {{
-      document.getElementById('trackingModal').classList.remove('open');
-    }}
-    function searchTracking() {{
-      const query = document.getElementById('trackingInput').value.trim();
-      const area = document.getElementById('trackingResultArea');
-      if (!query) return;
-      const reqs = getReqsDB();
-      const qLower = query.toLowerCase();
-      const req = reqs.find(r =>
-        (r.id || '').toLowerCase() === qLower ||
-        (r.id || '').toLowerCase().includes(qLower) ||
-        (r.requester || '').toLowerCase().includes(qLower)
-      );
-
-      if (!req) {{
-        Swal.fire({{
-          icon: 'error',
-          title: 'ไม่พบข้อมูลคำขอเบิก',
-          text: `ไม่พบข้อมูลคำขอเบิกที่ตรงกับ "${{query}}" ในระบบ กรุณาตรวจสอบเลขที่เอกสารหรือชื่อผู้ขอเบิกอีกครั้งครับ`,
-          confirmButtonColor: '#1e40af',
-          confirmButtonText: 'ตกลง'
-        }});
-        area.innerHTML = `<p style="color: var(--danger); text-align: center; padding: 1rem;">ไม่พบข้อมูลคำขอเบิกที่ตรงกับ "${{query}}"</p>`;
-        return;
-      }}
-
-      let statusBadge = '<span class="req-status-pill pill-pending">' + vIcons.clock + ' รอเจ้าหน้าที่พัสดุอนุมัติ</span>';
-      if (req.status === 'APPROVED') statusBadge = '<span class="req-status-pill pill-approved">' + vIcons.check + ' อนุมัติแล้ว (เชิญรับพัสดุ)</span>';
-      if (req.status === 'COMPLETED') statusBadge = '<span class="req-status-pill pill-completed">' + vIcons.check + ' รับมอบพัสดุสำเร็จแล้ว</span>';
-      if (req.status === 'REJECTED') statusBadge = '<span class="req-status-pill pill-rejected">' + vIcons.x + ' ไม่อนุมัติ</span>';
-
-      const step1Active = true;
-      const step2Active = req.status === 'APPROVED' || req.status === 'COMPLETED';
-      const step3Active = req.status === 'COMPLETED';
-      const isRejected = req.status === 'REJECTED';
-      const reasonText = req.reject_reason || req.rejectReason || 'ไม่ระบุเหตุผล';
-
-      const timelineHtml = isRejected ? `
-        <div class="tracking-timeline">
-          <div class="timeline-step active">
-            <div class="timeline-dot">${{vIcons.check}}</div>
-            <div class="timeline-title">1. ส่งคำขอเบิกพัสดุ (Pending)</div>
-            <div class="timeline-desc">บันทึกคำขอเบิกเข้าระบบเมื่อ ${{req.date}}</div>
-          </div>
-          <div class="timeline-step active">
-            <div class="timeline-dot" style="background: var(--danger); border-color: var(--danger);">${{vIcons.x}}</div>
-            <div class="timeline-title" style="color: var(--danger);">2. ไม่อนุมัติคำขอ / ยกเลิกรายการ (Rejected)</div>
-            <div class="timeline-desc" style="color: #991b1b;">เหตุผล: ${{reasonText}}</div>
-          </div>
-        </div>
-      ` : `
-        <div class="tracking-timeline">
-          <div class="timeline-step ${{step1Active ? 'active' : ''}}">
-            <div class="timeline-dot">${{step1Active ? vIcons.check : '1'}}</div>
-            <div class="timeline-title">1. ส่งคำขอเบิกพัสดุ (Pending)</div>
-            <div class="timeline-desc">บันทึกคำขอเบิกเข้าระบบเมื่อ ${{req.date}}</div>
-          </div>
-          <div class="timeline-step ${{step2Active ? 'active' : ''}}">
-            <div class="timeline-dot">${{step2Active ? vIcons.check : '2'}}</div>
-            <div class="timeline-title">2. อนุมัติและกันยอดสต๊อก (Approved)</div>
-            <div class="timeline-desc">${{step2Active ? 'เจ้าหน้าที่อนุมัติและกันสต๊อกเรียบร้อยแล้ว พร้อมให้มารับพัสดุ' : 'รอเจ้าหน้าที่คลังพัสดุตรวจสอบและอนุมัติ'}}</div>
-          </div>
-          <div class="timeline-step ${{step3Active ? 'active' : ''}}">
-            <div class="timeline-dot">${{step3Active ? vIcons.check : '3'}}</div>
-            <div class="timeline-title">3. ลงนามดิจิทัลและรับมอบพัสดุ (Completed)</div>
-            <div class="timeline-desc">${{step3Active ? 'ผู้เบิกลงนาม E-Signature รับของและตัดยอดสต๊อกจริงเรียบร้อยแล้ว' : 'รอผู้ขอเบิกเดินทางมารับของและเซ็นชื่อบนหน้าจอที่ห้องพัสดุ'}}</div>
-          </div>
-        </div>
-      `;
-
-      area.innerHTML = `
-        <div style="background: var(--neutral-50); border: 1px solid var(--neutral-200); border-radius: 8px; padding: 1.15rem; margin-top: 1rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
-            <strong style="font-size: 1.05rem; color: var(--primary); font-family: monospace;">${{req.id}}</strong>
-            ${{statusBadge}}
-          </div>
-          <div style="font-size: 0.85rem; color: var(--neutral-600); margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 4px;">
-            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.user}} <strong>ผู้เบิก:</strong> ${{req.requester}} (${{req.dept}})</div>
-            <div style="display: flex; align-items: center; gap: 6px;">${{vIcons.clock}} <strong>วันที่ขอ:</strong> ${{req.date}}</div>
-          </div>
-          ${{timelineHtml}}
-          <div style="font-size: 0.85rem; border-top: 1px dashed var(--neutral-200); padding-top: 0.65rem;">
-            <strong>รายการพัสดุ:</strong>
-            <ul style="padding-left: 1.25rem; margin-top: 4px;">
-              ${{req.items.map(i => `<li>${{i.name}}: ขอ ${{i.totalPieces.toLocaleString()}} ${{i.unitPiece}} (อนุมัติ ${{(i.approvedPieces ?? i.totalPieces).toLocaleString()}} ${{i.unitPiece}})</li>`).join('')}}
-            </ul>
-          </div>
-          <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end;">
-            <button class="btn btn-outline" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="openRequisitionPdf('${{req.id}}')">
-              ${{vIcons.file_text}} พิมพ์ใบขอเบิกพัสดุ (PDF)
-            </button>
-          </div>
-        </div>
-      `;
     }}
 
     // Requisition Official PDF Viewer (Requester Portal)

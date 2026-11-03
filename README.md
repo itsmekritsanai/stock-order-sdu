@@ -1,7 +1,7 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
-[![Version: 3.0.1](https://img.shields.io/badge/version-3.0.1-blue.svg)](CHANGELOG.md)
+[![Version: 3.0.2](https://img.shields.io/badge/version-3.0.2-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
