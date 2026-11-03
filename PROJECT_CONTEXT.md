@@ -11,7 +11,7 @@
 * **GitHub Repository:** [itsmekritsanai/stock-order-sdu](https://github.com/itsmekritsanai/stock-order-sdu)
 * **วัตถุประสงค์หลัก:**
   1. **Paperless & Digital Transformation:** ยกระดับกระบวนการขอเบิกพัสดุสำนักงานของมหาวิทยาลัยจากกระดาษสู่ระบบดิจิทัล 100%
-  2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการล็อกแถวระดับฐานข้อมูล MySQL (`SELECT ... FOR UPDATE`)
+  2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการล็อกแถวระดับฐานข้อมูล PostgreSQL (`SELECT ... FOR UPDATE`)
   3. **Multi-Unit Intelligence:** คำนวณการแปลงหน่วยอัตโนมัติระหว่างหน่วยบรรจุใหญ่ (กล่อง/ห่อ) และหน่วยย่อย (ชิ้น/ซอง/ใบ/แผ่น)
   4. **Strict Security Separation:** แยกสิทธิ์การใช้งานระหว่างผู้ขอเบิก (หัวหน้าหน่วยงานและบุคลากร 5 กลุ่มงานภายใน สวท.) และเจ้าหน้าที่คลังพัสดุออกจากกันอย่างเด็ดขาด
   5. **Audit Trail & Digital Signatures:** มีระบบลงนามรับของผ่านหน้าจอสัมผัส (E-Signature Pad), บันทึกประวัติความเคลื่อนไหวสต๊อก (`stock_transactions`) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) ตามระเบียบพัสดุ
@@ -52,15 +52,20 @@ graph TD
         STAFF["Staff Portal (staff.html)<br/>- Authentication Gate<br/>- Dashboard Metrics<br/>- Approval Queue<br/>- Touchscreen E-Signature Pad<br/>- Official PDF Print Engine<br/>- Inventory & Item CRUD Manager<br/>- User & Department Manager"]
     end
 
+    subgraph "Docker Compose Infrastructure"
+        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
+        PGA["pgAdmin 4 Web GUI<br/>Port 5051:80"]
+        PG <--> PGA
+    end
+
     subgraph "Persistence & API Layer"
-        API["Python MySQL REST API (backend/server.py)<br/>- ACID Transactions<br/>- Row-Level Locking (SELECT ... FOR UPDATE)<br/>- JSON REST API (/api)"]
-        MYSQL[("MySQL 8.0+ / MariaDB (sdu_inventory)<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
+        API["Python REST API Server (backend/server.py)<br/>- ACID Transactions<br/>- Row-Level Locking (SELECT ... FOR UPDATE)<br/>- JSON REST API (/api) via psycopg2"]
         LOCAL[("Browser localStorage<br/>+ Cross-Tab Storage Event Sync<br/>(Offline Fallback)")]
     end
 
     REQ <-->|GET / POST /api| API
     STAFF <-->|GET / POST /api| API
-    API <--> MYSQL
+    API <--> PG
     REQ <-->|Sync & Fallback| LOCAL
     STAFF <-->|Sync & Fallback| LOCAL
 ```
@@ -74,8 +79,9 @@ graph TD
   * **Canvas API:** แท่นลงนามดิจิทัล (E-Signature Pad) รองรับ Touchscreen, ปากกาสไตลัส และเมาส์
 * **Build & Code Generator:** Python 3.x (`scripts/generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
 * **Backend & Database Architecture:**
-  * **MySQL 8.0+ / MariaDB 10.6+ (`sdu_inventory`):** โครงสร้างตารางเชิงสัมพันธ์ (`backend/schema.sql`) ใช้เอนจิน `InnoDB` และชุดอักขระ `utf8mb4_unicode_ci`
-  * **Python REST API Server (`backend/server.py`):** ให้บริการทั้งไฟล์หน้าเว็บและ REST API (`/api`) ที่พอร์ต `8080` เชื่อมต่อผ่าน `PyMySQL` พร้อมระบบ初始化ฐานข้อมูลอัตโนมัติ (`backend/init_db.py`)
+  * **PostgreSQL 17 (`sdu_inventory`):** รันผ่าน Docker Compose (`postgres:17-alpine`) โครงสร้างตารางเชิงสัมพันธ์ (`backend/schema_postgres.sql`) พร้อมทริกเกอร์อัปเดต timestamp อัตโนมัติ (และยังรองรับ MySQL 8.0+ ย้อนหลัง)
+  * **pgAdmin 4 (`dpage/pgadmin4`):** เครื่องมือบริหารฐานข้อมูลผ่านเว็บพอร์ต `5051` พร้อมการเชื่อมต่อที่กำหนดค่าไว้ล่วงหน้า (`pgadmin_servers.json`)
+  * **Python REST API Server (`backend/server.py`):** ให้บริการทั้งไฟล์หน้าเว็บและ REST API (`/api`) ที่พอร์ต `8080` เชื่อมต่อผ่าน `psycopg2-binary` พร้อมระบบสร้างและตั้งค่าฐานข้อมูลอัตโนมัติ (`backend/init_db.py`)
   * **Offline Fallback:** Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event) รองรับการใช้งานแม้ในสภาวะออฟไลน์
 
 ---

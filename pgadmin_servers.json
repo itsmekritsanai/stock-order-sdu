@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Stock Order SDU (PostgreSQL 17)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "sdu_inventory",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
+

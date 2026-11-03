@@ -1,9 +1,11 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
-[![Version: 2.2.0](https://img.shields.io/badge/version-2.2.0-blue.svg)](CHANGELOG.md)
+[![Version: 3.0.0](https://img.shields.io/badge/version-3.0.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
+[![pgAdmin 4](https://img.shields.io/badge/pgAdmin-4-326690?style=flat&logo=postgresql&logoColor=white)](https://www.pgadmin.org/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
@@ -12,13 +14,13 @@
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
 
 
-เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย เชื่อมต่อฐานข้อมูลเชิงสัมพันธ์ **MySQL (`sdu_inventory`)** ผ่าน **Python REST API Server** พร้อมระบบ Offline Fallback, ลงนามรับของดิจิทัล (E-Signature), พิมพ์ใบเบิกทางการ (Official PDF) และป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
+เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย เชื่อมต่อฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (`sdu_inventory`) รันผ่าน Docker Compose พร้อม pgAdmin 4** ผ่าน **Python REST API Server** พร้อมระบบ Offline Fallback, ลงนามรับของดิจิทัล (E-Signature), พิมพ์ใบเบิกทางการ (Official PDF) และป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
 
 ---
 
 ## สถาปัตยกรรมการแยกระบบ (Architecture & Security Separation)
 
-ระบบแบ่งการเข้าถึงเป็น 2 พอร์ทัลอิสระ เชื่อมต่อกับฐานข้อมูล MySQL ผ่าน REST API พร้อมระบบสำรองข้อมูลแบบ Offline-First:
+ระบบแบ่งการเข้าถึงเป็น 2 พอร์ทัลอิสระ เชื่อมต่อกับฐานข้อมูล PostgreSQL 17 ผ่าน REST API พร้อมระบบสำรองข้อมูลแบบ Offline-First:
 
 ```mermaid
 graph TD
@@ -31,11 +33,16 @@ graph TD
         SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking Timeline)"]
     end
 
-    subgraph "Backend & Persistence Layer (MySQL + Hybrid Offline Sync)"
-        API["Python MySQL REST API (backend/server.py)<br/>ACID Transactions + Row-Level Locking"]
-        MYSQL[("MySQL Database (sdu_inventory)<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
+    subgraph "Docker Compose Infrastructure (PostgreSQL 17 & pgAdmin 4)"
+        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
+        PGA["pgAdmin 4 Web GUI<br/>Port 5051:80<br/>(Preloaded Connection)"]
+        PG <--> PGA
+    end
+
+    subgraph "Backend & Persistence Layer (Python REST API + Hybrid Offline Sync)"
+        API["Python REST API (backend/server.py)<br/>ACID Transactions + Row-Level Locking (psycopg2)"]
         LOCAL[("Browser localStorage<br/>(Offline Fallback & Cross-Tab Sync)")]
-        API <--> MYSQL
+        API <--> PG
     end
 
     subgraph "Private Staff Portal (staff.html)"
@@ -88,7 +95,7 @@ graph TD
 * **แท่นลงนามดิจิทัล (E-Signature Pad):**
   * เมื่อผู้ขอเบิกเดินทางมารับพัสดุที่ห้องคลัง เจ้าหน้าที่กดปุ่ม "ลงนามรับของ"
   * รองรับการเซ็นชื่อผ่านหน้าจอสัมผัส (Touchscreen), ปากกาสไตลัส, หรือเมาส์ พร้อมระบบตรวจสอบลายเซ็นว่างเปล่า
-* **ตัดสต๊อกอัตโนมัติ (Automated Inventory Deduction):** เมื่อผู้รับลงนามรับของเรียบร้อย ระบบจะตัดสต๊อกจริง (On-Hand) และคืนยอดกันจอง (Reserved) ภายใต้ MySQL ACID Transaction ทันที
+* **ตัดสต๊อกอัตโนมัติ (Automated Inventory Deduction):** เมื่อผู้รับลงนามรับของเรียบร้อย ระบบจะตัดสต๊อกจริง (On-Hand) และคืนยอดกันจอง (Reserved) ภายใต้ PostgreSQL ACID Transaction ทันที
 * **พิมพ์ใบเบิกพัสดุทางการ (Official PDF Printable Form):**
   * แบบฟอร์มราชการมาตรฐานตามระเบียบพัสดุ
   * ตราสัญลักษณ์มหาวิทยาลัยสวนดุสิต (Vector Seal)
@@ -106,7 +113,7 @@ graph TD
 * **Offline Asset Support:** ดาวน์โหลดไฟล์ `sweetalert2.all.min.js` เก็บไว้ใน `assets/js/` เพื่อให้ระบบทำงานได้เสถียร 100% แม้ไม่มีอินเทอร์เน็ตภายนอก พร้อมระบบ CDN Fallback อัตโนมัติ
 * **100% Vector SVG Icons:** ปราศจาก Emoji โดยเปลี่ยนมาใช้ไอคอนเวกเตอร์เส้น Stroke คุณภาพสูงทั้งหมด
 * **Typography:** ใช้ฟอนต์ Google Fonts `Prompt` สำหรับหน้าจอการใช้งานทั่วไป และ `Sarabun` สำหรับแบบฟอร์มเอกสารทางการ
-* **Hybrid MySQL + Cross-Tab Synchronization:** ซิงค์ข้อมูลผ่าน MySQL REST API พร้อมระบบตรวจจับการเปลี่ยนแปลงข้ามแท็บเบราว์เซอร์อัตโนมัติ
+* **Hybrid PostgreSQL + Cross-Tab Synchronization:** ซิงค์ข้อมูลผ่าน PostgreSQL REST API พร้อมระบบตรวจจับการเปลี่ยนแปลงข้ามแท็บเบราว์เซอร์อัตโนมัติ
 
 ---
 
@@ -121,8 +128,10 @@ stock-order-sdu/
 ├── CHANGELOG.md                         # บันทึกประวัติการเปลี่ยนแปลงของระบบตามมาตรฐาน SemVer
 ├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
 ├── LICENSE                              # สัญญาอนุญาต MIT License
-├── requirements.txt                     # รายการไลบรารี Python (PyMySQL, pytest, pytest-cov)
-├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อฐานข้อมูล MySQL
+├── requirements.txt                     # รายการไลบรารี Python (psycopg2-binary, PyMySQL, pytest)
+├── docker-compose.yml                   # คอนฟิก Docker Compose สำหรับรัน PostgreSQL 17 และ pgAdmin 4
+├── pgadmin_servers.json                 # ไฟล์พรีโหลดการเชื่อมต่อเซิร์ฟเวอร์ฐานข้อมูลเข้าสู่ pgAdmin 4
+├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ PostgreSQL / pgAdmin
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
 │
 ├── portal.html                          # ศูนย์กลางเชื่อมต่อพอร์ทัลกลาง (Gateway Hub)
@@ -133,8 +142,9 @@ stock-order-sdu/
 ├── favicon.ico                          # ไอคอน Favicon แบบหลายขนาด
 ├── start.bat                            # สคริปต์ 1-Click เปิดระบบอัตโนมัติบน Windows
 │
-├── .github/                             # การกำหนดค่า GitHub และ AI Assistant
-│   └── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
+├── .github/                             # การกำหนดค่า GitHub และ CI/CD Workflow
+│   ├── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
+│   └── workflows/ci.yml                 # Automated Testing CI Workflow ด้วย GitHub Actions
 │
 ├── assets/                              # ทรัพยากรของโครงการ (Static Web Assets)
 │   ├── logo_sdu.png                     # ตราสัญลักษณ์ทางการ มหาวิทยาลัยสวนดุสิต
@@ -144,11 +154,15 @@ stock-order-sdu/
 │   │   └── sweetalert2.all.min.js       # SweetAlert2 Local Asset สำหรับการทำงานออฟไลน์
 │   └── images/                          # รูปภาพพัสดุจริงสกัดจากไฟล์สต๊อก ตั้งชื่อตรงตามพัสดุภาษาไทย (66 รูปภาพ จาก 34 รายการ)
 │
-├── backend/                             # ระบบส่วนหลังบ้าน (MySQL Database & Python REST API)
-│   ├── schema.sql                       # โครงสร้างตาราง MySQL 6 ตาราง พร้อมข้อมูลตั้งต้นครบชุด
-│   ├── server.py                        # เซิร์ฟเวอร์ Python HTTP + MySQL REST API (Port 8080)
+├── backend/                             # ระบบส่วนหลังบ้าน (PostgreSQL 17 Database & REST API)
+│   ├── schema_postgres.sql              # โครงสร้างตาราง PostgreSQL 17 6 ตาราง พร้อม Trigger และ Seed Data
+│   ├── schema.sql                       # โครงสร้างตาราง MySQL สำหรับรองรับย้อนหลัง
+│   ├── server.py                        # เซิร์ฟเวอร์ Python HTTP + REST API (Port 8080)
 │   ├── init_db.py                       # สคริปต์สร้างฐานข้อมูลและนำเข้าข้อมูลตั้งต้นอัตโนมัติในคลิกเดียว
-│   └── README.md                        # คู่มือการติดตั้งและใช้งาน MySQL Backend
+│   └── README.md                        # คู่มือการติดตั้งและใช้งาน Backend
+│
+├── tests/                               # ชุดทดสอบอัตโนมัติ (Automated Test Suite)
+│   └── test_stock_logic.py              # ทดสอบการแปลงหน่วย, สูตรคำนวณสต๊อก, State Transitions, และ DDL
 │
 ├── data/                                # ข้อมูลหลักและชุดข้อมูลตั้งต้น (Master & Seed Data)
 │   ├── รายนามบุคลากร สวท.docx            # ข้อมูลหลัก 5 กลุ่มงาน/หน่วยงาน และรายชื่อหัวหน้าหน่วยงาน สวท.
@@ -156,8 +170,8 @@ stock-order-sdu/
 │   └── ยอดสต๊อก ตค.xlsx                  # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel (34 รายการ, 66 รูปภาพ)
 │
 ├── docs/                                # เอกสารข้อมูลเชิงเทคนิค (Technical Specifications)
-│   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล MySQL Entity-Relationship & Data Types
-│   ├── API_SPEC.md                      # โครงสร้าง MySQL REST API Endpoints (Request/Response Specs)
+│   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล PostgreSQL 17 Entity-Relationship & Data Types
+│   ├── API_SPEC.md                      # โครงสร้าง REST API Endpoints (Request/Response Specs)
 │   ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
 │   └── internship/                      # โฟลเดอร์จัดเก็บเอกสารรายงานฝึกงาน (ละเว้นใน .gitignore)
 │
@@ -171,51 +185,67 @@ stock-order-sdu/
 
 ## วิธีการติดตั้งและรันโครงการ (Getting Started)
 
-### 1. การตั้งค่าฐานข้อมูล MySQL (แนะนำสำหรับการใช้งานเต็มรูปแบบ)
+### 1. สตาร์ท PostgreSQL 17 และ pgAdmin 4 ด้วย Docker Compose
+1. สตาร์ทบริการฐานข้อมูลและเครื่องมือจัดการ:
+   ```bash
+   docker compose up -d
+   ```
+   > ระบบจะเปิด **PostgreSQL 17** (พอร์ต `5433:5432`) และ **pgAdmin 4** (พอร์ต `5051:80`) พร้อมอิมพอร์ตข้อมูลตั้งต้นจาก `schema_postgres.sql` ให้อัตโนมัติ
+
+2. เข้าใช้งาน **pgAdmin 4** ผ่านเบราว์เซอร์:
+   * **URL:** [http://localhost:5051](http://localhost:5051)
+   * **อีเมล:** `admin@admin.com` | **รหัสผ่าน:** `root`
+   * การเชื่อมต่อไปยัง `Stock Order SDU (PostgreSQL 17)` ถูกตั้งค่าล่วงหน้าไว้เรียบร้อยแล้ว (รหัสผ่าน DB: `postgrespassword`)
+
+### 2. รัน Python REST API Server
 1. ติดตั้งไลบรารีใน Virtual Environment (`.venv`):
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
    ```
-2. ตั้งค่าการเชื่อมต่อ MySQL ในไฟล์ `.env` (คัดลอกจาก `.env.example` โดยค่าเริ่มต้นใช้ `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_USER=root`, `DB_PASSWORD=`, `DB_NAME=sdu_inventory`)
-3. สร้างฐานข้อมูลและนำเข้าข้อมูลตั้งต้น (5 กลุ่มงาน สวท. + 4 หัวหน้าหน่วยงาน + 34 รายการพัสดุ):
-   ```bash
-   python backend/init_db.py
-   ```
-4. รันเซิร์ฟเวอร์ระบบ (ให้บริการทั้งหน้าเว็บและ MySQL REST API `/api` ที่พอร์ต `8080`):
+2. รันเซิร์ฟเวอร์ระบบ (ให้บริการทั้งหน้าเว็บและ REST API `/api` ที่พอร์ต `8080`):
    ```bash
    python backend/server.py
    ```
    *(หรือดับเบิลคลิกไฟล์ `start.bat`)*
 
-5. เปิด Web Browser เพื่อใช้งาน:
+3. เปิด Web Browser เพื่อใช้งาน:
    * **หน้าศูนย์กลางพอร์ทัล:** [http://localhost:8080/portal.html](http://localhost:8080/portal.html)
    * **หน้าสำหรับผู้ขอเบิก:** [http://localhost:8080/index.html](http://localhost:8080/index.html)
    * **หน้าสำหรับเจ้าหน้าที่พัสดุ:** [http://localhost:8080/staff.html](http://localhost:8080/staff.html)
-   * **ตรวจสอบสถานะ MySQL API:** [http://localhost:8080/api?action=health](http://localhost:8080/api?action=health)
+
+### 3. รันชุดทดสอบอัตโนมัติ (Automated Testing)
+```bash
+pytest tests/ -v
+```
 
 ---
 
 ## ฐานข้อมูลและการจัดเก็บข้อมูล (Data Persistence)
 
-* **ฐานข้อมูลหลัก (MySQL Relational Database — `sdu_inventory`):**
-  * จัดเก็บข้อมูลลงใน 6 ตารางหลัก (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`) บนเอนจิน **InnoDB (`utf8mb4_unicode_ci`)**
+* **ฐานข้อมูลหลัก (PostgreSQL 17 Relational Database — `sdu_inventory`):**
+  * รันผ่าน Docker Compose (`postgres:17-alpine`) บนพอร์ต `5433` บันทึกข้อมูลลง Volume `postgres-stock-data`
+  * จัดเก็บข้อมูลลงใน 6 ตารางหลัก (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`)
   * ป้องกันปัญหาการเบิกชนกัน (Race Condition) ด้วย **ACID Database Transactions** และการล็อกแถวข้อมูลระดับฐานข้อมูล (`SELECT ... FOR UPDATE`)
 * **ระบบสำรองข้อมูลออฟไลน์ (Hybrid Offline Fallback):**
-  * กรณีเปิดหน้าเว็บแบบออฟไลน์หรือยังไม่ได้เปิดบริการ MySQL ระบบจะสลับมาอ่านและบันทึกข้อมูลลงใน Browser **`localStorage`** (`inventory_items`, `inventory_requisitions`, `inventory_users_sdu`, `inventory_depts_sdu`) พร้อมซิงค์ข้ามแท็บอัตโนมัติ (`storage` event) โดยไม่เกิดหน้าเว็บค้างหรือ Error
+  * กรณีเปิดหน้าเว็บแบบออฟไลน์หรือยังไม่ได้เปิดบริการ PostgreSQL ระบบจะสลับมาอ่านและบันทึกข้อมูลลงใน Browser **`localStorage`** (`inventory_items`, `inventory_requisitions`, `inventory_users_sdu`, `inventory_depts_sdu`) พร้อมซิงค์ข้ามแท็บอัตโนมัติ (`storage` event) โดยไม่เกิดหน้าเว็บค้างหรือ Error
 
 ---
 
 ## แผนการพัฒนาและเอกสารสำคัญ (Roadmap & Documentation)
 
+* 🚀 **[คู่มือการติดตั้งและย้ายระบบไปเครื่องอื่น (INSTALLATION.md)](INSTALLATION.md)**
 * 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[.github/copilot-instructions.md](.github/copilot-instructions.md)**
 * 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
 * 📝 **[บันทึกประวัติการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
 * 📋 **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
-* 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล MySQL (docs/SCHEMA.md)](docs/SCHEMA.md)**
-* 🔌 **[โครงสร้าง MySQL REST API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
-* 🐬 **[คู่มือติดตั้งและใช้งาน MySQL Backend (backend/README.md)](backend/README.md)**
+* 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล PostgreSQL 17 (docs/SCHEMA.md)](docs/SCHEMA.md)**
+* 🔌 **[โครงสร้าง REST API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
+* 🐘 **[คู่มือติดตั้งและใช้งาน Backend (backend/README.md)](backend/README.md)**
+* 🐳 **[การกำหนดค่า Docker Compose (docker-compose.yml)](docker-compose.yml)**
+* ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
+* 📄 **[System Requirements Specification (SRS v1.1)](docs/system_requirements_specification.md)**
 * ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
 * 📄 **[System Requirements Specification (SRS v1.1)](docs/system_requirements_specification.md)**
 

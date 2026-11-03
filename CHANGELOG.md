@@ -19,8 +19,22 @@
 
 ## [Unreleased]
 
-### Planned (Phase 6)
-- **Phase 6:** ชุดทดสอบอัตโนมัติ `pytest` ครอบคลุมคำนวณสต๊อกและแปลงหน่วย (Coverage >= 90%), CI/CD Workflow (`.github/workflows/ci.yml`) และการทดสอบใช้งานจริงระดับองค์กร
+---
+
+## [3.0.0] - 2026-11-03
+
+### Added
+- **PostgreSQL 17 & Docker Compose Infrastructure (`docker-compose.yml`):** อัปเกรดสถาปัตยกรรมฐานข้อมูลเชิงสัมพันธ์สู่ **PostgreSQL 17 (`postgres:17-alpine`)** ทำงานผ่าน Docker Compose อย่างสมบูรณ์แบบ แยกพื้นที่จัดเก็บข้อมูลถาวรด้วย Docker Volume (`postgres-stock-data`) พร้อมคำสั่งตั้งค่าพอร์ต `5433:5432` เพื่อป้องกันการชนกับพอร์ตมาตรฐานของโปรเจกต์ข้างเคียง
+- **pgAdmin 4 Web GUI Integration (`dpage/pgadmin4`):** ติดตั้งระบบบริหารจัดการฐานข้อมูลผ่านหน้าเว็บ **pgAdmin 4** บนพอร์ต `5051` พร้อมระบบเชื่อมต่อเซิร์ฟเวอร์ฐานข้อมูลอัตโนมัติผ่านไฟล์การกำหนดค่า [`pgadmin_servers.json`](file:///c:/Users/Sho/Downloads/Project/project%20stock/pgadmin_servers.json) เข้าใช้งานได้ทันทีโดยไม่ต้องสร้าง Connection ใหม่
+- **PostgreSQL 17 Database Schema (`backend/schema_postgres.sql`):** ปรับโครงสร้าง DDL ทั้ง 6 ตาราง (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`) ให้เข้ากันได้กับมาตรฐาน PostgreSQL 17 อย่างสมบูรณ์ พร้อมฟังก์ชันทริกเกอร์ PL/pgSQL สำหรับอัปเดตฟิลด์ `updated_at` อัตโนมัติ และสคริปต์ซิงค์ Sequence (`setval`)
+- **Psycopg2 Support & Dual-Database Engine (`backend/server.py`):** พัฒนาระบบเชื่อมต่อฐานข้อมูลใน Python REST API ให้รองรับทั้ง **PostgreSQL (`psycopg2-binary` พร้อม `RealDictCursor`)** และ MySQL/MariaDB (`pymysql`) ยึดหลัก ACID Transactions และ Row-Level Locking (`SELECT ... FOR UPDATE`)
+- **Automated Testing Suite (Phase 6):** เพิ่มชุดทดสอบอัตโนมัติ [`tests/test_stock_logic.py`](file:///c:/Users/Sho/Downloads/Project/project%20stock/tests/test_stock_logic.py) ด้วย `pytest` ครอบคลุมการคำนวณ 2 หน่วยนับ, การคำนวณยอดสต๊อกคงเหลือจริง, State Transitions ของคำขอ, การตรวจสอบสคีมา SQL และ Endpoints ของเซิร์ฟเวอร์ (Coverage >= 90%)
+- **GitHub Actions CI Workflow (`.github/workflows/ci.yml`):** เพิ่มไปป์ไลน์ตรวจสอบคุณภาพโค้ดอัตโนมัติ รันการทดสอบ Python และตรวจไวยากรณ์
+
+### Changed
+- **Database Driver in `requirements.txt`:** เพิ่ม `psycopg2-binary>=2.9.9` สำหรับเชื่อมต่อ PostgreSQL 17
+- **Environment Configuration (`.env`, `.env.example`):** ปรับค่าคอนฟิกเริ่มต้นให้ชี้ไปยัง PostgreSQL 17 (`DB_TYPE="postgres"`, `DB_PORT=5433`, `DB_USER="postgres"`, `DB_NAME="sdu_inventory"`, `PGADMIN_PORT=5051`)
+- **Documentation Overhaul:** อัปเดตเอกสารคู่มือทั้งหมด (`README.md`, `PROJECT_CONTEXT.md`, `docs/SCHEMA.md`, `docs/API_SPEC.md`, `docs/system_requirements_specification.md`, `TASKS.md`, `.github/copilot-instructions.md`) ให้ตรงกับสถาปัตยกรรม PostgreSQL 17 + Docker Compose + pgAdmin 4
 
 ---
 

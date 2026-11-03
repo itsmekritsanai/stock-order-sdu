@@ -1,12 +1,19 @@
 @echo off
 chcp 65001 > nul
-title ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มสด. (Stock Order SDU)
+title ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มสด. (Stock Order SDU - PostgreSQL 17)
 echo ==============================================================================
 echo   ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU)
+echo   PostgreSQL 17 + pgAdmin 4 Edition
 echo ==============================================================================
 echo.
 
 cd /d "%~dp0"
+
+if exist ".venv\Scripts\python.exe" (
+    echo [*] ใช้งาน Python จาก Virtual Environment (.venv)...
+    .venv\Scripts\python.exe scripts\launch.py
+    goto end
+)
 
 where python >nul 2>nul
 if %ERRORLEVEL% equ 0 (

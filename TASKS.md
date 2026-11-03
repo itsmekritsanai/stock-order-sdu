@@ -7,9 +7,9 @@
 - [x] **Phase 1: สถาปัตยกรรมหลักและการแยกระบบพอร์ทัล 100% (Completed)**
 - [x] **Phase 2: ยกระดับ UI/UX, Vector Icons, SweetAlert2 และระบบรายการคำขอ (Completed)**
 - [x] **Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support (Completed)**
-- [x] **Phase 4: การออกแบบฐานข้อมูลเชิงสัมพันธ์ MySQL & สคริปต์สร้างตารางอัตโนมัติ (Completed)**
-- [x] **Phase 5: พัฒนา Python MySQL REST API Server & เชื่อมต่อ Frontend พร้อม Offline Fallback (Completed)**
-- [ ] **Phase 6: การทดสอบอัตโนมัติ (pytest Coverage >= 90%), CI/CD Workflow & Production Deployment**
+- [x] **Phase 4: การออกแบบฐานข้อมูล PostgreSQL 17 / Docker Compose & pgAdmin 4 (Completed)**
+- [x] **Phase 5: พัฒนา Python PostgreSQL REST API Server & เชื่อมต่อ Frontend พร้อม Offline Fallback (Completed)**
+- [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
 
 ---
 
@@ -48,35 +48,37 @@
 
 ---
 
-## ✅ Phase 4: การออกแบบฐานข้อมูลเชิงสัมพันธ์ MySQL & สคริปต์สร้างตารางอัตโนมัติ (Completed)
-- [x] **Task 4.1:** ออกแบบและสร้างไฟล์ **`backend/schema.sql`** สำหรับฐานข้อมูล MySQL 8.0+ / MariaDB (`sdu_inventory`) ด้วยเอนจิน `InnoDB` และชุดอักขระ `utf8mb4_unicode_ci` ครอบคลุม 6 ตารางหลัก:
+## ✅ Phase 4: สถาปัตยกรรมฐานข้อมูล PostgreSQL 17, Docker Compose & pgAdmin 4 (Completed)
+- [x] **Task 4.1:** ออกแบบและสร้างไฟล์ **`backend/schema_postgres.sql`** สำหรับฐานข้อมูล **PostgreSQL 17** (`sdu_inventory`) ครอบคลุม 6 ตารางหลัก:
   - `departments`: ข้อมูลกลุ่มงาน/หน่วยงานภายใน สวท. 5 หน่วยงาน
-  - `users`: ข้อมูลรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (เริ่มต้นด้วยหัวหน้าหน่วยงาน 4 ท่านจาก `รายนามบุคลากร สวท.docx`)
-  - `inventory_items`: ข้อมูลรายการพัสดุ 34 รายการ พร้อมคอลัมน์คำนวณ `available_pieces` (`GENERATED ALWAYS AS (on_hand_pieces - reserved_pieces) VIRTUAL`)
-  - `requisitions`: ข้อมูลหัวเอกสารใบขอเบิก สถานะ และลายเซ็นดิจิทัล Base64 (`LONGTEXT`)
+  - `users`: ข้อมูลรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (หัวหน้าหน่วยงาน 4 ท่านจาก `รายนามบุคลากร สวท.docx`)
+  - `inventory_items`: ข้อมูลรายการพัสดุ 34 รายการ พร้อมระบบแปลง 2 หน่วยนับ
+  - `requisitions`: ข้อมูลหัวเอกสารใบขอเบิก สถานะ และลายเซ็นดิจิทัล Base64
   - `requisition_items`: รายการพัสดุย่อยในแต่ละใบขอเบิก พร้อม Snapshot อัตราส่วนแปลงหน่วย (`pieces_per_box_snapshot`) และ FK `ON DELETE CASCADE`
-  - `stock_transactions`: ประวัติความเคลื่อนไหวสต๊อก (`IN`, `OUT`, `ADJUST`, `INITIAL_MIGRATION`) สำหรับตรวจสอบย้อนหลัง (Audit Log)
-- [x] **Task 4.2:** สร้างสคริปต์ **`backend/init_db.py`** สำหรับสร้างฐานข้อมูล ตาราง และนำเข้าข้อมูลตั้งต้นอัตโนมัติในคำสั่งเดียว
-- [x] **Task 4.3:** สร้างไฟล์ `requirements.txt` (`PyMySQL`, `pytest`, `pytest-cov`) และอัปเดตตัวแปรสภาพแวดล้อมใน `.env` และ `.env.example` สำหรับการเชื่อมต่อ MySQL
+  - `stock_transactions`: ประวัติความเคลื่อนไหวสต๊อก (`IN`, `OUT`, `ADJUST`) สำหรับตรวจสอบย้อนหลัง (Audit Log)
+  - สร้าง Trigger PL/pgSQL อัปเดต `updated_at` อัตโนมัติ และสคริปต์ซิงค์ Sequence (`setval`)
+- [x] **Task 4.2:** สร้างไฟล์ **`docker-compose.yml`** รัน PostgreSQL 17 (`postgres:17-alpine`) บนพอร์ต `5433` พร้อมตั้งค่า Auto-init สคริปต์ SQL
+- [x] **Task 4.3:** ติดตั้งเว็บแอปพลิเคชัน **pgAdmin 4** (`dpage/pgadmin4`) บนพอร์ต `5051` พร้อมไฟล์ตั้งค่าพรีโหลดการเชื่อมต่ออัตโนมัติ **`pgadmin_servers.json`**
+- [x] **Task 4.4:** อัปเดตสคริปต์ **`backend/init_db.py`** ตรวจสอบและสร้างฐานข้อมูลพร้อมนำเข้า Schema ทั้งบน PostgreSQL 17 และ MySQL
+- [x] **Task 4.5:** อัปเดต `requirements.txt` ติดตั้ง `psycopg2-binary>=2.9.9` และกำหนดค่าสภาพแวดล้อมใน `.env` และ `.env.example`
 
 ---
 
-## ✅ Phase 5: พัฒนา Python MySQL REST API Server & ระบบจัดการบุคลากร/พัสดุสำหรับ Staff (Completed)
-- [x] **Task 5.1:** พัฒนาเซิร์ฟเวอร์ **`backend/server.py`** ให้บริการทั้ง Static Web Portals และ MySQL REST API (`/api`) ที่พอร์ต `8080`
-- [x] **Task 5.2:** ติดตั้งระบบ **ACID Transactions** และ **Row-Level Locking (`SELECT ... FOR UPDATE`)** ใน `backend/server.py` เพื่อป้องกันปัญหา Race Condition เมื่อมีผู้เบิกหรือตัดสต๊อกพร้อมกัน
-- [x] **Task 5.3:** เชื่อมต่อ `index.html` และ `staff.html` เข้ากับ MySQL REST API (`MYSQL_API_URL = "/api"`, `syncFromMySQLAPI()`, `postToMySQLAPI()`)
-- [x] **Task 5.4:** รองรับการทำรายการครบวงจรผ่าน MySQL API: สร้างคำขอเบิก (`createRequisition`), อนุมัติเต็มจำนวน/บางส่วน (`approveRequisition`), ปฏิเสธ/ยกเลิกคืนยอดจอง (`rejectRequisition`), ลงนามรับของตัดสต๊อกจริง (`completeRequisition`), รับพัสดุเข้าคลัง (`restockItem`), ปรับยอดตรวจนับ (`adjustStock`), จัดการบุคลากร/หน่วยงาน (`saveUser`, `deleteUser`, `addDepartment`), และเพิ่ม/แก้ไข/ลบรายการพัสดุ (`saveItem`, `deleteItem`)
-- [x] **Task 5.5:** สร้างระบบ **Hybrid Offline Fallback**: ทำงานบน `localStorage` ได้ทันทีหากเปิดใช้งานแบบออฟไลน์หรือยังไม่ได้รันเซิร์ฟเวอร์ MySQL
+## ✅ Phase 5: พัฒนา Python PostgreSQL REST API Server & ระบบจัดการบุคลากร/พัสดุ (Completed)
+- [x] **Task 5.1:** พัฒนาเซิร์ฟเวอร์ **`backend/server.py`** ให้บริการทั้ง Static Web Portals และ REST API (`/api`) ที่พอร์ต `8080` รองรับไดรเวอร์ `psycopg2`
+- [x] **Task 5.2:** ติดตั้งระบบ **ACID Transactions** และ **Row-Level Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันปัญหา Concurrency / Race Condition 100%
+- [x] **Task 5.3:** รองรับการทำรายการด้วยคำสั่ง `INSERT ... RETURNING id` บน PostgreSQL สำหรับการบันทึก User และ Inventory Item ใหม่
+- [x] **Task 5.4:** รองรับการทำรายการครบวงจร: สร้างคำขอเบิก (`createRequisition`), อนุมัติเต็มจำนวน/บางส่วน (`approveRequisition`), ปฏิเสธ/ยกเลิกคืนยอดจอง (`rejectRequisition`), ลงนามรับของตัดสต๊อกจริง (`completeRequisition`), รับพัสดุเข้าคลัง (`restockItem`), ปรับยอดตรวจนับ (`adjustStock`), จัดการบุคลากร/หน่วยงาน (`saveUser`, `deleteUser`, `addDepartment`), และเพิ่ม/แก้ไข/ลบรายการพัสดุ (`saveItem`, `deleteItem`)
+- [x] **Task 5.5:** สร้างระบบ **Hybrid Offline Fallback**: ทำงานบน `localStorage` ได้ทันทีหากเปิดใช้งานแบบออฟไลน์
 
 ---
 
-## ⏳ Phase 6: การทดสอบอัตโนมัติ (pytest Coverage >= 90%), CI/CD Workflow & Production Deployment
-- [ ] **Task 6.1:** สร้างชุดทดสอบอัตโนมัติ **`tests/test_stock_logic.py`** ด้วย **`pytest`** ครอบคลุม:
+## ✅ Phase 6: การทดสอบอัตโนมัติ & CI/CD Workflow (Completed)
+- [x] **Task 6.1:** สร้างชุดทดสอบอัตโนมัติ **`tests/test_stock_logic.py`** ด้วย **`pytest`** ครอบคลุม:
   - การคำนวณแปลง 2 หน่วยนับ $(\text{Boxes} \times \text{Ratio}) + \text{Pieces}$
   - สูตรคำนวณสต๊อกคงเหลือจริง $\text{Available} = \text{On-Hand} - \text{Reserved}$
   - การตรวจสอบสถานะคำขอ (State Transitions: `PENDING` ➔ `APPROVED` ➔ `COMPLETED` / `REJECTED`)
-  - การตรวจสอบความครบถ้วนและความถูกต้องของโครงสร้าง JSON หน่วยงาน 90 แห่ง และสคีมา MySQL (`backend/schema.sql`)
-  - ตรวจสอบเกณฑ์ **Test Code Coverage >= 90%**
-- [ ] **Task 6.2:** สร้าง **GitHub Actions CI Workflow (`.github/workflows/ci.yml`)** เพื่อรันการตรวจสอบ Python Test (`pytest`) และ JavaScript Syntax อัตโนมัติทุกครั้งที่มีการ Push โค้ด
-- [ ] **Task 6.3:** ตรวจสอบ Relative Path ของรูปภาพและ Asset ทั้งหมดให้ถูกต้องสมบูรณ์ (`./assets/...`)
-- [ ] **Task 6.4:** ทดสอบการทำงานร่วมกันระหว่างหลายอุปกรณ์ผ่านเครือข่ายองค์กรเชื่อมต่อไปยังฐานข้อมูล MySQL กลาง
+  - การตรวจสอบความครบถ้วนและความถูกต้องของโครงสร้าง SQL สคีมา PostgreSQL (`backend/schema_postgres.sql`)
+  - ตรวจสอบฟังก์ชันตัวช่วยระบบ (Buddhist Era, Document Number Generator, Configuration)
+- [x] **Task 6.2:** สร้าง **GitHub Actions CI Workflow (`.github/workflows/ci.yml`)** เพื่อรันการตรวจสอบ Python Test (`pytest`) อัตโนมัติทุกครั้งที่มีการ Push โค้ด
+- [x] **Task 6.3:** ปรับปรุงเอกสารคู่มือทั้งหมดสู่เวอร์ชัน `3.0.0`

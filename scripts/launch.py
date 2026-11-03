@@ -23,13 +23,13 @@ def is_port_in_use(port):
 def main():
     print("=" * 65)
     print("  ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต")
-    print("  Suan Dusit University - Stock Order SDU (MySQL Edition v2.0.0)")
+    print("  Suan Dusit University - Stock Order SDU (PostgreSQL 17 Edition)")
     print("=" * 65)
 
     if is_port_in_use(PORT):
         print(f"[*] เซิร์ฟเวอร์กำลังทำงานอยู่ที่พอร์ต {PORT} (Active)")
     else:
-        print(f"[*] กำลังเริ่มทำงาน Web & MySQL REST API Server บนพอร์ต {PORT}...")
+        print(f"[*] กำลังเริ่มทำงาน Web & REST API Server บนพอร์ต {PORT}...")
         subprocess.Popen([sys.executable, SERVER_SCRIPT], cwd=PROJECT_ROOT)
         time.sleep(1.5)
 

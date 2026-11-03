@@ -1,11 +1,11 @@
 """
-Unified Web & MySQL REST API Server (backend/server.py)
+Unified Web & REST API Server (backend/server.py)
 Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
-Version: 2.2.0
+Version: 3.0.0
 
 Features:
 - Serves Frontend Static Portals (index.html, staff.html, portal.html, assets/)
-- Provides JSON REST API at /api connected to MySQL 8.0+ / MariaDB
+- Provides JSON REST API at /api connected to PostgreSQL 17 (Docker Compose) or MySQL
 - Implements ACID Transactions & Row-Level Locking (SELECT ... FOR UPDATE)
   to prevent inventory concurrency race conditions.
 """
@@ -17,9 +17,9 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "2.2.0"
+SYSTEM_VERSION = "3.0.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
+SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
 THAI_MONTHS = [
     "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
@@ -30,10 +30,11 @@ THAI_MONTHS = [
 def load_env_config():
     """Load database and server settings from .env file and environment variables."""
     config = {
+        "DB_TYPE": os.environ.get("DB_TYPE", "postgres"),
         "DB_HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-        "DB_PORT": int(os.environ.get("DB_PORT", "3306")),
-        "DB_USER": os.environ.get("DB_USER", "root"),
-        "DB_PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "DB_PORT": int(os.environ.get("DB_PORT", "5433")),
+        "DB_USER": os.environ.get("DB_USER", "postgres"),
+        "DB_PASSWORD": os.environ.get("DB_PASSWORD", "postgrespassword"),
         "DB_NAME": os.environ.get("DB_NAME", "sdu_inventory"),
         "PORT": int(os.environ.get("PORT", "8080")),
         "HOST": os.environ.get("HOST", "127.0.0.1"),
@@ -59,10 +60,32 @@ def load_env_config():
 
 
 CONFIG = load_env_config()
+IS_POSTGRES = CONFIG.get("DB_TYPE", "postgres").lower() in ("postgres", "postgresql")
+SCHEMA_SQL_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "schema_postgres.sql" if IS_POSTGRES else "schema.sql"
+)
 
 
 def get_db_connection(include_db=True):
-    """Create a MySQL connection using PyMySQL or mysql-connector-python."""
+    """Create a database connection (PostgreSQL 17 or MySQL)."""
+    db_type = CONFIG.get("DB_TYPE", "postgres").lower()
+    if db_type in ("postgres", "postgresql"):
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+
+        db_name = CONFIG["DB_NAME"] if include_db else "postgres"
+        conn = psycopg2.connect(
+            host=CONFIG["DB_HOST"],
+            port=CONFIG["DB_PORT"],
+            user=CONFIG["DB_USER"],
+            password=CONFIG["DB_PASSWORD"],
+            dbname=db_name,
+            cursor_factory=RealDictCursor,
+        )
+        conn.autocommit = False
+        return conn
+
     db_name = CONFIG["DB_NAME"] if include_db else None
     try:
         import pymysql
@@ -94,7 +117,7 @@ def get_db_connection(include_db=True):
 
 
 def dict_cursor(conn):
-    """Return a dictionary cursor compatible with both PyMySQL and mysql-connector."""
+    """Return a dictionary cursor compatible with psycopg2, PyMySQL, and mysql-connector."""
     try:
         return conn.cursor(dictionary=True)
     except TypeError:
@@ -696,11 +719,19 @@ def handle_save_user(payload):
                         (int(user_id), name, position, dept, phone),
                     )
             else:
-                cur.execute(
-                    "INSERT INTO users (name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, 1)",
-                    (name, position, dept, phone),
-                )
-                user_id = cur.lastrowid
+                if IS_POSTGRES:
+                    cur.execute(
+                        "INSERT INTO users (name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, 1) RETURNING id",
+                        (name, position, dept, phone),
+                    )
+                    row = cur.fetchone()
+                    user_id = row["id"] if row else None
+                else:
+                    cur.execute(
+                        "INSERT INTO users (name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, 1)",
+                        (name, position, dept, phone),
+                    )
+                    user_id = cur.lastrowid
         conn.commit()
         return {"status": "success", "message": "บันทึกข้อมูลบุคลากรสำเร็จ", "id": user_id}
     except Exception as e:
@@ -802,20 +833,38 @@ def handle_save_item(payload):
                         ),
                     )
             else:
-                cur.execute(
-                    """
-                    INSERT INTO inventory_items
-                      (name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                       pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
-                       image_piece, image_box, is_active)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
-                    """,
-                    (
-                        name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                        pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
-                    ),
-                )
-                item_id = cur.lastrowid
+                if IS_POSTGRES:
+                    cur.execute(
+                        """
+                        INSERT INTO inventory_items
+                          (name, category, is_multi_unit, unit_box_name, unit_piece_name,
+                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
+                           image_piece, image_box, is_active)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
+                        RETURNING id
+                        """,
+                        (
+                            name, category, is_multi_unit, unit_box_name, unit_piece_name,
+                            pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
+                        ),
+                    )
+                    row = cur.fetchone()
+                    item_id = row["id"] if row else None
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO inventory_items
+                          (name, category, is_multi_unit, unit_box_name, unit_piece_name,
+                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
+                           image_piece, image_box, is_active)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
+                        """,
+                        (
+                            name, category, is_multi_unit, unit_box_name, unit_piece_name,
+                            pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
+                        ),
+                    )
+                    item_id = cur.lastrowid
         conn.commit()
         return {"status": "success", "message": "บันทึกรายการพัสดุสำเร็จ", "id": item_id}
     except Exception as e:

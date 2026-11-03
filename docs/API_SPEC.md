@@ -5,13 +5,13 @@
 
 ## 1. ข้อมูลภาพรวม API (Overview & Conventions)
 
-* **Protocol:** HTTP / HTTPS (RESTful JSON API ให้บริการโดย Python MySQL Server [`backend/server.py`](file:///c:/Users/Sho/Downloads/project%20stock/backend/server.py))
+* **Protocol:** HTTP / HTTPS (RESTful JSON API ให้บริการโดย Python REST Server [`backend/server.py`](file:///c:/Users/Sho/Downloads/Project/project%20stock/backend/server.py) เชื่อมต่อ PostgreSQL 17 หรือ MySQL)
 * **Base Endpoint URL:**
   ```text
   http://localhost:8080/api
   ```
 * **Content-Type:** `application/json; charset=utf-8`
-* **การจัดการ Concurrency & Database Transaction:** ใช้ฐานข้อมูล **MySQL (`InnoDB`)** ทำงานภายใต้ **ACID Transaction (`BEGIN` / `COMMIT` / `ROLLBACK`)** ร่วมกับ **Row-Level Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันปัญหา Race Condition เมื่อมีการขอเบิกหรือตัดสต๊อกพร้อมกัน
+* **การจัดการ Concurrency & Database Transaction:** ใช้ฐานข้อมูล **PostgreSQL 17** (และรองรับ MySQL) ทำงานภายใต้ **ACID Transaction (`BEGIN` / `COMMIT` / `ROLLBACK`)** ร่วมกับ **Row-Level Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันปัญหา Race Condition เมื่อมีการขอเบิกหรือตัดสต๊อกพร้อมกัน
 
 ---
 
