@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.0"
+SYSTEM_VERSION = "3.0.1"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -2533,9 +2533,6 @@ staff_html = f'''<!DOCTYPE html>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง (On-Hand vs Available)</h3>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-outline" onclick="simulateExcelImport()">
-                {svg_icons['upload']} นำเข้าจาก Excel
-              </button>
               <button class="btn btn-outline" onclick="openStockAdjustModal()">
                 {svg_icons['edit']} ปรับยอดสต๊อก (Adjustment)
               </button>
@@ -3404,26 +3401,6 @@ staff_html = f'''<!DOCTYPE html>
       }});
     }}
 
-    function simulateExcelImport() {{
-      const items = getItemsDB();
-      Swal.fire({{
-        title: 'นำเข้าข้อมูลสต๊อกจาก Excel',
-        html: `
-          <div style="text-align: left; margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
-            <p style="margin-bottom: 0.5rem;">ตรวจสอบฐานข้อมูลจากไฟล์ <b>"data/ยอดสต๊อก ตค.xlsx"</b>:</p>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.85rem; color: #334155; line-height: 1.6;">
-              • รายการพัสดุที่นำเข้าสำเร็จ: <b>${{items.length}} รายการ (58 รูปภาพพัสดุจริง)</b><br>
-              • สถานะการซิงค์: <b>ข้อมูลสต๊อกและอัตราส่วนแปลงหน่วยพร้อมใช้งาน 100%</b><br>
-              • หมวดหมู่: <b>ซองเอกสาร, กระดาษและแบบฟอร์ม, เครื่องเขียนและแฟ้ม</b>
-            </div>
-          </div>
-        `,
-        icon: 'success',
-        confirmButtonColor: '#1e40af',
-        confirmButtonText: 'ตกลง'
-      }});
-    }}
-
     function openStockInModal() {{
       const items = getItemsDB();
       const options = items.map(i => {{
@@ -3730,8 +3707,8 @@ staff_html = f'''<!DOCTYPE html>
                 <input id="swal-item-unit-piece" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น ชิ้น, ซอง, ใบ" value="${{existing ? (existing.unit_piece_name || 'ชิ้น') : 'ชิ้น'}}">
               </div>
               <div>
-                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ยอดคงคลัง (หน่วยย่อย)</label>
-                <input type="number" id="swal-item-onhand" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${{existing ? existing.on_hand_pieces : 100}}">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ยอดคงคลัง (หน่วยย่อย) ${{existing ? '<small style="color: #64748b; font-weight: normal;">(ปรับยอดที่ปุ่มปรับสต๊อก)</small>' : '*'}}</label>
+                <input type="number" id="swal-item-onhand" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem; ${{existing ? 'background-color: #f1f5f9; cursor: not-allowed;' : ''}}" value="${{existing ? existing.on_hand_pieces : 100}}" ${{existing ? 'readonly disabled' : ''}}>
               </div>
               <div>
                 <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เกณฑ์เตือนขั้นต่ำ</label>
@@ -3768,7 +3745,9 @@ staff_html = f'''<!DOCTYPE html>
           const pieces_per_box = is_multi_unit
             ? Math.max(1, parseInt(document.getElementById('swal-item-ratio').value, 10) || 1)
             : 1;
-          const on_hand_pieces = Math.max(0, parseInt(document.getElementById('swal-item-onhand').value, 10) || 0);
+          const on_hand_pieces = existing
+            ? Number(existing.on_hand_pieces)
+            : Math.max(0, parseInt(document.getElementById('swal-item-onhand').value, 10) || 0);
           const min_alert = Math.max(0, parseInt(document.getElementById('swal-item-min').value, 10) || 0);
 
           if (!name) {{

@@ -21,6 +21,15 @@
 
 ---
 
+## [3.0.1] - 2026-11-03
+
+### Changed
+- **Consolidated Stock Quantity Adjustment (`staff.html` & `scripts/generate_separated_portals.py`):** ปรับปรุงหน้าต่างแก้ไขพัสดุ (`openItemModal`) ให้ช่องยอดคงคลัง On-Hand เป็น `Read-only` สำหรับพัสดุเดิม เพื่อป้องกันการแก้ไขยอดสต๊อกโดยข้ามประวัติ Transaction และกำหนดให้การเปลี่ยนยอดต้องทำผ่านปุ่ม **"ปรับยอดสต๊อก (Adjustment)"** หรือ **"บันทึกรับเข้าพัสดุ (เติมสต๊อก)"** ที่มี Audit Trail ชัดเจนเท่านั้น (พัสดุใหม่ยังคงกำหนดยอดตั้งต้นได้ตามปกติ)
+- **Removed Redundant Simulation Feature:** ลบปุ่มจำลองการนำเข้า Excel (`simulateExcelImport`) ในหน้า `staff.html` ออก เพื่อลดความซ้ำซ้อนและป้องกันความสับสนของผู้ใช้งาน
+- **Version Bump:** ปรับเพิ่มเวอร์ชันของระบบสู่ `3.0.1` ให้สอดคล้องกันทุกส่วน (`scripts/generate_separated_portals.py`, `backend/server.py`, `tests/test_stock_logic.py`, `index.html`, `staff.html`)
+
+---
+
 ## [3.0.0] - 2026-11-03
 
 ### Added
