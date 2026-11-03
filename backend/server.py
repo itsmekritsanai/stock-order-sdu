@@ -17,7 +17,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.0.2"
+SYSTEM_VERSION = "3.0.3"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -315,6 +315,7 @@ def handle_get_users():
             {
                 "id": int(r["id"]),
                 "name": r["name"],
+                "username": r.get("username") or "",
                 "position": r.get("position") or "",
                 "dept": r.get("dept") or "",
                 "phone": r.get("phone") or "",
@@ -693,12 +694,27 @@ def handle_save_user(payload):
     position = str(payload.get("position", "")).strip()
     dept = str(payload.get("dept", "")).strip()
     phone = str(payload.get("phone", "")).strip()
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", "")).strip()
+
     if not name or not dept:
         return {"status": "error", "message": "กรุณาระบุชื่อ-นามสกุล และกลุ่มงาน/หน่วยงาน"}
+
+    if not username:
+        clean_name = name.replace("นางสาว", "").replace("นาย", "").replace("นาง", "").replace("ดร.", "").strip()
+        parts = clean_name.split()
+        username = parts[0].lower() if parts else f"user_{random.randint(100, 999)}"
 
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
+            if user_id:
+                cur.execute("SELECT id FROM users WHERE username = %s AND id != %s", (username, int(user_id)))
+            else:
+                cur.execute("SELECT id FROM users WHERE username = %s", (username,))
+            if cur.fetchone():
+                return {"status": "error", "message": f'ชื่อผู้ใช้งาน "{username}" มีผู้ใช้งานแล้ว กรุณาระบุชื่อผู้ใช้อื่น'}
+
             cur.execute("SELECT id FROM departments WHERE full_label = %s OR name = %s LIMIT 1", (dept, dept))
             if not cur.fetchone():
                 cat = "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)"
@@ -707,36 +723,95 @@ def handle_save_user(payload):
                     (cat, dept, cat, dept),
                 )
             if user_id:
-                cur.execute("SELECT id FROM users WHERE id = %s", (int(user_id),))
-                if cur.fetchone():
+                cur.execute("SELECT id, password FROM users WHERE id = %s", (int(user_id),))
+                existing_row = cur.fetchone()
+                if existing_row:
+                    final_pass = password if password else (existing_row.get("password") or "sdu1234")
                     cur.execute(
-                        "UPDATE users SET name = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
-                        (name, position, dept, phone, int(user_id)),
+                        "UPDATE users SET name = %s, username = %s, password = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
+                        (name, username, final_pass, position, dept, phone, int(user_id)),
                     )
                 else:
+                    final_pass = password if password else "sdu1234"
                     cur.execute(
-                        "INSERT INTO users (id, name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, 1)",
-                        (int(user_id), name, position, dept, phone),
+                        "INSERT INTO users (id, name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)",
+                        (int(user_id), name, username, final_pass, position, dept, phone),
                     )
             else:
+                final_pass = password if password else "sdu1234"
                 if IS_POSTGRES:
                     cur.execute(
-                        "INSERT INTO users (name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, 1) RETURNING id",
-                        (name, position, dept, phone),
+                        "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1) RETURNING id",
+                        (name, username, final_pass, position, dept, phone),
                     )
                     row = cur.fetchone()
                     user_id = row["id"] if row else None
                 else:
                     cur.execute(
-                        "INSERT INTO users (name, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, 1)",
-                        (name, position, dept, phone),
+                        "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1)",
+                        (name, username, final_pass, position, dept, phone),
                     )
                     user_id = cur.lastrowid
         conn.commit()
-        return {"status": "success", "message": "บันทึกข้อมูลบุคลากรสำเร็จ", "id": user_id}
+        return {
+            "status": "success",
+            "message": "บันทึกข้อมูลบุคลากรสำเร็จ",
+            "id": int(user_id) if user_id else 0,
+            "data": {
+                "id": int(user_id) if user_id else 0,
+                "name": name,
+                "username": username,
+                "position": position,
+                "dept": dept,
+                "phone": phone
+            }
+        }
     except Exception as e:
         conn.rollback()
         raise e
+    finally:
+        conn.close()
+
+
+def handle_login_requester(payload):
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", "")).strip()
+    if not username or not password:
+        return {"status": "error", "message": "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน"}
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            cur.execute(
+                "SELECT id, name, username, password, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                (username, username),
+            )
+            row = cur.fetchone()
+            if not row:
+                return {
+                    "status": "error",
+                    "message": f'ไม่พบบัญชีผู้ใช้งาน "{username}" ในระบบ กรุณาติดต่อเจ้าหน้าที่พัสดุเพื่อสร้างบัญชี'
+                }
+            stored_pass = str(row.get("password") or "").strip()
+            valid_pass = stored_pass if stored_pass else "sdu1234"
+            if password != valid_pass:
+                return {
+                    "status": "error",
+                    "message": "รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อเจ้าหน้าที่พัสดุ"
+                }
+
+            return {
+                "status": "success",
+                "message": "เข้าสู่ระบบสำเร็จ",
+                "user": {
+                    "id": int(row["id"]),
+                    "name": row["name"],
+                    "username": row.get("username") or username,
+                    "position": row.get("position") or "",
+                    "dept": row.get("dept") or "",
+                    "phone": row.get("phone") or "",
+                }
+            }
     finally:
         conn.close()
 
@@ -968,6 +1043,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         try:
             if action == "createRequisition":
                 return self.send_json(handle_create_requisition(payload))
+            elif action == "loginRequester":
+                return self.send_json(handle_login_requester(payload))
             elif action == "approveRequisition":
                 return self.send_json(handle_approve_requisition(payload))
             elif action == "completeRequisition":

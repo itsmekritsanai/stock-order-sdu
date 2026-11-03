@@ -21,6 +21,21 @@
 
 ---
 
+## [3.0.3] - 2026-11-03
+
+### Added
+- **Staff-Managed Requester Authentication System (`index.html`, `staff.html`, `backend/server.py`, `backend/schema.sql`, `backend/schema_postgres.sql`):**
+  - **Staff User Provisioning (`staff.html` & `scripts/generate_separated_portals.py`):** เจ้าหน้าที่พัสดุสามารถสร้างและแก้ไขบัญชีผู้ใช้งาน (User) พร้อมกำหนด **ชื่อผู้ใช้งาน (Username)** และ **รหัสผ่าน (Password)** ได้โดยตรงจากหน้าจัดการบุคลากร มีการตรวจสอบชื่อผู้ใช้งานซ้ำแบบ Real-time และเพิ่มคอลัมน์แสดง Username ในตารางข้อมูลบุคลากร
+  - **Requester Login Gate (`index.html` & `scripts/generate_separated_portals.py`):** เพิ่มหน้าจอเข้าสู่ระบบ (`#requesterLoginScreen`) สวยงามตามอัตลักษณ์ มสด. พร้อมระบบตรวจสอบสิทธิ์ทั้งผ่าน REST API และ Local Storage Fallback รวมถึงกล่องแนะนำการติดต่อเจ้าหน้าที่เพื่อสร้างบัญชี
+  - **Authenticated Identity Auto-Fill & Locked Form:** เมื่อผู้เบิกเข้าสู่ระบบ ข้อมูลชื่อ-นามสกุล และกลุ่มงานสังกัดจะถูกล็อกให้ตรงกับบัญชีที่ Login โดยอัตโนมัติ ป้องกันการแก้ไขหรือส่งคำขอในนามผู้อื่น
+  - **Personalized Requisitions Isolation:** ปรับปรุงปุ่มและหน้าต่าง **"รายการคำขอเบิกพัสดุของฉัน (My Requisitions)"** ให้แสดงและนับเฉพาะประวัติคำขอของบัญชีผู้ใช้งานที่กำลัง Login อยู่เท่านั้น เพื่อความปลอดภัยและความเป็นส่วนตัวของข้อมูล
+  - **Backend REST API `loginRequester`:** เพิ่มฟังก์ชัน `handle_login_requester` ใน `backend/server.py` รองรับการยืนยันตัวตนผ่านฐานข้อมูล
+  - **Database Schema Migration:** เพิ่มคอลัมน์ `username` (VARCHAR 100 UNIQUE) และ `password` (VARCHAR 255) ในตาราง `users` ของ `backend/schema.sql` และ `backend/schema_postgres.sql` พร้อม Seed Data บัญชีทดสอบ
+  - **Automated Unit Tests:** เพิ่มชุดทดสอบใน `tests/test_stock_logic.py` สำหรับระบบตรวจสอบสิทธิ์ผู้เบิก รวมทั้งหมด 36/36 tests ผ่านการทดสอบ 100%
+- **Version Bump:** ปรับเพิ่มเวอร์ชันของระบบสู่ `3.0.3` ทั่วทั้งโปรเจกต์
+
+---
+
 ## [3.0.2] - 2026-11-03
 
 ### Changed

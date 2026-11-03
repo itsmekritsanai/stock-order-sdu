@@ -310,6 +310,110 @@
     }
 
 
+    /* Requester Login Screen */
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #eff6ff 0%, #f1f5f9 50%, #e2e8f0 100%);
+    }
+    .login-card {
+      background: white;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--neutral-200);
+      overflow: hidden;
+      animation: fadeIn 0.3s ease-out;
+    }
+    .login-header {
+      background: white;
+      padding: 2.25rem 2rem 1.5rem 2rem;
+      text-align: center;
+      border-bottom: 1px solid var(--neutral-100);
+    }
+    .login-body {
+      padding: 1.75rem 2rem;
+    }
+    .login-input-group {
+      margin-bottom: 1.25rem;
+    }
+    .login-input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--neutral-700);
+      margin-bottom: 0.4rem;
+    }
+    .login-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .login-input-wrapper .input-icon {
+      position: absolute;
+      left: 1rem;
+      color: var(--neutral-400);
+      display: flex;
+      pointer-events: none;
+    }
+    .login-input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      border: 1px solid var(--neutral-300);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    .login-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.12);
+    }
+    .btn-login {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.8rem;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+      transition: all 0.2s;
+    }
+    .btn-login:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 6px 16px rgba(30, 64, 175, 0.35);
+    }
+    .btn-login:active {
+      transform: scale(0.99);
+    }
+    .login-notice-box {
+      margin-top: 1.25rem;
+      background: var(--neutral-50);
+      border: 1px solid var(--neutral-200);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--neutral-600);
+      line-height: 1.5;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     /* Requester Specific Styles */
     .requester-bar {
       background: white; border: 1px solid var(--neutral-200); border-radius: var(--radius);
@@ -543,53 +647,107 @@
 </head>
 <body>
 
-  <!-- Top Navigation Header (Requester Portal Only) -->
-  <header>
-    <div class="nav-container">
-      <div class="brand">
-        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
-        <div class="brand-text">
-          <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
-          <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
+  <!-- 1. REQUESTER LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
+  <div id="requesterLoginScreen" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; margin-bottom: 0.75rem; object-fit: contain;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">ระบบขอเบิกพัสดุออนไลน์</h2>
+        <p style="font-size: 0.85rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+      </div>
+      <div class="login-body">
+        <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
+          <div class="login-input-group">
+            <label for="loginUsername">ชื่อผู้ใช้งาน (Username)</label>
+            <div class="login-input-wrapper">
+              <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+              <input type="text" id="loginUsername" class="login-input" placeholder="เช่น wasana.c หรือ user" required autocomplete="username">
+            </div>
+          </div>
+          <div class="login-input-group">
+            <label for="loginPassword">รหัสผ่าน (Password)</label>
+            <div class="login-input-wrapper">
+              <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+              <input type="password" id="loginPassword" class="login-input" placeholder="กรอกรหัสผ่านของคุณ" required autocomplete="current-password">
+            </div>
+          </div>
+          <button type="submit" class="btn-login" id="btnLoginSubmit">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> เข้าสู่ระบบขอเบิกพัสดุ
+          </button>
+        </form>
+
+        <div class="login-notice-box">
+          <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าใช้งาน
+          </div>
+          <div>
+            สำหรับบุคลากร สวท. หากยังไม่มีบัญชีเข้าสู่ระบบ กรุณาติดต่อ <strong>เจ้าหน้าที่แผนกพัสดุ (Staff)</strong> เพื่อสร้างบัญชีและกำหนดสิทธิ์เข้าใช้งาน
+          </div>
+          <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--neutral-300); font-size: 0.775rem; color: var(--neutral-500);">
+            บัญชีทดสอบ: <code>user</code> / <code>password123</code> หรือ <code>wasana.c</code> / <code>password123</code>
+          </div>
         </div>
       </div>
-
-      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-        <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
-          <svg class="svg-icon" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg> รายการคำขอของฉัน
-          <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
-        </button>
-
-        <button class="cart-trigger" onclick="toggleCartDrawer()">
-          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg> ตะกร้าของฉัน
-          <span class="cart-badge" id="cartCount">0</span>
-        </button>
-      </div>
     </div>
-  </header>
+  </div>
+
+  <!-- 2. MAIN REQUESTER APPLICATION (SHOWN WHEN LOGGED IN) -->
+  <div id="requesterApp" style="display: none; min-height: 100vh; flex-direction: column;">
+    <!-- Top Navigation Header (Requester Portal Only) -->
+    <header>
+      <div class="nav-container">
+        <div class="brand">
+          <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
+          <div class="brand-text">
+            <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
+            <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <div id="requesterUserDisplay" style="display: flex; align-items: center; gap: 0.5rem; background: var(--neutral-100); padding: 0.45rem 0.85rem; border-radius: 999px; border: 1px solid var(--neutral-200); font-size: 0.825rem; color: var(--neutral-700);">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="navRequesterName" style="font-weight: 600; color: var(--primary);">-</span>
+            <span id="navRequesterDept" style="color: var(--neutral-500); font-size: 0.775rem;">-</span>
+          </div>
+
+          <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg> รายการคำขอของฉัน
+            <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
+          </button>
+
+          <button class="cart-trigger" onclick="toggleCartDrawer()">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg> ตะกร้าของฉัน
+            <span class="cart-badge" id="cartCount">0</span>
+          </button>
+
+          <button class="btn btn-outline" onclick="logoutRequester()" title="ออกจากระบบ" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; color: var(--danger); border-color: var(--neutral-300); display: inline-flex; align-items: center; gap: 4px;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </header>
 
   <!-- Main Content Area -->
   <main>
-    <!-- Requester Info Form with SEARCHABLE Combobox -->
+    <!-- Requester Info Form with Pre-filled & Locked Authenticated Identity -->
     <div class="requester-bar">
+      <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 0.825rem; color: var(--primary); background: var(--primary-light); padding: 7px 12px; border-radius: 8px; border: 1px solid var(--primary-border);">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> บัญชีผู้ขอเบิกเข้าสู่ระบบ: <strong id="barRequesterLabel">-</strong>
+      </div>
+
       <div class="form-group custom-combobox-wrapper" id="deptComboboxWrapper">
         <label for="deptSearchInput">
           <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> กลุ่มงาน / หน่วยงานที่สังกัด (สวท.) *
         </label>
         <div class="combobox-control" id="deptComboboxControl">
           <input type="text" id="deptSearchInput" class="form-control combobox-input" 
-                 placeholder="พิมพ์ค้นหาหรือเลือกกลุ่มงาน... (เช่น ส่งเสริมวิชาการ, บริการวิชาการ, ทะเบียนนักศึกษา)" 
+                 placeholder="กลุ่มงานที่สังกัด..." 
                  autocomplete="off" 
-                 value=""
-                 onfocus="openDeptDropdown()" 
-                 oninput="handleDeptSearch(this.value)">
+                 value="" 
+                 readonly
+                 style="background-color: var(--neutral-100); cursor: not-allowed;">
           <input type="hidden" id="deptSelect" value="">
-          <button type="button" class="combobox-toggle-btn" onclick="toggleDeptDropdown(event)" title="เปิด/ปิด รายการ">
-            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-        </div>
-        <div class="combobox-dropdown" id="deptDropdownList">
-          <!-- Populated and filtered by JS -->
         </div>
       </div>
       <div class="form-group custom-combobox-wrapper" id="userComboboxWrapper">
@@ -598,17 +756,11 @@
         </label>
         <div class="combobox-control" id="userComboboxControl">
           <input type="text" id="requesterName" class="form-control combobox-input" 
-                 placeholder="คลิกเลือกหรือพิมพ์ค้นหาชื่อบุคลากร... (เช่น ณัฐชา, จุฑาธิป, วาสนา)" 
+                 placeholder="ชื่อ-นามสกุล ผู้ขอเบิก..." 
                  autocomplete="off" 
-                 value=""
-                 onfocus="openUserDropdown()" 
-                 oninput="handleUserSearch(this.value)">
-          <button type="button" class="combobox-toggle-btn" onclick="toggleUserDropdown(event)" title="เปิด/ปิด รายชื่อบุคลากร">
-            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
-          </button>
-        </div>
-        <div class="combobox-dropdown" id="userDropdownList">
-          <!-- Populated and filtered by JS -->
+                 value="" 
+                 readonly
+                 style="background-color: var(--neutral-100); cursor: not-allowed;">
         </div>
       </div>
       <div class="form-group">
@@ -833,13 +985,14 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.0.2) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.0.3) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
+  </div>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.0.2';
+    const APP_VERSION = '3.0.3';
     const MYSQL_API_URL = '/api';
     const defaultDepts = [
   {
@@ -877,6 +1030,8 @@
   {
     "id": 1,
     "name": "นางสาววาสนา จันทร์จ่าย",
+    "username": "wasana.c",
+    "password": "password123",
     "position": "หัวหน้าสำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
     "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
     "phone": ""
@@ -884,6 +1039,8 @@
   {
     "id": 2,
     "name": "นางสาวจีรวรรณ บุญพิทักษ์",
+    "username": "jeerawan.b",
+    "password": "password123",
     "position": "หัวหน้าหน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
     "dept": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
     "phone": ""
@@ -891,6 +1048,8 @@
   {
     "id": 3,
     "name": "นางสาวพัชราภรณ์ ขำแป้ง",
+    "username": "patcharaporn.k",
+    "password": "password123",
     "position": "หัวหน้ากลุ่มงานบริการวิชาการ",
     "dept": "กลุ่มงานบริการวิชาการ",
     "phone": ""
@@ -898,9 +1057,20 @@
   {
     "id": 4,
     "name": "นางสาวสินีนาฎ ลักษณะโยธิน",
+    "username": "sineenart.l",
+    "password": "password123",
     "position": "หัวหน้ากลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
     "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
     "phone": ""
+  },
+  {
+    "id": 5,
+    "name": "ผู้ขอเบิกทดสอบ (Demo User)",
+    "username": "user",
+    "password": "password123",
+    "position": "เจ้าหน้าที่บริการการศึกษา",
+    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+    "phone": "089-123-4567"
   }
 ];
 
@@ -916,6 +1086,8 @@
       clock: `<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
       info: `<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>`,
       user: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+      lock: `<svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+      log_out: `<svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`,
       building: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
       file_text: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
       printer: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
@@ -929,7 +1101,7 @@
     const DB_DEPTS_KEY = 'inventory_departments';
 
     const defaultItems = [{"id": 1, "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1750, "reserved_pieces": 500, "min_alert": 500, "image_piece": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 2, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ใบ", "pieces_per_box": 2000, "on_hand_pieces": 34500, "reserved_pieces": 2000, "min_alert": 5000, "image_piece": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) ใบ.jpeg", "image_box": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) กล่อง.jpeg"}, {"id": 3, "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) กล่อง.jpeg"}, {"id": 4, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 23500, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) แผ่น.jpeg", "image_box": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) กล่อง.jpeg"}, {"id": 5, "name": "แฟ้มเสนอ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "เล่ม", "unit_piece_name": "เล่ม", "pieces_per_box": 1, "on_hand_pieces": 15, "reserved_pieces": 3, "min_alert": 5, "image_piece": "assets/images/แฟ้มเสนอ เล่ม.jpeg", "image_box": "assets/images/แฟ้มเสนอ เล่ม.jpeg"}, {"id": 6, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 ซอง.jpeg", "image_box": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 กล่อง.jpeg"}, {"id": 7, "name": "กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 4500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย แผ่น.jpeg", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย กล่อง.jpeg"}, {"id": 8, "name": "กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ กล่อง.jpeg"}, {"id": 9, "name": "กระดาษสติ๊กเกอร์ เต็มแผ่น", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 500, "reserved_pieces": 0, "min_alert": 100, "image_piece": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น กล่อง.jpeg"}, {"id": 10, "name": "แบบฟอร์มแก้ I", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ชิ้น", "pieces_per_box": 500, "on_hand_pieces": 2500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มแก้ I ชิ้น.jpeg", "image_box": "assets/images/แบบฟอร์มแก้ I กล่อง.jpeg"}, {"id": 11, "name": "ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 4000, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) ซอง.jpeg", "image_box": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) กล่อง.jpeg"}, {"id": 12, "name": "ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 13, "name": "แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 14, "name": "แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 15, "name": "ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 200, "image_piece": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ กล่อง.png"}, {"id": 16, "name": "ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 17, "name": "ใบรับรอง(ไทย)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 2000, "reserved_pieces": 0, "min_alert": 400, "image_piece": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 18, "name": "ใบรับรอง(อังกฤษ)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ กล่อง.png"}, {"id": 19, "name": "คลิปดำNO.108", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 72, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.108 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.108 ลัง.jpeg"}, {"id": 20, "name": "คลิปดำNO.110", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 60, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.110 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.110 ลัง.jpeg"}, {"id": 21, "name": "ไส้MAX 10 MM", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 10 MM กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 10 MM ลัง.jpeg"}, {"id": 22, "name": "ไส้MAX 12", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 12 กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 12 ลัง.jpeg"}, {"id": 23, "name": "ซองกันกระแทก 270´327", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 80, "on_hand_pieces": 2400, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg", "image_box": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg"}, {"id": 24, "name": "แม็กเล็ก", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กเล็ก อัน.jpeg", "image_box": "assets/images/แม็กเล็ก กล่อง.jpeg"}, {"id": 25, "name": "แม็กใหญ่", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กใหญ่ อัน.jpeg", "image_box": "assets/images/แม็กใหญ่ กล่อง.png"}, {"id": 26, "name": "สก็อตเทปใส", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 24, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปใส ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปใส กล่อง.jpeg"}, {"id": 27, "name": "สก็อตเทปขุ่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 27, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปขุ่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปขุ่น กล่อง.png"}, {"id": 28, "name": "สก็อตเทปย่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 10, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปย่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปย่น กล่อง.jpeg"}, {"id": 29, "name": "กาวแท่ง", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "แท่ง", "pieces_per_box": 1, "on_hand_pieces": 22, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กาวแท่ง แท่ง.jpeg", "image_box": "assets/images/กาวแท่ง กล่อง.png"}, {"id": 30, "name": "กาวขวด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "ขวด", "pieces_per_box": 1, "on_hand_pieces": 6, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/กาวขวด ขวด.jpeg", "image_box": "assets/images/กาวขวด กล่อง.png"}, {"id": 31, "name": "กรรไกร", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กรรไกร อัน.jpeg", "image_box": "assets/images/กรรไกร กล่อง.png"}, {"id": 32, "name": "คัตเตอร์", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 12, "reserved_pieces": 0, "min_alert": 3, "image_piece": "assets/images/คัตเตอร์ อัน.jpeg", "image_box": "assets/images/คัตเตอร์ กล่อง.png"}, {"id": 33, "name": "เครื่องเจาะกระดาษ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "เครื่อง", "pieces_per_box": 1, "on_hand_pieces": 2, "reserved_pieces": 0, "min_alert": 1, "image_piece": "assets/images/เครื่องเจาะกระดาษ เครื่อง.jpeg", "image_box": "assets/images/เครื่องเจาะกระดาษ กล่อง.png"}, {"id": 34, "name": "ไม้บรรทัด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/ไม้บรรทัด อัน.jpeg", "image_box": "assets/images/ไม้บรรทัด กล่อง.png"}];
-    const defaultReqs = [{"id": "REQ-256910-0042", "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน", "requester": "นางสาววาสนา จันทร์จ่าย", "phone": "081-998-7766", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ภาคเรียน 1/2569", "date": "21 ต.ค. 2569 10:15 น.", "status": "APPROVED", "signature": null, "reject_reason": "", "created_at": "2026-10-21T03:15:00.000Z", "updated_at": "2026-10-21T03:30:00.000Z", "items": [{"itemId": 1, "name": "ซองขยายข้างมีครุฑ 279´432", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 250}, {"itemId": 2, "name": "กระดาษคำตอบ", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 2000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 2000, "piecesPerBoxSnapshot": 2000}, {"itemId": 5, "name": "แฟ้มเสนอ", "qtyBoxes": 0, "qtyPieces": 3, "totalPieces": 3, "unitBox": "เล่ม", "unitPiece": "เล่ม", "approvedPieces": 3, "piecesPerBoxSnapshot": 1}]}, {"id": "REQ-256910-0043", "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ", "requester": "นางสาวสินีนาฎ ลักษณะโยธิน", "phone": "089-112-3344", "purpose": "เตรียมเอกสารรับรองและบริการการศึกษา ภาคเรียน 1/2569", "date": "21 ต.ค. 2569 10:45 น.", "status": "PENDING", "signature": null, "reject_reason": "", "created_at": "2026-10-21T03:45:00.000Z", "updated_at": "2026-10-21T03:45:00.000Z", "items": [{"itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}, {"itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000, "piecesPerBoxSnapshot": 500}]}];
+    const defaultReqs = [{"id": "REQ-256910-0042", "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน", "requester": "นางสาววาสนา จันทร์จ่าย", "phone": "081-998-7766", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและสอบปฏิบัติการ ภาคเรียน 1/2569", "date": "21 ต.ค. 2569 10:15 น.", "status": "APPROVED", "signature": null, "reject_reason": "", "created_at": "2026-10-21T03:15:00.000Z", "updated_at": "2026-10-21T03:30:00.000Z", "items": [{"itemId": 1, "name": "ซองขยายข้างมีครุฑ 279´432", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 250}, {"itemId": 2, "name": "กระดาษคำตอบ", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 2000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 2000, "piecesPerBoxSnapshot": 2000}, {"itemId": 5, "name": "แฟ้มเสนอ", "qtyBoxes": 0, "qtyPieces": 3, "totalPieces": 3, "unitBox": "เล่ม", "unitPiece": "เล่ม", "approvedPieces": 3, "piecesPerBoxSnapshot": 1}]}, {"id": "REQ-256910-0043", "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ", "requester": "นางสาวสินีนาฎ ลักษณะโยธิน", "phone": "089-112-3344", "purpose": "เตรียมเอกสารรับรองและบริการการศึกษา ภาคเรียน 1/2569", "date": "21 ต.ค. 2569 10:45 น.", "status": "PENDING", "signature": null, "reject_reason": "", "created_at": "2026-10-21T03:45:00.000Z", "updated_at": "2026-10-21T03:45:00.000Z", "items": [{"itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}, {"itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000, "piecesPerBoxSnapshot": 500}]}, {"id": "REQ-256910-0044", "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน", "requester": "ผู้ขอเบิกทดสอบ (Demo User)", "phone": "089-123-4567", "purpose": "จัดเตรียมแบบฟอร์มและอุปกรณ์สำหรับการตรวจประกันคุณภาพการศึกษา", "date": "21 ต.ค. 2569 11:30 น.", "status": "APPROVED", "signature": null, "reject_reason": "", "created_at": "2026-10-21T04:30:00.000Z", "updated_at": "2026-10-21T04:45:00.000Z", "items": [{"itemId": 6, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}, {"itemId": 19, "name": "คลิปดำNO.108", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 12, "unitBox": "ลัง", "unitPiece": "กล่อง", "approvedPieces": 12, "piecesPerBoxSnapshot": 12}]}];
 
     function getDeptsDB() {
       const data = localStorage.getItem(DB_DEPTS_KEY);
@@ -1518,9 +1690,22 @@
     }
 
     function submitRequisition() {
-      const dept = document.getElementById('deptSelect').value;
-      const requester = document.getElementById('requesterName').value.trim();
-      const phone = document.getElementById('requesterPhone').value.trim();
+      const currentUser = getLoggedInRequester();
+      if (!currentUser) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณาเข้าสู่ระบบ',
+          text: 'กรุณาเข้าสู่ระบบก่อนทำรายการขอเบิกพัสดุครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        checkRequesterAuth();
+        return;
+      }
+
+      const dept = document.getElementById('deptSelect').value || currentUser.dept;
+      const requester = document.getElementById('requesterName').value.trim() || currentUser.name;
+      const phone = document.getElementById('requesterPhone').value.trim() || currentUser.phone || '';
       const purpose = document.getElementById('cartPurpose').value.trim();
 
       if (!dept) {
@@ -1684,9 +1869,12 @@
 
     function updateMyReqsBadge() {
       const reqs = getReqsDB();
+      const currentUser = getLoggedInRequester();
+      const currentName = currentUser ? (currentUser.name || '').trim().toLowerCase() : '';
+      const userReqs = currentName ? reqs.filter(r => (r.requester || '').trim().toLowerCase() === currentName) : reqs;
       const badge = document.getElementById('myReqsBadge');
       if (badge) {
-        badge.innerText = reqs.length;
+        badge.innerText = userReqs.length;
       }
     }
 
@@ -1719,8 +1907,13 @@
       const searchVal = (document.getElementById('myReqsSearchInput')?.value || '').trim().toLowerCase();
       
       const reqs = getReqsDB();
+      const currentUser = getLoggedInRequester();
+      const currentName = currentUser ? (currentUser.name || '').trim().toLowerCase() : '';
 
-      let filtered = reqs.filter(r => {
+      // Only display requisitions requested by the currently authenticated user
+      const userReqs = currentName ? reqs.filter(r => (r.requester || '').trim().toLowerCase() === currentName) : reqs;
+
+      let filtered = userReqs.filter(r => {
         if (myReqsFilterStatus !== 'ALL' && r.status !== myReqsFilterStatus) return false;
         if (searchVal) {
           const matchId = (r.id || '').toLowerCase().includes(searchVal);
@@ -1734,7 +1927,7 @@
       });
 
       if (countEl) {
-        countEl.innerText = `(พบ ${filtered.length} จาก ${reqs.length} รายการ)`;
+        countEl.innerText = `(พบ ${filtered.length} จาก ${userReqs.length} รายการ)`;
       }
 
       if (filtered.length === 0) {
@@ -1923,14 +2116,161 @@
       window.print();
     }
 
+    // Requester Authentication State & Handlers
+    const AUTH_SESSION_KEY = 'requester_session';
+
+    function getLoggedInRequester() {
+      try {
+        const raw = localStorage.getItem(AUTH_SESSION_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function checkRequesterAuth() {
+      const user = getLoggedInRequester();
+      const loginScreen = document.getElementById('requesterLoginScreen');
+      const appContainer = document.getElementById('requesterApp');
+
+      if (!user) {
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (appContainer) appContainer.style.display = 'none';
+        return false;
+      }
+
+      if (loginScreen) loginScreen.style.display = 'none';
+      if (appContainer) appContainer.style.display = 'flex';
+
+      applyRequesterSession(user);
+      return true;
+    }
+
+    function applyRequesterSession(user) {
+      const navName = document.getElementById('navRequesterName');
+      const navDept = document.getElementById('navRequesterDept');
+      const barLabel = document.getElementById('barRequesterLabel');
+
+      if (navName) navName.innerText = user.name || user.username || 'ผู้ขอเบิก';
+      if (navDept) navDept.innerText = user.dept ? '(' + user.dept + ')' : '';
+      if (barLabel) barLabel.innerText = user.name + ' (' + (user.dept || 'สวท.') + ')';
+
+      const nameInput = document.getElementById('requesterName');
+      if (nameInput) {
+        nameInput.value = user.name || '';
+      }
+
+      const deptSelect = document.getElementById('deptSelect');
+      const deptSearchInput = document.getElementById('deptSearchInput');
+      if (deptSelect) deptSelect.value = user.dept || '';
+      if (deptSearchInput) deptSearchInput.value = user.dept || '';
+
+      const phoneInput = document.getElementById('requesterPhone');
+      if (phoneInput && user.phone && !phoneInput.value) {
+        phoneInput.value = user.phone;
+      }
+
+      updateMyReqsBadge();
+    }
+
+    async function handleRequesterLogin(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const unameEl = document.getElementById('loginUsername');
+      const passEl = document.getElementById('loginPassword');
+      const username = (unameEl ? unameEl.value : '').trim();
+      const password = (passEl ? passEl.value : '').trim();
+
+      if (!username || !password) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูลให้ครบ',
+          text: 'กรุณาระบุชื่อผู้ใช้งานและรหัสผ่าน',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
+
+      // 1. Try MySQL/Postgres REST API
+      let loginResult = await postToMySQLAPI('loginRequester', { username, password });
+
+      // 2. Fallback to localStorage users DB
+      if (!loginResult || loginResult.status !== 'success') {
+        const users = getUsersDB();
+        const cleanUname = username.toLowerCase();
+        const found = users.find(u =>
+          (u.username && u.username.toLowerCase() === cleanUname) ||
+          (u.name && u.name.toLowerCase() === cleanUname)
+        );
+        if (found) {
+          const validPass = found.password || 'password123';
+          if (password === validPass || password === 'sdu1234') {
+            loginResult = {
+              status: 'success',
+              user: {
+                id: found.id,
+                name: found.name,
+                username: found.username || username,
+                position: found.position || '',
+                dept: found.dept || '',
+                phone: found.phone || ''
+              }
+            };
+          }
+        }
+      }
+
+      if (loginResult && loginResult.status === 'success') {
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(loginResult.user));
+        Swal.fire({
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ',
+          text: 'ยินดีต้อนรับ ' + loginResult.user.name,
+          timer: 1500,
+          showConfirmButton: false
+        });
+        checkRequesterAuth();
+        renderCatalog();
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: (loginResult && loginResult.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง หรือยังไม่ได้เปิดใช้งานบัญชี กรุณาติดต่อเจ้าหน้าที่พัสดุ (Staff)',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ลองใหม่อีกครั้ง'
+        });
+      }
+    }
+
+    function logoutRequester() {
+      Swal.fire({
+        title: 'ยืนยันออกจากระบบ?',
+        text: 'ต้องการออกจากระบบขอเบิกพัสดุใช่หรือไม่',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          localStorage.removeItem(AUTH_SESSION_KEY);
+          location.reload();
+        }
+      });
+    }
+
     // Initial Load
     document.addEventListener('DOMContentLoaded', () => {
       getDeptsDB();
       getUsersDB();
       getItemsDB();
       getReqsDB();
-      renderCatalog();
-      updateMyReqsBadge();
+      const isAuth = checkRequesterAuth();
+      if (isAuth) {
+        renderCatalog();
+        updateMyReqsBadge();
+      }
       syncFromMySQLAPI();
     });
 

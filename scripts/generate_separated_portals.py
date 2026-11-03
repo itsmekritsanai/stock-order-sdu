@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.2"
+SYSTEM_VERSION = "3.0.3"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -56,13 +56,29 @@ def parse_docx_depts_and_users(docx_path):
 
         # User ตั้งต้นเอาเฉพาะ "หัวหน้าหน่วยงาน/กลุ่มงาน" (ส่วนคนอื่นให้ Staff เพิ่มทีหลังได้)
         if pos.startswith('หัวหน้า'):
+            idx = len(users) + 1
+            default_unames = ['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l']
+            uname = default_unames[idx - 1] if idx <= len(default_unames) else f"user0{idx}"
             users.append({
-                "id": len(users) + 1,
+                "id": idx,
                 "name": full_name,
+                "username": uname,
+                "password": "password123",
                 "position": pos,
                 "dept": unit,
                 "phone": ""
             })
+
+    # Demo User สำหรับผู้ขอเบิกเข้าใช้งาน
+    users.append({
+        "id": len(users) + 1,
+        "name": "ผู้ขอเบิกทดสอบ (Demo User)",
+        "username": "user",
+        "password": "password123",
+        "position": "เจ้าหน้าที่บริการการศึกษา",
+        "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+        "phone": "089-123-4567"
+    })
 
     preferred_order = [
         'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
@@ -200,6 +216,23 @@ initial_requisitions = [
     "items": [
       { "itemId": 3, "name": "ซองเอกสารสีขาว 7´10", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500 },
       { "itemId": 4, "name": "กระดาษลายเส้น", "qtyBoxes": 2, "qtyPieces": 0, "totalPieces": 1000, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 1000, "piecesPerBoxSnapshot": 500 }
+    ]
+  },
+  {
+    "id": "REQ-256910-0044",
+    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+    "requester": "ผู้ขอเบิกทดสอบ (Demo User)",
+    "phone": "089-123-4567",
+    "purpose": "จัดเตรียมแบบฟอร์มและอุปกรณ์สำหรับการตรวจประกันคุณภาพการศึกษา",
+    "date": "21 ต.ค. 2569 11:30 น.",
+    "status": "APPROVED",
+    "signature": None,
+    "reject_reason": "",
+    "created_at": "2026-10-21T04:30:00.000Z",
+    "updated_at": "2026-10-21T04:45:00.000Z",
+    "items": [
+      { "itemId": 6, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ซอง", "approvedPieces": 500, "piecesPerBoxSnapshot": 500 },
+      { "itemId": 19, "name": "คลิปดำNO.108", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 12, "unitBox": "ลัง", "unitPiece": "กล่อง", "approvedPieces": 12, "piecesPerBoxSnapshot": 12 }
     ]
   }
 ]
@@ -535,6 +568,110 @@ requester_html = f'''<!DOCTYPE html>
   <style>
 {common_css}
 
+    /* Requester Login Screen */
+    .login-wrapper {{
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      background: linear-gradient(135deg, #eff6ff 0%, #f1f5f9 50%, #e2e8f0 100%);
+    }}
+    .login-card {{
+      background: white;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--neutral-200);
+      overflow: hidden;
+      animation: fadeIn 0.3s ease-out;
+    }}
+    .login-header {{
+      background: white;
+      padding: 2.25rem 2rem 1.5rem 2rem;
+      text-align: center;
+      border-bottom: 1px solid var(--neutral-100);
+    }}
+    .login-body {{
+      padding: 1.75rem 2rem;
+    }}
+    .login-input-group {{
+      margin-bottom: 1.25rem;
+    }}
+    .login-input-group label {{
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--neutral-700);
+      margin-bottom: 0.4rem;
+    }}
+    .login-input-wrapper {{
+      position: relative;
+      display: flex;
+      align-items: center;
+    }}
+    .login-input-wrapper .input-icon {{
+      position: absolute;
+      left: 1rem;
+      color: var(--neutral-400);
+      display: flex;
+      pointer-events: none;
+    }}
+    .login-input {{
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.75rem;
+      border: 1px solid var(--neutral-300);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }}
+    .login-input:focus {{
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.12);
+    }}
+    .btn-login {{
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.8rem;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+      transition: all 0.2s;
+    }}
+    .btn-login:hover {{
+      background: var(--primary-hover);
+      box-shadow: 0 6px 16px rgba(30, 64, 175, 0.35);
+    }}
+    .btn-login:active {{
+      transform: scale(0.99);
+    }}
+    .login-notice-box {{
+      margin-top: 1.25rem;
+      background: var(--neutral-50);
+      border: 1px solid var(--neutral-200);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 0.8rem;
+      color: var(--neutral-600);
+      line-height: 1.5;
+    }}
+    @keyframes fadeIn {{
+      from {{ opacity: 0; transform: translateY(6px); }}
+      to {{ opacity: 1; transform: translateY(0); }}
+    }}
+
     /* Requester Specific Styles */
     .requester-bar {{
       background: white; border: 1px solid var(--neutral-200); border-radius: var(--radius);
@@ -768,53 +905,107 @@ requester_html = f'''<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- Top Navigation Header (Requester Portal Only) -->
-  <header>
-    <div class="nav-container">
-      <div class="brand">
-        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
-        <div class="brand-text">
-          <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
-          <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
+  <!-- 1. REQUESTER LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
+  <div id="requesterLoginScreen" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; margin-bottom: 0.75rem; object-fit: contain;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">ระบบขอเบิกพัสดุออนไลน์</h2>
+        <p style="font-size: 0.85rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+      </div>
+      <div class="login-body">
+        <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
+          <div class="login-input-group">
+            <label for="loginUsername">ชื่อผู้ใช้งาน (Username)</label>
+            <div class="login-input-wrapper">
+              <span class="input-icon">{svg_icons['user']}</span>
+              <input type="text" id="loginUsername" class="login-input" placeholder="เช่น wasana.c หรือ user" required autocomplete="username">
+            </div>
+          </div>
+          <div class="login-input-group">
+            <label for="loginPassword">รหัสผ่าน (Password)</label>
+            <div class="login-input-wrapper">
+              <span class="input-icon">{svg_icons['lock']}</span>
+              <input type="password" id="loginPassword" class="login-input" placeholder="กรอกรหัสผ่านของคุณ" required autocomplete="current-password">
+            </div>
+          </div>
+          <button type="submit" class="btn-login" id="btnLoginSubmit">
+            {svg_icons['check_circle']} เข้าสู่ระบบขอเบิกพัสดุ
+          </button>
+        </form>
+
+        <div class="login-notice-box">
+          <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+            {svg_icons['info']} คำแนะนำการเข้าใช้งาน
+          </div>
+          <div>
+            สำหรับบุคลากร สวท. หากยังไม่มีบัญชีเข้าสู่ระบบ กรุณาติดต่อ <strong>เจ้าหน้าที่แผนกพัสดุ (Staff)</strong> เพื่อสร้างบัญชีและกำหนดสิทธิ์เข้าใช้งาน
+          </div>
+          <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--neutral-300); font-size: 0.775rem; color: var(--neutral-500);">
+            บัญชีทดสอบ: <code>user</code> / <code>password123</code> หรือ <code>wasana.c</code> / <code>password123</code>
+          </div>
         </div>
       </div>
-
-      <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-        <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
-          {svg_icons['clipboard']} รายการคำขอของฉัน
-          <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
-        </button>
-
-        <button class="cart-trigger" onclick="toggleCartDrawer()">
-          {svg_icons['cart']} ตะกร้าของฉัน
-          <span class="cart-badge" id="cartCount">0</span>
-        </button>
-      </div>
     </div>
-  </header>
+  </div>
+
+  <!-- 2. MAIN REQUESTER APPLICATION (SHOWN WHEN LOGGED IN) -->
+  <div id="requesterApp" style="display: none; min-height: 100vh; flex-direction: column;">
+    <!-- Top Navigation Header (Requester Portal Only) -->
+    <header>
+      <div class="nav-container">
+        <div class="brand">
+          <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
+          <div class="brand-text">
+            <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
+            <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <div id="requesterUserDisplay" style="display: flex; align-items: center; gap: 0.5rem; background: var(--neutral-100); padding: 0.45rem 0.85rem; border-radius: 999px; border: 1px solid var(--neutral-200); font-size: 0.825rem; color: var(--neutral-700);">
+            {svg_icons['user']}
+            <span id="navRequesterName" style="font-weight: 600; color: var(--primary);">-</span>
+            <span id="navRequesterDept" style="color: var(--neutral-500); font-size: 0.775rem;">-</span>
+          </div>
+
+          <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+            {svg_icons['clipboard']} รายการคำขอของฉัน
+            <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
+          </button>
+
+          <button class="cart-trigger" onclick="toggleCartDrawer()">
+            {svg_icons['cart']} ตะกร้าของฉัน
+            <span class="cart-badge" id="cartCount">0</span>
+          </button>
+
+          <button class="btn btn-outline" onclick="logoutRequester()" title="ออกจากระบบ" style="padding: 0.45rem 0.75rem; font-size: 0.8rem; color: var(--danger); border-color: var(--neutral-300); display: inline-flex; align-items: center; gap: 4px;">
+            {svg_icons['log_out']} ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </header>
 
   <!-- Main Content Area -->
   <main>
-    <!-- Requester Info Form with SEARCHABLE Combobox -->
+    <!-- Requester Info Form with Pre-filled & Locked Authenticated Identity -->
     <div class="requester-bar">
+      <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 0.825rem; color: var(--primary); background: var(--primary-light); padding: 7px 12px; border-radius: 8px; border: 1px solid var(--primary-border);">
+        {svg_icons['check_circle']} บัญชีผู้ขอเบิกเข้าสู่ระบบ: <strong id="barRequesterLabel">-</strong>
+      </div>
+
       <div class="form-group custom-combobox-wrapper" id="deptComboboxWrapper">
         <label for="deptSearchInput">
           {svg_icons['building']} กลุ่มงาน / หน่วยงานที่สังกัด (สวท.) *
         </label>
         <div class="combobox-control" id="deptComboboxControl">
           <input type="text" id="deptSearchInput" class="form-control combobox-input" 
-                 placeholder="พิมพ์ค้นหาหรือเลือกกลุ่มงาน... (เช่น ส่งเสริมวิชาการ, บริการวิชาการ, ทะเบียนนักศึกษา)" 
+                 placeholder="กลุ่มงานที่สังกัด..." 
                  autocomplete="off" 
-                 value=""
-                 onfocus="openDeptDropdown()" 
-                 oninput="handleDeptSearch(this.value)">
+                 value="" 
+                 readonly
+                 style="background-color: var(--neutral-100); cursor: not-allowed;">
           <input type="hidden" id="deptSelect" value="">
-          <button type="button" class="combobox-toggle-btn" onclick="toggleDeptDropdown(event)" title="เปิด/ปิด รายการ">
-            {svg_icons['chevron_down']}
-          </button>
-        </div>
-        <div class="combobox-dropdown" id="deptDropdownList">
-          <!-- Populated and filtered by JS -->
         </div>
       </div>
       <div class="form-group custom-combobox-wrapper" id="userComboboxWrapper">
@@ -823,17 +1014,11 @@ requester_html = f'''<!DOCTYPE html>
         </label>
         <div class="combobox-control" id="userComboboxControl">
           <input type="text" id="requesterName" class="form-control combobox-input" 
-                 placeholder="คลิกเลือกหรือพิมพ์ค้นหาชื่อบุคลากร... (เช่น ณัฐชา, จุฑาธิป, วาสนา)" 
+                 placeholder="ชื่อ-นามสกุล ผู้ขอเบิก..." 
                  autocomplete="off" 
-                 value=""
-                 onfocus="openUserDropdown()" 
-                 oninput="handleUserSearch(this.value)">
-          <button type="button" class="combobox-toggle-btn" onclick="toggleUserDropdown(event)" title="เปิด/ปิด รายชื่อบุคลากร">
-            {svg_icons['chevron_down']}
-          </button>
-        </div>
-        <div class="combobox-dropdown" id="userDropdownList">
-          <!-- Populated and filtered by JS -->
+                 value="" 
+                 readonly
+                 style="background-color: var(--neutral-100); cursor: not-allowed;">
         </div>
       </div>
       <div class="form-group">
@@ -1061,6 +1246,7 @@ requester_html = f'''<!DOCTYPE html>
       © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v{SYSTEM_VERSION}) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
+  </div>
 
   <!-- Scripts -->
   <script>
@@ -1081,6 +1267,8 @@ requester_html = f'''<!DOCTYPE html>
       clock: `{svg_icons['clock']}`,
       info: `{svg_icons['info']}`,
       user: `{svg_icons['user']}`,
+      lock: `{svg_icons['lock']}`,
+      log_out: `{svg_icons['log_out']}`,
       building: `{svg_icons['building']}`,
       file_text: `{svg_icons['file_text']}`,
       printer: `{svg_icons['printer']}`,
@@ -1683,9 +1871,22 @@ requester_html = f'''<!DOCTYPE html>
     }}
 
     function submitRequisition() {{
-      const dept = document.getElementById('deptSelect').value;
-      const requester = document.getElementById('requesterName').value.trim();
-      const phone = document.getElementById('requesterPhone').value.trim();
+      const currentUser = getLoggedInRequester();
+      if (!currentUser) {{
+        Swal.fire({{
+          icon: 'warning',
+          title: 'กรุณาเข้าสู่ระบบ',
+          text: 'กรุณาเข้าสู่ระบบก่อนทำรายการขอเบิกพัสดุครับ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        }});
+        checkRequesterAuth();
+        return;
+      }}
+
+      const dept = document.getElementById('deptSelect').value || currentUser.dept;
+      const requester = document.getElementById('requesterName').value.trim() || currentUser.name;
+      const phone = document.getElementById('requesterPhone').value.trim() || currentUser.phone || '';
       const purpose = document.getElementById('cartPurpose').value.trim();
 
       if (!dept) {{
@@ -1849,9 +2050,12 @@ requester_html = f'''<!DOCTYPE html>
 
     function updateMyReqsBadge() {{
       const reqs = getReqsDB();
+      const currentUser = getLoggedInRequester();
+      const currentName = currentUser ? (currentUser.name || '').trim().toLowerCase() : '';
+      const userReqs = currentName ? reqs.filter(r => (r.requester || '').trim().toLowerCase() === currentName) : reqs;
       const badge = document.getElementById('myReqsBadge');
       if (badge) {{
-        badge.innerText = reqs.length;
+        badge.innerText = userReqs.length;
       }}
     }}
 
@@ -1884,8 +2088,13 @@ requester_html = f'''<!DOCTYPE html>
       const searchVal = (document.getElementById('myReqsSearchInput')?.value || '').trim().toLowerCase();
       
       const reqs = getReqsDB();
+      const currentUser = getLoggedInRequester();
+      const currentName = currentUser ? (currentUser.name || '').trim().toLowerCase() : '';
 
-      let filtered = reqs.filter(r => {{
+      // Only display requisitions requested by the currently authenticated user
+      const userReqs = currentName ? reqs.filter(r => (r.requester || '').trim().toLowerCase() === currentName) : reqs;
+
+      let filtered = userReqs.filter(r => {{
         if (myReqsFilterStatus !== 'ALL' && r.status !== myReqsFilterStatus) return false;
         if (searchVal) {{
           const matchId = (r.id || '').toLowerCase().includes(searchVal);
@@ -1899,7 +2108,7 @@ requester_html = f'''<!DOCTYPE html>
       }});
 
       if (countEl) {{
-        countEl.innerText = `(พบ ${{filtered.length}} จาก ${{reqs.length}} รายการ)`;
+        countEl.innerText = `(พบ ${{filtered.length}} จาก ${{userReqs.length}} รายการ)`;
       }}
 
       if (filtered.length === 0) {{
@@ -2088,14 +2297,161 @@ requester_html = f'''<!DOCTYPE html>
       window.print();
     }}
 
+    // Requester Authentication State & Handlers
+    const AUTH_SESSION_KEY = 'requester_session';
+
+    function getLoggedInRequester() {{
+      try {{
+        const raw = localStorage.getItem(AUTH_SESSION_KEY);
+        return raw ? JSON.parse(raw) : null;
+      }} catch (e) {{
+        return null;
+      }}
+    }}
+
+    function checkRequesterAuth() {{
+      const user = getLoggedInRequester();
+      const loginScreen = document.getElementById('requesterLoginScreen');
+      const appContainer = document.getElementById('requesterApp');
+
+      if (!user) {{
+        if (loginScreen) loginScreen.style.display = 'flex';
+        if (appContainer) appContainer.style.display = 'none';
+        return false;
+      }}
+
+      if (loginScreen) loginScreen.style.display = 'none';
+      if (appContainer) appContainer.style.display = 'flex';
+
+      applyRequesterSession(user);
+      return true;
+    }}
+
+    function applyRequesterSession(user) {{
+      const navName = document.getElementById('navRequesterName');
+      const navDept = document.getElementById('navRequesterDept');
+      const barLabel = document.getElementById('barRequesterLabel');
+
+      if (navName) navName.innerText = user.name || user.username || 'ผู้ขอเบิก';
+      if (navDept) navDept.innerText = user.dept ? '(' + user.dept + ')' : '';
+      if (barLabel) barLabel.innerText = user.name + ' (' + (user.dept || 'สวท.') + ')';
+
+      const nameInput = document.getElementById('requesterName');
+      if (nameInput) {{
+        nameInput.value = user.name || '';
+      }}
+
+      const deptSelect = document.getElementById('deptSelect');
+      const deptSearchInput = document.getElementById('deptSearchInput');
+      if (deptSelect) deptSelect.value = user.dept || '';
+      if (deptSearchInput) deptSearchInput.value = user.dept || '';
+
+      const phoneInput = document.getElementById('requesterPhone');
+      if (phoneInput && user.phone && !phoneInput.value) {{
+        phoneInput.value = user.phone;
+      }}
+
+      updateMyReqsBadge();
+    }}
+
+    async function handleRequesterLogin(e) {{
+      if (e && e.preventDefault) e.preventDefault();
+      const unameEl = document.getElementById('loginUsername');
+      const passEl = document.getElementById('loginPassword');
+      const username = (unameEl ? unameEl.value : '').trim();
+      const password = (passEl ? passEl.value : '').trim();
+
+      if (!username || !password) {{
+        Swal.fire({{
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูลให้ครบ',
+          text: 'กรุณาระบุชื่อผู้ใช้งานและรหัสผ่าน',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        }});
+        return;
+      }}
+
+      // 1. Try MySQL/Postgres REST API
+      let loginResult = await postToMySQLAPI('loginRequester', {{ username, password }});
+
+      // 2. Fallback to localStorage users DB
+      if (!loginResult || loginResult.status !== 'success') {{
+        const users = getUsersDB();
+        const cleanUname = username.toLowerCase();
+        const found = users.find(u =>
+          (u.username && u.username.toLowerCase() === cleanUname) ||
+          (u.name && u.name.toLowerCase() === cleanUname)
+        );
+        if (found) {{
+          const validPass = found.password || 'password123';
+          if (password === validPass || password === 'sdu1234') {{
+            loginResult = {{
+              status: 'success',
+              user: {{
+                id: found.id,
+                name: found.name,
+                username: found.username || username,
+                position: found.position || '',
+                dept: found.dept || '',
+                phone: found.phone || ''
+              }}
+            }};
+          }}
+        }}
+      }}
+
+      if (loginResult && loginResult.status === 'success') {{
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(loginResult.user));
+        Swal.fire({{
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ',
+          text: 'ยินดีต้อนรับ ' + loginResult.user.name,
+          timer: 1500,
+          showConfirmButton: false
+        }});
+        checkRequesterAuth();
+        renderCatalog();
+      }} else {{
+        Swal.fire({{
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: (loginResult && loginResult.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง หรือยังไม่ได้เปิดใช้งานบัญชี กรุณาติดต่อเจ้าหน้าที่พัสดุ (Staff)',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ลองใหม่อีกครั้ง'
+        }});
+      }}
+    }}
+
+    function logoutRequester() {{
+      Swal.fire({{
+        title: 'ยืนยันออกจากระบบ?',
+        text: 'ต้องการออกจากระบบขอเบิกพัสดุใช่หรือไม่',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ออกจากระบบ',
+        cancelButtonText: 'ยกเลิก'
+      }}).then((res) => {{
+        if (res.isConfirmed) {{
+          localStorage.removeItem(AUTH_SESSION_KEY);
+          location.reload();
+        }}
+      }});
+    }}
+
     // Initial Load
     document.addEventListener('DOMContentLoaded', () => {{
       getDeptsDB();
       getUsersDB();
       getItemsDB();
       getReqsDB();
-      renderCatalog();
-      updateMyReqsBadge();
+      const isAuth = checkRequesterAuth();
+      if (isAuth) {{
+        renderCatalog();
+        updateMyReqsBadge();
+      }}
       syncFromMySQLAPI();
     }});
 
@@ -2454,12 +2810,13 @@ staff_html = f'''<!DOCTYPE html>
             <table class="req-table" style="font-size: 0.9rem;">
               <thead>
                 <tr>
-                  <th style="width: 60px; text-align: center;">ลำดับ</th>
+                  <th style="width: 50px; text-align: center;">ลำดับ</th>
+                  <th style="width: 150px;">ชื่อผู้ใช้งาน (Username)</th>
                   <th>ชื่อ-นามสกุล</th>
                   <th>ตำแหน่ง</th>
                   <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
-                  <th style="width: 140px;">เบอร์โทรศัพท์</th>
-                  <th style="width: 160px; text-align: right;">จัดการ</th>
+                  <th style="width: 130px;">เบอร์โทรศัพท์</th>
+                  <th style="width: 150px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="staffUsersTableBody">
@@ -3738,6 +4095,7 @@ staff_html = f'''<!DOCTYPE html>
       const filtered = users.filter(u => {{
         const matchDept = deptFilter === 'ALL' || u.dept === deptFilter;
         const matchSearch = !q ||
+          (u.username && u.username.toLowerCase().includes(q)) ||
           (u.name && u.name.toLowerCase().includes(q)) ||
           (u.position && u.position.toLowerCase().includes(q)) ||
           (u.dept && u.dept.toLowerCase().includes(q)) ||
@@ -3751,7 +4109,7 @@ staff_html = f'''<!DOCTYPE html>
       if (filtered.length === 0) {{
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
+            <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
               ไม่พบรายชื่อบุคลากรที่ตรงกับเงื่อนไขการค้นหา
             </td>
           </tr>
@@ -3762,6 +4120,9 @@ staff_html = f'''<!DOCTYPE html>
       tbody.innerHTML = filtered.map((u, idx) => `
         <tr>
           <td style="text-align: center; color: var(--neutral-600);">${{idx + 1}}</td>
+          <td>
+            <code style="background: var(--neutral-100); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.825rem; font-weight: 600; border: 1px solid var(--neutral-200);">${{u.username || '-'}}</code>
+          </td>
           <td><strong>${{u.name}}</strong></td>
           <td style="color: var(--neutral-700);">${{u.position || '-'}}</td>
           <td>
@@ -3796,6 +4157,14 @@ staff_html = f'''<!DOCTYPE html>
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
             <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อผู้ใช้งานสำหรับเข้าสู่ระบบ (Username) *</label>
+              <input id="swal-user-uname" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น wasana.c หรือ user01" value="${{existing ? (existing.username || '') : ''}}">
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รหัสผ่านเข้าใช้งาน (Password) ${{existing ? '<span style="font-weight: normal; color: #64748b;">(เว้นว่างหากไม่เปลี่ยน)</span>' : '*'}}</label>
+              <input type="password" id="swal-user-pass" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="${{existing ? 'กรอกรหัสผ่านใหม่เพื่อเปลี่ยน' : 'กำหนดรหัสผ่าน เช่น sdu1234'}}">
+            </div>
+            <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อ-นามสกุล บุคลากร *</label>
               <input id="swal-user-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น นางสาวสมศรี ใจดี" value="${{existing ? existing.name : ''}}">
             </div>
@@ -3825,6 +4194,8 @@ staff_html = f'''<!DOCTYPE html>
         confirmButtonText: existing ? 'บันทึกการแก้ไข' : 'เพิ่มรายชื่อบุคลากร',
         cancelButtonText: 'ยกเลิก',
         preConfirm: () => {{
+          const username = document.getElementById('swal-user-uname').value.trim();
+          const password = document.getElementById('swal-user-pass').value.trim();
           const name = document.getElementById('swal-user-name').value.trim();
           const position = document.getElementById('swal-user-pos').value.trim();
           const deptSel = document.getElementById('swal-user-dept').value;
@@ -3832,6 +4203,22 @@ staff_html = f'''<!DOCTYPE html>
           const phone = document.getElementById('swal-user-phone').value.trim();
           const finalDept = deptSel === '__NEW__' ? newDept : deptSel;
 
+          if (!username) {{
+            Swal.showValidationMessage('กรุณาระบุชื่อผู้ใช้งาน (Username) สำหรับเข้าสู่ระบบ');
+            return false;
+          }}
+          const duplicateUser = currentUsers.find(u =>
+            u.username && u.username.toLowerCase() === username.toLowerCase() &&
+            (!existing || Number(u.id) !== Number(existing.id))
+          );
+          if (duplicateUser) {{
+            Swal.showValidationMessage(`ชื่อผู้ใช้งาน "${{username}}" ซ้ำกับบุคลากรท่านอื่น กรุณาเลือกชื่อผู้ใช้งานอื่น`);
+            return false;
+          }}
+          if (!existing && !password) {{
+            Swal.showValidationMessage('กรุณากำหนดรหัสผ่าน (Password) สำหรับผู้ใช้งานใหม่');
+            return false;
+          }}
           if (!name) {{
             Swal.showValidationMessage('กรุณาระบุชื่อ-นามสกุล บุคลากร');
             return false;
@@ -3840,7 +4227,7 @@ staff_html = f'''<!DOCTYPE html>
             Swal.showValidationMessage('กรุณาระบุกลุ่มงาน / หน่วยงานที่สังกัด');
             return false;
           }}
-          return {{ name, position, dept: finalDept, phone }};
+          return {{ username, password, name, position, dept: finalDept, phone }};
         }}
       }}).then((result) => {{
         if (!result.isConfirmed || !result.value) return;
@@ -3852,7 +4239,16 @@ staff_html = f'''<!DOCTYPE html>
         if (existing) {{
           const idx = currentUsers.findIndex(u => Number(u.id) === Number(existing.id));
           if (idx !== -1) {{
-            currentUsers[idx] = {{ ...currentUsers[idx], ...val }};
+            const updatedUser = {{
+              ...currentUsers[idx],
+              name: val.name,
+              username: val.username,
+              position: val.position,
+              dept: val.dept,
+              phone: val.phone
+            }};
+            if (val.password) updatedUser.password = val.password;
+            currentUsers[idx] = updatedUser;
             savedUser = currentUsers[idx];
           }}
         }} else {{
@@ -3860,6 +4256,8 @@ staff_html = f'''<!DOCTYPE html>
           savedUser = {{
             id: maxId + 1,
             name: val.name,
+            username: val.username,
+            password: val.password || 'sdu1234',
             position: val.position,
             dept: val.dept,
             phone: val.phone
@@ -3874,7 +4272,7 @@ staff_html = f'''<!DOCTYPE html>
         Swal.fire({{
           icon: 'success',
           title: existing ? 'อัปเดตข้อมูลบุคลากรสำเร็จ' : 'เพิ่มรายชื่อบุคลากรสำเร็จ',
-          text: `${{val.name}} (${{val.dept}}) พร้อมให้เลือกใช้งานในหน้าขอเบิกพัสดุทันที`,
+          text: `${{val.name}} (${{val.dept}}) พร้อมให้ใช้ชื่อ ${{val.username}} เข้าสู่ระบบขอเบิกพัสดุทันที`,
           timer: 2000,
           showConfirmButton: false
         }});

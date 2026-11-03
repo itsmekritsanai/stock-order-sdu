@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.2"
+        assert SYSTEM_VERSION == "3.0.3"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -292,3 +292,62 @@ class TestApiHandlers:
     def test_handle_delete_item_validation(self):
         res = server.handle_delete_item({"id": 0})
         assert res["status"] == "error"
+
+    def test_handle_login_requester_missing_fields(self):
+        res = server.handle_login_requester({})
+        assert res["status"] == "error"
+        assert "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน" in res["message"]
+
+        res = server.handle_login_requester({"username": "user", "password": ""})
+        assert res["status"] == "error"
+
+    def test_handle_login_requester_not_found(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = None
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_login_requester({"username": "unknown_user", "password": "sdu1234"})
+            assert res["status"] == "error"
+            assert "ไม่พบบัญชีผู้ใช้งาน" in res["message"]
+
+    def test_handle_login_requester_wrong_password(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {
+            "id": 1,
+            "name": "นางสาววาสนา จันทร์จ่าย",
+            "username": "wasana.c",
+            "password": "sdu1234",
+            "position": "หัวหน้าสำนักงาน",
+            "dept": "สำนักงานผู้อำนวยการ สวท.",
+            "phone": "081-998-7766"
+        }
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_login_requester({"username": "wasana.c", "password": "wrong_password"})
+            assert res["status"] == "error"
+            assert "รหัสผ่านไม่ถูกต้อง" in res["message"]
+
+    def test_handle_login_requester_success(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {
+            "id": 1,
+            "name": "นางสาววาสนา จันทร์จ่าย",
+            "username": "wasana.c",
+            "password": "sdu1234",
+            "position": "หัวหน้าสำนักงาน",
+            "dept": "สำนักงานผู้อำนวยการ สวท.",
+            "phone": "081-998-7766"
+        }
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+            assert res["status"] == "success"
+            assert res["user"]["name"] == "นางสาววาสนา จันทร์จ่าย"
+            assert res["user"]["username"] == "wasana.c"
+            assert res["user"]["dept"] == "สำนักงานผู้อำนวยการ สวท."
