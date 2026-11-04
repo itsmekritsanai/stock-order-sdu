@@ -240,12 +240,12 @@ pytest tests/ -v
 * 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
 * 📝 **[บันทึกประวัติการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
 * 📋 **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
+* 📘 **[คู่มืออธิบายโค้ดและการทำงานของระบบอย่างละเอียด (docs/CODE_EXPLANATION.md)](docs/CODE_EXPLANATION.md)**
+* 📚 **[พจนานุกรมข้อมูล Data Dictionary (docs/DATA_DICTIONARY.md)](docs/DATA_DICTIONARY.md)**
 * 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล PostgreSQL 17 (docs/SCHEMA.md)](docs/SCHEMA.md)**
 * 🔌 **[โครงสร้าง REST API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
 * 🐘 **[คู่มือติดตั้งและใช้งาน Backend (backend/README.md)](backend/README.md)**
 * 🐳 **[การกำหนดค่า Docker Compose (docker-compose.yml)](docker-compose.yml)**
-* ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
-* 📄 **[System Requirements Specification (SRS v1.1)](docs/system_requirements_specification.md)**
 * ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
 * 📄 **[System Requirements Specification (SRS v1.1)](docs/system_requirements_specification.md)**
 
