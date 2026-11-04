@@ -304,7 +304,15 @@ def handle_get_departments():
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
-            cur.execute("SELECT * FROM departments WHERE is_active = 1 ORDER BY id ASC")
+            cur.execute("""
+                SELECT d.id, d.category, d.name, d.parent_name, d.full_label, d.is_active,
+                       COUNT(u.id) FILTER (WHERE u.is_active = 1) AS user_count
+                FROM departments d
+                LEFT JOIN users u ON (u.dept = d.name OR u.dept = d.full_label)
+                WHERE d.is_active = 1
+                GROUP BY d.id
+                ORDER BY d.id ASC
+            """)
             rows = cur.fetchall()
         return {"status": "success", "data": rows, "total": len(rows)}
     finally:
@@ -884,18 +892,137 @@ def handle_add_department(payload):
     name = str(payload.get("name", "")).strip()
     cat = str(payload.get("category") or "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)").strip()
     if not name:
-        return {"status": "error", "message": "กรุณาระบุชื่อหน่วยงาน"}
+        return {"status": "error", "message": "กรุณาระบุชื่อกลุ่มงาน/หน่วยงาน"}
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
-            cur.execute("SELECT id FROM departments WHERE full_label = %s OR name = %s LIMIT 1", (name, name))
-            if not cur.fetchone():
-                cur.execute(
-                    "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1)",
-                    (cat, name, cat, name),
-                )
+            cur.execute("SELECT id, is_active FROM departments WHERE full_label = %s OR name = %s LIMIT 1", (name, name))
+            existing = cur.fetchone()
+            if existing:
+                if existing.get("is_active") == 0:
+                    cur.execute(
+                        "UPDATE departments SET is_active = 1, category = %s, full_label = %s WHERE id = %s",
+                        (cat, name, existing["id"])
+                    )
+                    conn.commit()
+                    return {"status": "success", "message": f"เปิดใช้งานกลุ่มงาน/หน่วยงาน '{name}' สำเร็จ", "id": existing["id"], "name": name}
+                return {"status": "error", "code": "DUPLICATE_DEPT", "message": f"มีกลุ่มงาน/หน่วยงานชื่อ '{name}' อยู่แล้ว"}
+
+            cur.execute(
+                "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1) RETURNING id",
+                (cat, name, cat, name),
+            )
+            inserted = cur.fetchone()
+            dept_id = inserted["id"] if inserted else None
         conn.commit()
-        return {"status": "success", "message": "เพิ่มกลุ่มงาน/หน่วยงานสำเร็จ", "name": name}
+        return {"status": "success", "message": "เพิ่มกลุ่มงาน/หน่วยงานสำเร็จ", "id": dept_id, "name": name}
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def handle_update_department(payload):
+    dept_id = payload.get("id")
+    old_name = str(payload.get("old_name", "")).strip()
+    new_name = str(payload.get("name", "")).strip()
+    category = str(payload.get("category") or "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)").strip()
+
+    if not new_name:
+        return {"status": "error", "message": "กรุณาระบุชื่อกลุ่มงาน/หน่วยงาน"}
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            if dept_id:
+                cur.execute("SELECT * FROM departments WHERE id = %s AND is_active = 1", (int(dept_id),))
+            elif old_name:
+                cur.execute("SELECT * FROM departments WHERE (name = %s OR full_label = %s) AND is_active = 1 LIMIT 1", (old_name, old_name))
+            else:
+                return {"status": "error", "message": "กรุณาระบุ ID หรือชื่อหน่วยงานเดิมที่ต้องการแก้ไข"}
+
+            dept = cur.fetchone()
+            if not dept:
+                return {"status": "error", "message": "ไม่พบกลุ่มงาน/หน่วยงานที่ต้องการแก้ไข"}
+
+            target_id = dept["id"]
+            current_name = dept["name"]
+
+            cur.execute(
+                "SELECT id FROM departments WHERE (name = %s OR full_label = %s) AND id != %s AND is_active = 1 LIMIT 1",
+                (new_name, new_name, target_id)
+            )
+            if cur.fetchone():
+                return {"status": "error", "code": "DUPLICATE_DEPT", "message": f"มีกลุ่มงาน/หน่วยงานชื่อ '{new_name}' อยู่แล้ว"}
+
+            cur.execute(
+                "UPDATE departments SET name = %s, full_label = %s, category = %s WHERE id = %s",
+                (new_name, new_name, category, target_id)
+            )
+
+            cur.execute(
+                "UPDATE users SET dept = %s, updated_at = CURRENT_TIMESTAMP WHERE dept = %s OR dept = %s",
+                (new_name, current_name, dept.get("full_label", current_name))
+            )
+
+        conn.commit()
+        return {
+            "status": "success",
+            "message": f"แก้ไขชื่อกลุ่มงาน/หน่วยงานเป็น '{new_name}' สำเร็จ",
+            "id": target_id,
+            "name": new_name,
+            "old_name": current_name
+        }
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def handle_delete_department(payload):
+    dept_id = payload.get("id")
+    name = str(payload.get("name", "")).strip()
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            if dept_id:
+                cur.execute("SELECT * FROM departments WHERE id = %s AND is_active = 1", (int(dept_id),))
+            elif name:
+                cur.execute("SELECT * FROM departments WHERE (name = %s OR full_label = %s) AND is_active = 1 LIMIT 1", (name, name))
+            else:
+                return {"status": "error", "message": "กรุณาระบุ ID หรือชื่อหน่วยงานที่ต้องการลบ"}
+
+            dept = cur.fetchone()
+            if not dept:
+                return {"status": "error", "message": "ไม่พบกลุ่มงาน/หน่วยงานที่ต้องการลบ"}
+
+            target_id = dept["id"]
+            target_name = dept["name"]
+
+            cur.execute(
+                "SELECT COUNT(*) AS active_users FROM users WHERE (dept = %s OR dept = %s) AND is_active = 1",
+                (target_name, dept.get("full_label", target_name))
+            )
+            user_count = int(cur.fetchone()["active_users"])
+            if user_count > 0:
+                return {
+                    "status": "error",
+                    "code": "DEPT_IN_USE",
+                    "message": f"ไม่สามารถลบกลุ่มงาน '{target_name}' ได้ เนื่องจากมีบุคลากรสังกัดอยู่ {user_count} ท่าน (กรุณาย้ายสังกัดหรือลบบุคลากรก่อนลบหน่วยงาน)"
+                }
+
+            cur.execute("UPDATE departments SET is_active = 0 WHERE id = %s", (target_id,))
+
+        conn.commit()
+        return {
+            "status": "success",
+            "message": f"ลบกลุ่มงาน/หน่วยงาน '{target_name}' เรียบร้อยแล้ว",
+            "id": target_id,
+            "name": target_name
+        }
     except Exception as e:
         conn.rollback()
         raise e
@@ -1232,7 +1359,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         STAFF_ACTIONS = {
             "approveRequisition", "completeRequisition", "rejectRequisition",
             "restockItem", "adjustStock", "saveUser", "deleteUser",
-            "addDepartment", "saveItem", "deleteItem"
+            "addDepartment", "updateDepartment", "deleteDepartment",
+            "saveItem", "deleteItem"
         }
 
         if action in STAFF_ACTIONS:
@@ -1275,6 +1403,10 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 return self.send_json(handle_delete_user(payload))
             elif action == "addDepartment":
                 return self.send_json(handle_add_department(payload))
+            elif action == "updateDepartment":
+                return self.send_json(handle_update_department(payload))
+            elif action == "deleteDepartment":
+                return self.send_json(handle_delete_department(payload))
             elif action == "saveItem":
                 return self.send_json(handle_save_item(payload))
             elif action == "deleteItem":

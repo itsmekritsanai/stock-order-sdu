@@ -78,4 +78,7 @@ docker compose up -d
 | `POST` | `action: "adjustStock"` | ปรับยอดตรวจนับพัสดุจริงและบันทึกประวัติ | `SELECT ... FOR UPDATE` + ACID Commit |
 | `POST` | `action: "saveUser"` | เพิ่ม/แก้ไขข้อมูลบุคลากรผู้ขอเบิก | Commit |
 | `POST` | `action: "saveItem"` | เพิ่ม/แก้ไขข้อมูลรายการพัสดุ | Commit |
+| `POST` | `action: "addDepartment"` | เพิ่มกลุ่มงาน/หน่วยงานใหม่ภายใน สวท. | Commit |
+| `POST` | `action: "updateDepartment"` | แก้ไขชื่อกลุ่มงาน/หน่วยงาน พร้อม Cascade อัปเดตสังกัดของบุคลากร | Commit |
+| `POST` | `action: "deleteDepartment"` | Soft delete กลุ่มงาน/หน่วยงาน (`is_active = 0`) พร้อมป้องกันการลบเมื่อมีบุคลากรสังกัดอยู่ | Commit |
 | `POST` | `action: "deleteUser"` / `deleteItem"` | Soft delete บุคลากรหรือพัสดุ (`is_active = 0`) | Commit |

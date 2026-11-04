@@ -285,6 +285,41 @@ class TestApiHandlers:
         res = server.handle_add_department({"name": ""})
         assert res["status"] == "error"
 
+    def test_handle_update_department_validation(self):
+        res = server.handle_update_department({"name": ""})
+        assert res["status"] == "error"
+        res_no_id = server.handle_update_department({"name": "กลุ่มงานใหม่"})
+        assert res_no_id["status"] == "error"
+
+    def test_handle_delete_department_validation(self):
+        res = server.handle_delete_department({})
+        assert res["status"] == "error"
+
+    def test_department_crud_lifecycle(self):
+        import uuid
+        uid = uuid.uuid4().hex[:6]
+        test_dept_name = f"กลุ่มงานทดสอบ {uid}"
+        updated_dept_name = f"กลุ่มงานทดสอบแก้ไข {uid}"
+
+        # 1. Add
+        add_res = server.handle_add_department({"name": test_dept_name})
+        assert add_res["status"] == "success"
+        dept_id = add_res.get("id")
+
+        # 2. Duplicate check
+        dup_res = server.handle_add_department({"name": test_dept_name})
+        assert dup_res["status"] == "error"
+        assert dup_res.get("code") == "DUPLICATE_DEPT"
+
+        # 3. Update name
+        upd_res = server.handle_update_department({"id": dept_id, "name": updated_dept_name})
+        assert upd_res["status"] == "success"
+        assert upd_res["name"] == updated_dept_name
+
+        # 4. Delete
+        del_res = server.handle_delete_department({"id": dept_id})
+        assert del_res["status"] == "success"
+
     def test_handle_save_item_validation(self):
         res = server.handle_save_item({"name": ""})
         assert res["status"] == "error"

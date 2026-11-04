@@ -581,8 +581,8 @@
             <div class="metric-header"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> บุคลากรผู้มีสิทธิ์เบิกทั้งหมด</div>
             <span class="metric-val" id="metricTotalUsers">4 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ท่าน</small></span>
           </div>
-          <div class="metric-card">
-            <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> กลุ่มงาน / หน่วยงานภายใน สวท.</div>
+          <div class="metric-card" onclick="openManageDeptsModal()" style="cursor: pointer;" title="คลิกเพื่อเปิดหน้าต่างจัดการรายชื่อกลุ่มงาน/หน่วยงาน">
+            <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> กลุ่มงาน / หน่วยงานภายใน สวท. (คลิกจัดการ)</div>
             <span class="metric-val" style="color: var(--primary);" id="metricTotalDepts">5 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small></span>
           </div>
         </div>
@@ -594,8 +594,8 @@
               <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข หรือลบรายชื่อบุคลากรและกลุ่มงานได้ตลอดเวลา</p>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-outline" onclick="openAddDeptModal()">
-                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> + เพิ่มกลุ่มงาน/หน่วยงาน
+              <button class="btn btn-outline" onclick="openManageDeptsModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> จัดการกลุ่มงาน / หน่วยงาน
               </button>
               <button class="btn btn-primary" onclick="openUserModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> เพิ่มรายชื่อบุคลากร (User)
@@ -2451,40 +2451,290 @@
       });
     }
 
-    function openAddDeptModal() {
+    async function openManageDeptsModal() {
+      let deptsList = [];
+      try {
+        const res = await fetch(`${MYSQL_API_URL}?action=getDepartments`);
+        const json = await res.json();
+        if (json && json.status === 'success' && Array.isArray(json.data)) {
+          deptsList = json.data;
+        }
+      } catch (e) {
+        console.warn('API error, using local fallback:', e);
+      }
+
+      if (deptsList.length === 0) {
+        const localDepts = getAllDeptNames();
+        const users = getUsersDB();
+        deptsList = localDepts.map((d, i) => ({
+          id: i + 1,
+          name: d,
+          category: 'สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)',
+          user_count: users.filter(u => u.dept === d).length
+        }));
+      }
+
+      const rowsHtml = deptsList.map((d, idx) => `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px 8px; text-align: center; color: #64748b; font-weight: 500;">${idx + 1}</td>
+          <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; text-align: left;">
+            ${escapeHtml(d.name)}
+          </td>
+          <td style="padding: 10px 8px; text-align: center;">
+            <span style="background: ${(d.user_count || 0) > 0 ? '#dbeafe' : '#f1f5f9'}; color: ${(d.user_count || 0) > 0 ? '#1e40af' : '#64748b'}; padding: 3px 10px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600;">
+              ${d.user_count || 0} ท่าน
+            </span>
+          </td>
+          <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${escapeHtml(d.name)}')">
+              ✏️ แก้ไขชื่อ
+            </button>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${escapeHtml(d.name)}', ${d.user_count || 0})">
+              🗑️ ลบ
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
       Swal.fire({
-        title: 'เพิ่มกลุ่มงาน / หน่วยงานใหม่ (สวท.)',
+        title: '🏛️ จัดการกลุ่มงาน / หน่วยงาน (สวท.)',
+        width: '760px',
         html: `
-          <div style="text-align: left; margin-top: 0.5rem;">
-            <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 6px;">ชื่อกลุ่มงาน / หน่วยงาน *</label>
-            <input id="swal-dept-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น กลุ่มงานพัฒนาวิชาการ">
+          <div style="text-align: left; margin-top: 0.5rem; font-size: 0.9rem;">
+            <!-- เพิ่มกลุ่มงานใหม่ -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; margin-bottom: 1rem;">
+              <label style="font-weight: 600; color: #1e293b; display: block; margin-bottom: 6px;">+ เพิ่มกลุ่มงาน / หน่วยงานใหม่</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="manage-new-dept-name" class="swal2-input" style="margin: 0; flex: 1; font-size: 0.9rem; height: 38px;" placeholder="ระบุชื่อกลุ่มงาน เช่น กลุ่มงานพัฒนาวิชาการ">
+                <button type="button" class="btn btn-primary" style="padding: 0 16px; height: 38px; white-space: nowrap;" onclick="submitNewDeptFromManage()">+ เพิ่มหน่วยงาน</button>
+              </div>
+            </div>
+
+            <!-- ตารางรายชื่อกลุ่มงาน -->
+            <div style="max-height: 360px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0; z-index: 1;">
+                    <th style="padding: 10px 8px; text-align: center; width: 45px; color: #475569;">#</th>
+                    <th style="padding: 10px 8px; text-align: left; color: #475569;">ชื่อกลุ่มงาน / หน่วยงาน</th>
+                    <th style="padding: 10px 8px; text-align: center; width: 120px; color: #475569;">จำนวนบุคลากร</th>
+                    <th style="padding: 10px 8px; text-align: right; width: 170px; color: #475569;">จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="manageDeptsTbody">
+                  ${rowsHtml || '<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: #94a3b8;">ยังไม่มีกลุ่มงานในระบบ</td></tr>'}
+                </tbody>
+              </table>
+            </div>
           </div>
         `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+          const input = document.getElementById('manage-new-dept-name');
+          if (input) {
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                submitNewDeptFromManage();
+              }
+            });
+          }
+        }
+      });
+    }
+
+    async function submitNewDeptFromManage() {
+      const input = document.getElementById('manage-new-dept-name');
+      const name = input ? input.value.trim() : '';
+      if (!name) {
+        Swal.showValidationMessage('กรุณาระบุชื่อกลุ่มงาน / หน่วยงาน');
+        return;
+      }
+
+      Swal.showLoading();
+      try {
+        const res = await postToMySQLAPI('addDepartment', { name });
+        if (res && res.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ไม่สามารถเพิ่มหน่วยงานได้',
+            text: res.message || 'ชื่อหน่วยงานนี้มีอยู่ในระบบแล้ว'
+          });
+          return;
+        }
+
+        ensureDeptExists(name);
+        await syncFromMySQLAPI();
+        loadStaffDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'เพิ่มหน่วยงานสำเร็จ',
+          text: `เพิ่ม "${name}" เข้าสู่ระบบเรียบร้อยแล้ว`,
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          openManageDeptsModal();
+        });
+      } catch (err) {
+        console.error('Error adding department:', err);
+        ensureDeptExists(name);
+        loadStaffDashboard();
+        openManageDeptsModal();
+      }
+    }
+
+    async function promptEditDepartment(id, currentName) {
+      const { value: newName } = await Swal.fire({
+        title: 'แก้ไขชื่อกลุ่มงาน / หน่วยงาน',
+        input: 'text',
+        inputValue: currentName,
+        inputLabel: 'ชื่อกลุ่มงาน / หน่วยงานใหม่ *',
         showCancelButton: true,
         confirmButtonColor: '#1e40af',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'เพิ่มหน่วยงาน',
+        confirmButtonText: 'บันทึกการแก้ไข',
         cancelButtonText: 'ยกเลิก',
-        preConfirm: () => {
-          const name = document.getElementById('swal-dept-name').value.trim();
-          if (!name) {
-            Swal.showValidationMessage('กรุณาระบุชื่อกลุ่มงาน / หน่วยงาน');
-            return false;
-          }
-          return name;
+        inputValidator: (val) => {
+          if (!val || !val.trim()) return 'กรุณาระบุชื่อกลุ่มงาน / หน่วยงาน';
+          if (val.trim() === currentName) return 'ชื่อหน่วยงานไม่มีการเปลี่ยนแปลง';
         }
-      }).then((result) => {
-        if (!result.isConfirmed || !result.value) return;
-        ensureDeptExists(result.value);
-        renderStaffUsersTable();
+      });
+
+      if (!newName || !newName.trim()) return;
+      const cleanNew = newName.trim();
+
+      Swal.showLoading();
+      try {
+        const res = await postToMySQLAPI('updateDepartment', {
+          id: id,
+          old_name: currentName,
+          name: cleanNew
+        });
+
+        if (res && res.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ไม่สามารถแก้ไขได้',
+            text: res.message || 'เกิดข้อผิดพลาดในการแก้ไขชื่อหน่วยงาน'
+          });
+          return;
+        }
+
+        // Update local storage depts
+        const deptsData = getDeptsDB();
+        deptsData.forEach(c => {
+          (c.items || []).forEach(it => {
+            if (it.value === currentName) {
+              it.value = cleanNew;
+              it.label = cleanNew;
+            }
+          });
+        });
+        saveDeptsDB(deptsData);
+
+        // Cascade update local users
+        const users = getUsersDB();
+        users.forEach(u => {
+          if (u.dept === currentName) {
+            u.dept = cleanNew;
+          }
+        });
+        saveUsersDB(users);
+
+        await syncFromMySQLAPI();
+        loadStaffDashboard();
+
         Swal.fire({
           icon: 'success',
-          title: 'เพิ่มกลุ่มงาน/หน่วยงานสำเร็จ',
-          text: `เพิ่ม "${result.value}" เข้าสู่ระบบเรียบร้อยแล้ว`,
-          timer: 1800,
+          title: 'แก้ไขชื่อหน่วยงานสำเร็จ',
+          text: `เปลี่ยนชื่อเป็น "${cleanNew}" เรียบร้อยแล้ว`,
+          timer: 1600,
           showConfirmButton: false
+        }).then(() => {
+          openManageDeptsModal();
         });
+      } catch (err) {
+        console.error('Error updating department:', err);
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    async function promptDeleteDepartment(id, name, userCount) {
+      if (userCount > 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไม่สามารถลบหน่วยงานนี้ได้',
+          html: `
+            <div style="text-align: left; font-size: 0.9rem;">
+              <p>กลุ่มงาน <strong>"${escapeHtml(name)}"</strong> ยังมีบุคลากรสังกัดอยู่จำนวน <strong>${userCount} ท่าน</strong></p>
+              <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; padding: 10px; color: #991b1b; margin-top: 8px;">
+                ⚠️ กรุณาแก้ไขหรือเปลี่ยนสังกัดของบุคลากรกลุ่มนี้ให้เรียบร้อยก่อน จึงจะสามารถลบหน่วยงานออกจากระบบได้
+              </div>
+            </div>
+          `,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'รับทราบ'
+        }).then(() => {
+          openManageDeptsModal();
+        });
+        return;
+      }
+
+      const result = await Swal.fire({
+        title: 'ยืนยันการลบกลุ่มงาน / หน่วยงาน',
+        text: `ต้องการลบกลุ่มงาน "${name}" ออกจากระบบใช่หรือไม่?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ใช่, ลบหน่วยงาน',
+        cancelButtonText: 'ยกเลิก'
       });
+
+      if (!result.isConfirmed) {
+        openManageDeptsModal();
+        return;
+      }
+
+      Swal.showLoading();
+      try {
+        const res = await postToMySQLAPI('deleteDepartment', { id: id, name: name });
+        if (res && res.status === 'error') {
+          Swal.fire('ข้อผิดพลาด', res.message || 'ไม่สามารถลบหน่วยงานได้', 'error');
+          return;
+        }
+
+        // Remove from local storage depts
+        const deptsData = getDeptsDB();
+        deptsData.forEach(c => {
+          if (c.items) {
+            c.items = c.items.filter(it => it.value !== name);
+          }
+        });
+        saveDeptsDB(deptsData);
+
+        await syncFromMySQLAPI();
+        loadStaffDashboard();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'ลบหน่วยงานสำเร็จ',
+          text: `ลบกลุ่มงาน "${name}" เรียบร้อยแล้ว`,
+          timer: 1600,
+          showConfirmButton: false
+        }).then(() => {
+          openManageDeptsModal();
+        });
+      } catch (err) {
+        console.error('Error deleting department:', err);
+        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+      }
+    }
+
+    function openAddDeptModal() {
+      openManageDeptsModal();
     }
 
     function loadStaffDashboard() {
