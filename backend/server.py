@@ -444,6 +444,15 @@ def handle_approve_requisition(payload):
                 conn.rollback()
                 return {"status": "error", "message": f"ไม่พบเอกสารคำขอเลขที่ {doc_no}"}
 
+            current_status = req.get("status", "")
+            if current_status != "PENDING":
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "INVALID_STATE",
+                    "message": f"ไม่สามารถอนุมัติได้เนื่องจากคำขอเลขที่ {doc_no} อยู่ในสถานะ {current_status}",
+                }
+
             cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
             req_items = cur.fetchall()
 
@@ -505,6 +514,22 @@ def handle_complete_requisition(payload):
             if not req:
                 conn.rollback()
                 return {"status": "error", "message": f"ไม่พบเอกสารคำขอเลขที่ {doc_no}"}
+
+            current_status = req.get("status", "")
+            if current_status == "COMPLETED":
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "ALREADY_COMPLETED",
+                    "message": f"คำขอเลขที่ {doc_no} ได้รับการบันทึกจ่ายพัสดุเรียบร้อยแล้ว (ไม่สามารถตัดสต๊อกซ้ำได้)",
+                }
+            if current_status != "APPROVED":
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "NOT_APPROVED",
+                    "message": f"คำขอเลขที่ {doc_no} ต้องได้รับการอนุมัติ (APPROVED) ก่อนดำเนินการจ่ายพัสดุ (สถานะปัจจุบัน: {current_status})",
+                }
 
             cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
             req_items = cur.fetchall()
@@ -568,7 +593,23 @@ def handle_reject_requisition(payload):
                 conn.rollback()
                 return {"status": "error", "message": f"ไม่พบเอกสารคำขอเลขที่ {doc_no}"}
 
-            if req["status"] == "APPROVED":
+            current_status = req.get("status", "")
+            if current_status == "COMPLETED":
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "ALREADY_COMPLETED",
+                    "message": f"ไม่สามารถปฏิเสธคำขอเลขที่ {doc_no} ได้ เนื่องจากได้รับการจ่ายพัสดุเรียบร้อยแล้ว",
+                }
+            if current_status == "REJECTED":
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "ALREADY_REJECTED",
+                    "message": f"คำขอเลขที่ {doc_no} ถูกปฏิเสธไปแล้ว",
+                }
+
+            if current_status == "APPROVED":
                 cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
                 req_items = cur.fetchall()
                 for ri in req_items:

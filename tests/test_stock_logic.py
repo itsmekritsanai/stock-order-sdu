@@ -414,3 +414,31 @@ class TestSecurityEnhancements:
         # Invalid staff login
         res_fail = server.handle_login_staff({'username': 'admin_staff', 'password': 'completely_wrong_pass'})
         assert res_fail['status'] == 'error'
+
+
+class TestRequisitionStateMachineSafety:
+    """Test prevention of invalid state transitions (CWE-841 / bugscope-requisition-state-machine-bypass)."""
+
+    def test_complete_already_completed_requisition_rejected(self):
+        """A COMPLETED requisition must NOT be completed again (prevent double stock deduction)."""
+        res = server.handle_complete_requisition({"docNo": "REQ-256910-0042", "signature": "test"})
+        assert res["status"] == "error"
+        assert res.get("code") in ("ALREADY_COMPLETED", "INVALID_STATE")
+
+    def test_complete_pending_or_rejected_requisition_rejected(self):
+        """A REJECTED or PENDING requisition must NOT be completed directly."""
+        res = server.handle_complete_requisition({"docNo": "REQ-256910-0043", "signature": "test"})
+        assert res["status"] == "error"
+        assert res.get("code") in ("NOT_APPROVED", "INVALID_STATE")
+
+    def test_approve_already_approved_or_completed_rejected(self):
+        """An already COMPLETED or APPROVED requisition must NOT be approved again."""
+        res = server.handle_approve_requisition({"docNo": "REQ-256910-0042"})
+        assert res["status"] == "error"
+        assert res.get("code") in ("INVALID_STATE", "ALREADY_COMPLETED")
+
+    def test_reject_already_completed_requisition_rejected(self):
+        """A COMPLETED requisition cannot be rejected after goods handover."""
+        res = server.handle_reject_requisition({"docNo": "REQ-256910-0042", "reason": "test"})
+        assert res["status"] == "error"
+        assert res.get("code") in ("ALREADY_COMPLETED", "INVALID_STATE")
