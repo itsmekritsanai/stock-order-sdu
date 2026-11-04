@@ -351,3 +351,66 @@ class TestApiHandlers:
             assert res["user"]["name"] == "นางสาววาสนา จันทร์จ่าย"
             assert res["user"]["username"] == "wasana.c"
             assert res["user"]["dept"] == "สำนักงานผู้อำนวยการ สวท."
+
+
+class TestSecurityEnhancements:
+    """Unit tests for security audit defensive fixes (Vulnerabilities 1-5)."""
+
+    def test_static_file_path_security_filtering(self):
+        handler = server.SDUInventoryRequestHandler
+        req_inst = handler.__new__(handler)
+
+        # Forbidden dotfiles
+        assert req_inst.is_safe_static_path('/.env') is False
+        assert req_inst.is_safe_static_path('/.git/config') is False
+        assert req_inst.is_safe_static_path('/.env.local') is False
+
+        # Forbidden internal code & data directories
+        assert req_inst.is_safe_static_path('/backend/server.py') is False
+        assert req_inst.is_safe_static_path('/data/inventory.db') is False
+        assert req_inst.is_safe_static_path('/tests/test_stock_logic.py') is False
+        assert req_inst.is_safe_static_path('/reports/security-audit/findings.json') is False
+
+        # Forbidden root config files
+        assert req_inst.is_safe_static_path('/docker-compose.yml') is False
+        assert req_inst.is_safe_static_path('/schema_postgres.sql') is False
+        assert req_inst.is_safe_static_path('/pgadmin_servers.json') is False
+
+        # Allowed static public files
+        assert req_inst.is_safe_static_path('/index.html') is True
+        assert req_inst.is_safe_static_path('/staff.html') is True
+        assert req_inst.is_safe_static_path('/portal.html') is True
+        assert req_inst.is_safe_static_path('/assets/favicon.ico') is True
+
+    def test_password_pbkdf2_hashing_and_verification(self):
+        plain = 'MySecurePass#2026'
+        hashed = server.hash_password(plain)
+
+        assert hashed.startswith('pbkdf2_sha256$')
+        assert server.verify_password(hashed, plain) is True
+        assert server.verify_password(hashed, 'WrongPassword') is False
+
+        # Backward compatibility with legacy plaintext passwords
+        assert server.verify_password('sdu1234', 'sdu1234') is True
+        assert server.verify_password('sdu1234', 'wrong') is False
+
+    def test_staff_hmac_token_lifecycle(self):
+        token = server.generate_staff_token('admin_staff')
+        assert token.startswith('admin_staff.')
+        assert server.verify_staff_token(token) is True
+
+        # Invalid token rejection
+        assert server.verify_staff_token('invalid.token') is False
+        assert server.verify_staff_token('') is False
+        assert server.verify_staff_token('admin_staff.1000000000.invalidsignature') is False
+
+    def test_handle_login_staff(self):
+        # Valid staff login
+        res = server.handle_login_staff({'username': 'admin_staff', 'password': '••••••••'})
+        assert res['status'] == 'success'
+        assert 'token' in res
+        assert server.verify_staff_token(res['token']) is True
+
+        # Invalid staff login
+        res_fail = server.handle_login_staff({'username': 'admin_staff', 'password': 'completely_wrong_pass'})
+        assert res_fail['status'] == 'error'

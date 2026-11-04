@@ -1,0 +1,333 @@
+[
+  {
+    "coverage_id": "http-web::file-system::static-files::resource-and-file-handling",
+    "canonical_refs": {
+      "surface": "http-web",
+      "boundary": "file-system",
+      "subsystem": "static-files",
+      "attack_class": "resource-and-file-handling"
+    },
+    "surface": "http-web",
+    "boundary": "file-system",
+    "subsystem": "static-files",
+    "attack_class": "resource-and-file-handling",
+    "starting_paths": ["backend/server.py"],
+    "ordinary_attack_class_block": "resource-and-file-handling",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "candidate",
+        "agent_id": "hunter-web",
+        "reviewed_paths": ["backend/server.py"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-web",
+            "reviewed_paths": ["backend/server.py"],
+            "invariant": "Static file server must reject requests for sensitive files and dotfiles.",
+            "method": "source",
+            "result": "Disproved: SimpleHTTPRequestHandler serves any file in PROJECT_ROOT.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": ["sdu-sec-001-sensitive-file-exposure"],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-web",
+    "reviewed_paths": ["backend/server.py"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-web",
+        "reviewed_paths": ["backend/server.py"],
+        "invariant": "Static file server must reject requests for sensitive files and dotfiles.",
+        "method": "source",
+        "result": "Disproved: SimpleHTTPRequestHandler serves any file in PROJECT_ROOT.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": ["sdu-sec-001-sensitive-file-exposure"],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "rest-api::auth-boundary::admin-mutations::access-control",
+    "canonical_refs": {
+      "surface": "rest-api",
+      "boundary": "auth-boundary",
+      "subsystem": "admin-mutations",
+      "attack_class": "access-control"
+    },
+    "surface": "rest-api",
+    "boundary": "auth-boundary",
+    "subsystem": "admin-mutations",
+    "attack_class": "access-control",
+    "starting_paths": ["backend/server.py", "staff.html"],
+    "ordinary_attack_class_block": "access-control",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "candidate",
+        "agent_id": "hunter-api",
+        "reviewed_paths": ["backend/server.py", "staff.html"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-api",
+            "reviewed_paths": ["backend/server.py"],
+            "invariant": "Administrative actions must require cryptographic authentication token.",
+            "method": "source",
+            "result": "Disproved: do_POST handles mutation actions without token check.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": ["sdu-sec-002-missing-api-authentication"],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-api",
+    "reviewed_paths": ["backend/server.py", "staff.html"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-api",
+        "reviewed_paths": ["backend/server.py"],
+        "invariant": "Administrative actions must require cryptographic authentication token.",
+        "method": "source",
+        "result": "Disproved: do_POST handles mutation actions without token check.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": ["sdu-sec-002-missing-api-authentication"],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "browser-ui::dom-boundary::requisition-rendering::injection",
+    "canonical_refs": {
+      "surface": "browser-ui",
+      "boundary": "dom-boundary",
+      "subsystem": "requisition-rendering",
+      "attack_class": "injection"
+    },
+    "surface": "browser-ui",
+    "boundary": "dom-boundary",
+    "subsystem": "requisition-rendering",
+    "attack_class": "injection",
+    "starting_paths": ["staff.html", "index.html"],
+    "ordinary_attack_class_block": "injection",
+    "selected_companion_blocks": ["CLIENT-SIDE.md"],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "candidate",
+        "agent_id": "hunter-xss",
+        "reviewed_paths": ["staff.html", "index.html"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-xss",
+            "reviewed_paths": ["staff.html"],
+            "invariant": "User-supplied fields must be escaped before innerHTML interpolation.",
+            "method": "source",
+            "result": "Disproved: req.requester and req.purpose are interpolated unescaped into innerHTML.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": ["sdu-sec-003-stored-xss-portals"],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-xss",
+    "reviewed_paths": ["staff.html", "index.html"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-xss",
+        "reviewed_paths": ["staff.html"],
+        "invariant": "User-supplied fields must be escaped before innerHTML interpolation.",
+        "method": "source",
+        "result": "Disproved: req.requester and req.purpose are interpolated unescaped into innerHTML.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": ["sdu-sec-003-stored-xss-portals"],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "database-storage::credential-boundary::user-passwords::cryptography-and-secrets",
+    "canonical_refs": {
+      "surface": "database-storage",
+      "boundary": "credential-boundary",
+      "subsystem": "user-passwords",
+      "attack_class": "cryptography-and-secrets"
+    },
+    "surface": "database-storage",
+    "boundary": "credential-boundary",
+    "subsystem": "user-passwords",
+    "attack_class": "cryptography-and-secrets",
+    "starting_paths": ["backend/server.py", "schema_postgres.sql"],
+    "ordinary_attack_class_block": "cryptography-and-secrets",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "candidate",
+        "agent_id": "hunter-crypto",
+        "reviewed_paths": ["backend/server.py", "schema_postgres.sql"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-crypto",
+            "reviewed_paths": ["backend/server.py"],
+            "invariant": "Passwords must be stored as cryptographic one-way hashes.",
+            "method": "source",
+            "result": "Disproved: Passwords stored and checked in plaintext with fallback default sdu1234.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": ["sdu-sec-004-plaintext-password-storage"],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-crypto",
+    "reviewed_paths": ["backend/server.py", "schema_postgres.sql"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-crypto",
+        "reviewed_paths": ["backend/server.py"],
+        "invariant": "Passwords must be stored as cryptographic one-way hashes.",
+        "method": "source",
+        "result": "Disproved: Passwords stored and checked in plaintext with fallback default sdu1234.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": ["sdu-sec-004-plaintext-password-storage"],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "http-headers::cross-origin::cors-policy::web-protocol-and-auth",
+    "canonical_refs": {
+      "surface": "http-headers",
+      "boundary": "cross-origin",
+      "subsystem": "cors-policy",
+      "attack_class": "web-protocol-and-auth"
+    },
+    "surface": "http-headers",
+    "boundary": "cross-origin",
+    "subsystem": "cors-policy",
+    "attack_class": "web-protocol-and-auth",
+    "starting_paths": ["backend/server.py"],
+    "ordinary_attack_class_block": "web-protocol-and-auth",
+    "selected_companion_blocks": ["CLIENT-SIDE.md"],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "candidate",
+        "agent_id": "hunter-cors",
+        "reviewed_paths": ["backend/server.py"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-cors",
+            "reviewed_paths": ["backend/server.py"],
+            "invariant": "CORS headers should restrict origin access.",
+            "method": "source",
+            "result": "Disproved: Access-Control-Allow-Origin is set to wildcard *.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": ["sdu-sec-005-permissive-cors"],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "candidate",
+    "agent_id": "hunter-cors",
+    "reviewed_paths": ["backend/server.py"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-cors",
+        "reviewed_paths": ["backend/server.py"],
+        "invariant": "CORS headers should restrict origin access.",
+        "method": "source",
+        "result": "Disproved: Access-Control-Allow-Origin is set to wildcard *.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": ["sdu-sec-005-permissive-cors"],
+    "unresolved": []
+  },
+  {
+    "coverage_id": "database-queries::sql-boundary::inventory-queries::injection",
+    "canonical_refs": {
+      "surface": "database-queries",
+      "boundary": "sql-boundary",
+      "subsystem": "inventory-queries",
+      "attack_class": "injection"
+    },
+    "surface": "database-queries",
+    "boundary": "sql-boundary",
+    "subsystem": "inventory-queries",
+    "attack_class": "injection",
+    "starting_paths": ["backend/server.py"],
+    "ordinary_attack_class_block": "injection",
+    "selected_companion_blocks": [],
+    "excluded_blocks": [],
+    "prior_status": "new",
+    "attempts": [
+      {
+        "wave": 1,
+        "status": "covered",
+        "agent_id": "hunter-sqli",
+        "reviewed_paths": ["backend/server.py"],
+        "local_checks": [
+          {
+            "agent_id": "hunter-sqli",
+            "reviewed_paths": ["backend/server.py"],
+            "invariant": "All SQL statements must use parameterized placeholders.",
+            "method": "source",
+            "result": "Verified: All SQL statements in server.py use %s parameters with tuple binding.",
+            "artifact": null
+          }
+        ],
+        "result_fingerprints": [],
+        "unresolved": [],
+        "reassignment_reason": null
+      }
+    ],
+    "wave": 1,
+    "status": "covered",
+    "agent_id": "hunter-sqli",
+    "reviewed_paths": ["backend/server.py"],
+    "local_checks": [
+      {
+        "agent_id": "hunter-sqli",
+        "reviewed_paths": ["backend/server.py"],
+        "invariant": "All SQL statements must use parameterized placeholders.",
+        "method": "source",
+        "result": "Verified: All SQL statements in server.py use %s parameters with tuple binding.",
+        "artifact": null
+      }
+    ],
+    "result_fingerprints": [],
+    "unresolved": []
+  }
+]
+

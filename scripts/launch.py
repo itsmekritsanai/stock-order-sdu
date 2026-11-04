@@ -1,6 +1,6 @@
 """
 Launch Script for Suan Dusit University - Digital Stock & Requisition System
-Starts Unified Web & MySQL REST API Server (backend/server.py) on port 8080 and opens browser.
+Starts Unified Web & PostgreSQL REST API Server (backend/server.py) on port 8080 and opens browser.
 """
 
 import os

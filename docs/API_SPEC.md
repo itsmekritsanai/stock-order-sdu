@@ -5,7 +5,7 @@
 
 ## 1. ข้อมูลภาพรวม API (Overview & Conventions)
 
-* **Protocol:** HTTP / HTTPS (RESTful JSON API ให้บริการโดย Python REST Server [`backend/server.py`](file:///c:/Users/Sho/Downloads/Project/project%20stock/backend/server.py) เชื่อมต่อ PostgreSQL 17 หรือ MySQL)
+* **Protocol:** HTTP / HTTPS (RESTful JSON API ให้บริการโดย Python REST Server [`backend/server.py`](backend/server.py) เชื่อมต่อ PostgreSQL 17 หรือ MySQL)
 * **Base Endpoint URL:**
   ```text
   http://localhost:8080/api
@@ -16,6 +16,11 @@
 ---
 
 ## 2. สรุปรายการ Endpoints (Summary Table)
+
+> [!IMPORTANT]
+> **ระบบความปลอดภัยและการตรวจสอบสิทธิ์ API (Security & Auth):**  
+> คำสั่งระดับเจ้าหน้าที่พัสดุทั้งหมด (เครื่องหมาย **เจ้าหน้าที่**) จำเป็นต้องแนบโทเค็นใน Request Header:  
+> `Authorization: Bearer <staff_token>` (โทเค็นที่ได้รับหลังจากส่ง `loginStaff` สำเร็จ) เพื่อยืนยันสิทธิ์การเปลี่ยนแปลงข้อมูล
 
 | Method | Endpoint Parameter | Action Name | สิทธิ์การเข้าถึง | วัตถุประสงค์ |
 | :---: | :--- | :--- | :---: | :--- |
@@ -35,6 +40,9 @@
 | `POST`| Payload `action: "saveUser"` | `saveUser` | เจ้าหน้าที่ | เพิ่มหรือแก้ไขรายชื่อบุคลากร (User) |
 | `POST`| Payload `action: "deleteUser"` | `deleteUser` | เจ้าหน้าที่ | ลบรายชื่อบุคลากรออกจากระบบ |
 | `POST`| Payload `action: "addDepartment"` | `addDepartment` | เจ้าหน้าที่ | เพิ่มกลุ่มงาน/หน่วยงานใหม่เข้าสู่ตาราง `departments` |
+| `POST`| Payload `action: "loginRequester"` | `loginRequester` | สาธารณะ | ตรวจสอบรหัสผ่านผู้ขอเบิก (Requester Authentication) |
+| `POST`| Payload `action: "loginStaff"` | `loginStaff` | เจ้าหน้าที่ | เข้าสู่ระบบเจ้าหน้าที่พัสดุ และรับ HMAC-SHA256 Token สำหรับยืนยันสิทธิ์ API |
+| `GET` | `?action=health` | `health` | สาธารณะ | ตรวจสอบสถานะการทำงานของ REST API และการเชื่อมต่อฐานข้อมูล |
 
 ---
 
@@ -255,5 +263,54 @@
   "docNo": "REQ-256910-4491",
   "statusNow": "REJECTED",
   "message": "ปฏิเสธคำขอและคืนยอดพัสดุเรียบร้อยแล้ว"
+}
+```
+
+---
+
+### 3.12 `POST /api` (Action: `loginRequester`)
+ตรวจสอบสิทธิ์การเข้าใช้งานของผู้ขอเบิกพัสดุ (Requester Login) ด้วยชื่อผู้ใช้งานและรหัสผ่าน
+
+* **Payload Example:**
+```json
+{
+  "action": "loginRequester",
+  "payload": {
+    "username": "wasana.c",
+    "password": "password123"
+  }
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "เข้าสู่ระบบสำเร็จ",
+  "user": {
+    "id": 1,
+    "name": "นางสาววาสนา จันทร์จ่าย",
+    "username": "wasana.c",
+    "position": "หัวหน้าสำนักงาน",
+    "dept": "สำนักงานผู้อำนวยการ สวท.",
+    "phone": "081-998-7766"
+  }
+}
+```
+
+---
+
+### 3.13 `GET /api?action=health`
+ตรวจสอบสถานะความพร้อมในการทำงานของเซิร์ฟเวอร์ และการเชื่อมต่อฐานข้อมูล PostgreSQL 17 / MySQL
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "healthy": true,
+  "message": "SDU Stock Order PostgreSQL 17 REST API is operational.",
+  "version": "3.0.3",
+  "database": "PostgreSQL 17",
+  "db_name": "sdu_inventory"
 }
 ```

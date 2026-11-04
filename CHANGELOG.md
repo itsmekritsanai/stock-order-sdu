@@ -21,6 +21,34 @@
 
 ---
 
+## [3.0.5] - 2026-11-04
+### Added
+- **Comprehensive Data Dictionary (docs/DATA_DICTIONARY.md):** จัดทำพจนานุกรมข้อมูลฉบับสมบูรณ์ครอบคลุมทั้ง 6 ตารางบน PostgreSQL 17 พร้อม Mermaid ERD, รายละเอียด Data Types, Constraints, Default Values, Business Rules และ Status Enums
+
+### Security
+- **Static Web Root Secret Protection (CWE-552 / CWE-200):** ปิดกั้นการเข้าถึงไฟล์ที่ขึ้นต้นด้วยจุด (.env, .git) และไดเรกทอรีภายในเซิร์ฟเวอร์ (backend/, tests/, scripts/, data/) ตอบกลับ HTTP 404
+- **Server-Side Administrative API Authentication (CWE-306 / CWE-862):** เพิ่มระบบยืนยันตัวตนเจ้าหน้าที่พัสดุระดับเซิร์ฟเวอร์ (loginStaff) และออกโทเค็น HMAC-SHA256 พร้อมตรวจจับสิทธิ์ผ่าน Header Authorization: Bearer <token>
+- **Stored Cross-Site Scripting (XSS) Prevention (CWE-79):** เพิ่มฟังก์ชัน escapeHtml() ป้องกันการแทรกสคริปต์ใน staff.html และ index.html
+- **PBKDF2 Password Hashing with Salt (CWE-256 / CWE-312):** จัดเก็บรหัสผ่านผู้ใช้ด้วย PBKDF2-HMAC-SHA256 พร้อม Migration ข้อมูลเดิมเรียบร้อย
+- **Strict CORS Origin Policy (CWE-942):** ป้องกันการโจมตีข้ามโดเมนด้วย Origin Whitelisting
+
+---
+
+## [3.0.4] - 2026-11-04
+### Added
+- **Searchable Combobox for Stock Adjustment:** อัปเกรดหน้าต่างปรับยอดสต๊อกจริง (`openStockAdjustModal`) เป็น Dropdown แบบค้นหาได้ (Searchable Combobox) กรองชื่อพัสดุ หมวดหมู่ และแสดงป้ายยอดคงคลังปัจจุบันแบบ Real-time
+- **Health Check Endpoint (`/api?action=health`):** เพิ่ม API สำหรับตรวจสอบสถานะเซิร์ฟเวอร์และการเชื่อมต่อฐานข้อมูล PostgreSQL 17 / MySQL อย่างเป็นทางการ
+
+### Changed
+- **Handover Workflow (No E-Signature Required):** นำหน้าต่างวาดลายเซ็น (Canvas Pad) ออกตามความต้องการใช้งานจริง เปลี่ยนเป็นปุ่ม "จ่ายพัสดุเรียบร้อย" พร้อมกล่องยืนยัน SweetAlert2 เพื่อตัดสต๊อกจริงได้สะดวกรวดเร็ว และปรับใบเบิกทางการ (Official PDF) เป็นช่องลงนามรับของมาตรฐาน
+- **Docs & Specifications Audit:** ซิงโครไนซ์คู่มือทั้งหมดใน `docs/` (`API_SPEC.md`, `SCHEMA.md`, `system_requirements_specification.md`, `PROJECT_CONTEXT.md`) ให้ตรงกับพฤติกรรมของระบบเวอร์ชันล่าสุด 100%
+
+### Fixed
+- **Windows Batch Launcher Bug (`start.bat`):** แก้ไขปัญหา Syntax Error จากเครื่องหมายวงเล็บและการเข้ารหัสใน Batch Script บน Windows CMD ทำให้ดับเบิลคลิกเปิดระบบได้ทันที
+- **Staff User Modal Freeze:** แก้ไขข้อผิดพลาด `ReferenceError: currentUsers is not defined` ในหน้าต่างแก้ไขข้อมูลบุคลากร (`openUserModal`) ทำให้กดบันทึกการแก้ไขได้ทันทีโดยไม่ค้าง
+
+---
+
 ## [3.0.3] - 2026-11-03
 
 ### Added
@@ -58,10 +86,10 @@
 
 ### Added
 - **PostgreSQL 17 & Docker Compose Infrastructure (`docker-compose.yml`):** อัปเกรดสถาปัตยกรรมฐานข้อมูลเชิงสัมพันธ์สู่ **PostgreSQL 17 (`postgres:17-alpine`)** ทำงานผ่าน Docker Compose อย่างสมบูรณ์แบบ แยกพื้นที่จัดเก็บข้อมูลถาวรด้วย Docker Volume (`postgres-stock-data`) พร้อมคำสั่งตั้งค่าพอร์ต `5433:5432` เพื่อป้องกันการชนกับพอร์ตมาตรฐานของโปรเจกต์ข้างเคียง
-- **pgAdmin 4 Web GUI Integration (`dpage/pgadmin4`):** ติดตั้งระบบบริหารจัดการฐานข้อมูลผ่านหน้าเว็บ **pgAdmin 4** บนพอร์ต `5051` พร้อมระบบเชื่อมต่อเซิร์ฟเวอร์ฐานข้อมูลอัตโนมัติผ่านไฟล์การกำหนดค่า [`pgadmin_servers.json`](file:///c:/Users/Sho/Downloads/Project/project%20stock/pgadmin_servers.json) เข้าใช้งานได้ทันทีโดยไม่ต้องสร้าง Connection ใหม่
+- **pgAdmin 4 Web GUI Integration (`dpage/pgadmin4`):** ติดตั้งระบบบริหารจัดการฐานข้อมูลผ่านหน้าเว็บ **pgAdmin 4** บนพอร์ต `5051` พร้อมระบบเชื่อมต่อเซิร์ฟเวอร์ฐานข้อมูลอัตโนมัติผ่านไฟล์การกำหนดค่า [`pgadmin_servers.json`](pgadmin_servers.json) เข้าใช้งานได้ทันทีโดยไม่ต้องสร้าง Connection ใหม่
 - **PostgreSQL 17 Database Schema (`backend/schema_postgres.sql`):** ปรับโครงสร้าง DDL ทั้ง 6 ตาราง (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`) ให้เข้ากันได้กับมาตรฐาน PostgreSQL 17 อย่างสมบูรณ์ พร้อมฟังก์ชันทริกเกอร์ PL/pgSQL สำหรับอัปเดตฟิลด์ `updated_at` อัตโนมัติ และสคริปต์ซิงค์ Sequence (`setval`)
 - **Psycopg2 Support & Dual-Database Engine (`backend/server.py`):** พัฒนาระบบเชื่อมต่อฐานข้อมูลใน Python REST API ให้รองรับทั้ง **PostgreSQL (`psycopg2-binary` พร้อม `RealDictCursor`)** และ MySQL/MariaDB (`pymysql`) ยึดหลัก ACID Transactions และ Row-Level Locking (`SELECT ... FOR UPDATE`)
-- **Automated Testing Suite (Phase 6):** เพิ่มชุดทดสอบอัตโนมัติ [`tests/test_stock_logic.py`](file:///c:/Users/Sho/Downloads/Project/project%20stock/tests/test_stock_logic.py) ด้วย `pytest` ครอบคลุมการคำนวณ 2 หน่วยนับ, การคำนวณยอดสต๊อกคงเหลือจริง, State Transitions ของคำขอ, การตรวจสอบสคีมา SQL และ Endpoints ของเซิร์ฟเวอร์ (Coverage >= 90%)
+- **Automated Testing Suite (Phase 6):** เพิ่มชุดทดสอบอัตโนมัติ [`tests/test_stock_logic.py`](tests/test_stock_logic.py) ด้วย `pytest` ครอบคลุมการคำนวณ 2 หน่วยนับ, การคำนวณยอดสต๊อกคงเหลือจริง, State Transitions ของคำขอ, การตรวจสอบสคีมา SQL และ Endpoints ของเซิร์ฟเวอร์ (Coverage >= 90%)
 - **GitHub Actions CI Workflow (`.github/workflows/ci.yml`):** เพิ่มไปป์ไลน์ตรวจสอบคุณภาพโค้ดอัตโนมัติ รันการทดสอบ Python และตรวจไวยากรณ์
 
 ### Changed

@@ -1,6 +1,8 @@
 # Database Schema Specification (docs/SCHEMA.md)
 ### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU)
 
+> 📘 **ดูพจนานุกรมข้อมูลฉบับสมบูรณ์ (Data Dictionary):** เอกสารอ้างอิงรายละเอียดทุกฟิลด์ กฎทางธุรกิจ และคำอธิบายรหัสสถานะทั้งหมด จัดทำไว้ในไฟล์ [docs/DATA_DICTIONARY.md](DATA_DICTIONARY.md)
+
 ---
 
 ## 1. แผนผังความสัมพันธ์ของข้อมูล (Entity-Relationship Diagram)
@@ -182,11 +184,11 @@ erDiagram
    * Host Port: `5433` (หลีกเลี่ยงการชนกับพอร์ต `5432` ของโปรเจกต์ข้างเคียง)
    * ฐานข้อมูล: `sdu_inventory`
    * บันทึกข้อมูลถาวร: Docker Volume `postgres-stock-data`
-   * สคริปต์สคีมา: [`backend/schema_postgres.sql`](file:///c:/Users/Sho/Downloads/Project/project%20stock/backend/schema_postgres.sql) (อิมพอร์ตอัตโนมัติเมื่อสร้างคอนเทนเนอร์)
+   * สคริปต์สคีมา: [`backend/schema_postgres.sql`](backend/schema_postgres.sql) (อิมพอร์ตอัตโนมัติเมื่อสร้างคอนเทนเนอร์)
 2. **คอนเทนเนอร์จัดการฐานข้อมูล (`pgadmin`):**
    * URL: `http://localhost:5051`
    * บัญชีผู้ดูแล: `admin@admin.com` / `root`
-   * พรีโหลดการเชื่อมต่ออัตโนมัติผ่าน [`pgadmin_servers.json`](file:///c:/Users/Sho/Downloads/Project/project%20stock/pgadmin_servers.json)
+   * พรีโหลดการเชื่อมต่ออัตโนมัติผ่าน [`pgadmin_servers.json`](pgadmin_servers.json)
 
 ### คำสั่งควบคุมฐานข้อมูล:
 ```bash

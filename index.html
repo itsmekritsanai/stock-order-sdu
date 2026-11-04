@@ -25,6 +25,17 @@
   <!-- SweetAlert2 (Offline local asset with CDN fallback) -->
   <script src="assets/js/sweetalert2.all.min.js"></script>
   <script>
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     if (typeof Swal === 'undefined') {
       document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
     }
@@ -833,7 +844,7 @@
         </div>
         <p style="font-size: 0.9rem; color: var(--neutral-600); line-height: 1.6;">
           คำขอของท่านถูกส่งไปยัง <strong>เจ้าหน้าที่แผนกพัสดุ</strong> เรียบร้อยแล้ว<br>
-          เมื่อเจ้าหน้าที่อนุมัติและจัดของเสร็จสิ้น ท่านสามารถเดินทางมารับพัสดุพร้อมเซ็นชื่อรับมอบผ่านหน้าจอได้ที่ห้องคลังพัสดุ
+          เมื่อเจ้าหน้าที่อนุมัติและจัดของเสร็จสิ้น ท่านสามารถเดินทางมารับพัสดุได้ที่ห้องคลังพัสดุ
         </p>
       </div>
       <div class="modal-footer" style="justify-content: center; gap: 1rem;">
@@ -2007,15 +2018,15 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; font-size: 0.85rem; color: var(--neutral-700); margin-bottom: 0.75rem; background: var(--neutral-50); padding: 0.75rem; border-radius: 8px;">
               <div>
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">ผู้ขอเบิก:</span><br>
-                <strong>${req.requester}</strong>${phoneText}
+                <strong>${escapeHtml(req.requester)}</strong>${escapeHtml(phoneText)}
               </div>
               <div>
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">หน่วยงาน:</span><br>
-                <span>${req.dept}</span>
+                <span>${escapeHtml(req.dept)}</span>
               </div>
               <div style="grid-column: 1 / -1;">
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
-                <span>${req.purpose || '-'}</span>
+                <span>${escapeHtml(req.purpose || '-')}</span>
               </div>
               ${req.status === 'REJECTED' && (req.reject_reason || req.rejectReason) ? `
               <div style="grid-column: 1 / -1; background: var(--danger-light); color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">

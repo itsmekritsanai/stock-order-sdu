@@ -14,7 +14,7 @@
   2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการล็อกแถวระดับฐานข้อมูล PostgreSQL (`SELECT ... FOR UPDATE`)
   3. **Multi-Unit Intelligence:** คำนวณการแปลงหน่วยอัตโนมัติระหว่างหน่วยบรรจุใหญ่ (กล่อง/ห่อ) และหน่วยย่อย (ชิ้น/ซอง/ใบ/แผ่น)
   4. **Strict Security Separation:** แยกสิทธิ์การใช้งานระหว่างผู้ขอเบิก (หัวหน้าหน่วยงานและบุคลากร 5 กลุ่มงานภายใน สวท.) และเจ้าหน้าที่คลังพัสดุออกจากกันอย่างเด็ดขาด
-  5. **Audit Trail & Digital Signatures:** มีระบบลงนามรับของผ่านหน้าจอสัมผัส (E-Signature Pad), บันทึกประวัติความเคลื่อนไหวสต๊อก (`stock_transactions`) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) ตามระเบียบพัสดุ
+  5. **Audit Trail & Digital Signatures:** มีระบบยืนยันจ่ายพัสดุตัดยอดสต๊อกจริงในคลิกเดียว, บันทึกประวัติความเคลื่อนไหวสต๊อก (`stock_transactions`) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) พร้อมช่องลงนามทางการ
 
 ---
 
@@ -119,7 +119,7 @@ stateDiagram-v2
     [*] --> PENDING: ผู้เบิกส่งคำขอ (index.html)
     PENDING --> APPROVED: เจ้าหน้าที่อนุมัติ (staff.html)<br/>[กันยอด Reserved]
     PENDING --> REJECTED: เจ้าหน้าที่ไม่อนุมัติ (staff.html)<br/>[ระบุเหตุผล]
-    APPROVED --> COMPLETED: ผู้เบิกมารับของ + เซ็นชื่อดิจิทัล<br/>[ตัดยอด On-Hand จริง & คืน Reserved]
+    APPROVED --> COMPLETED: เจ้าหน้าที่ยืนยันจ่ายพัสดุ<br/>[ตัดยอด On-Hand จริง & คืน Reserved]
     APPROVED --> REJECTED: เจ้าหน้าที่ยกเลิกใบเบิก<br/>[คืนยอด Reserved]
     REJECTED --> [*]
     COMPLETED --> [*]: พิมพ์ใบเบิกทางการ (Official PDF)
@@ -178,3 +178,14 @@ stateDiagram-v2
    * ทุกครั้งที่มีการพัฒนา เพิ่มฟีเจอร์ หรือแก้ไขโค้ด จะต้องปรับเพิ่มเลขเวอร์ชันตามมาตรฐาน Semantic Versioning (`MAJOR.MINOR.PATCH`)
    * บันทึกรายละเอียดการเปลี่ยนแปลงทั้งหมดลงในไฟล์ `CHANGELOG.md` ทุกครั้ง
    * ซิงก์ตัวเลขเวอร์ชัน (`SYSTEM_VERSION` ใน `scripts/generate_separated_portals.py`, Footer, และ `SYSTEM_VERSION` ใน `backend/server.py`) ให้ตรงกันเสมอ
+
+---
+
+## 🔒 8. สถาปัตยกรรมความปลอดภัยขั้นสูง (Security Architecture - v3.0.5)
+
+ระบบผ่านการตรวจสอบความปลอดภัยระดับ Full Security Audit (Cloudflare Methodology) และได้รับการแพตช์ยกระดับความปลอดภัยครบถ้วน:
+1. **Static Web Root Boundary Enforcement:** ป้องกันการเข้าถึงไฟล์ข้อมูลสำคัญ (.env, .git) และซอร์สโค้ดหลังบ้านอย่างเด็ดขาด ตอบกลับ HTTP 404
+2. **Server-Side Administrative Authentication:** คำสั่งดัดแปลงสต๊อกและข้อมูลระบบทั้งหมดต้องยืนยันสิทธิ์ด้วย HMAC-SHA256 Token (`Authorization: Bearer <token>`)
+3. **Stored XSS Neutralization:** มีฟังก์ชัน `escapeHtml()` ป้องกันการรันโค้ด JavaScript แปลกปลอมในทุกหน้าจอพอร์ทัล
+4. **PBKDF2 Password Storage:** จัดเก็บรหัสผ่านผู้ใช้ด้วยการแฮชแบบ PBKDF2-HMAC-SHA256 (Salt 16 bytes, 600,000 rounds)
+5. **CORS Origin Whitelisting:** จำกัดการเรียกใช้ API ข้ามโดเมนเฉพาะ Origin ที่ได้รับอนุญาตเท่านั้น

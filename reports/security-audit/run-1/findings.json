@@ -1,0 +1,410 @@
+[
+  {
+    "verdict": "confirmed",
+    "fingerprint": "sdu-sec-001-sensitive-file-exposure",
+    "title": "Arbitrary Sensitive File Disclosure via SimpleHTTPRequestHandler Root Directory",
+    "description": "The backend HTTP server initializes SDUInventoryRequestHandler with directory=PROJECT_ROOT. Because SimpleHTTPRequestHandler recursively serves files directly from this directory without filtering hidden dotfiles or sensitive configuration, unauthenticated remote clients can download secrets including .env (containing database credentials and STAFF_AUTH_SECRET), .git/config, docker-compose.yml, and server source code.",
+    "root_cause": "backend/server.py:975 configures SimpleHTTPRequestHandler with directory=PROJECT_ROOT without overriding translate_path or filtering forbidden file extensions and directory paths.",
+    "intended_behavior": "The HTTP server must restrict file serving to safe public web assets (HTML, CSS, JS, images) and strictly block access to hidden files (.env, .git), source directories (backend/, tests/, scripts/), and database scripts.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "backend/server.py",
+        "line": 975,
+        "scope": "SDUInventoryRequestHandler.__init__",
+        "description": "Initializes SimpleHTTPRequestHandler with directory pointing to the repository root directory."
+      },
+      {
+        "kind": "propagation",
+        "file": "backend/server.py",
+        "line": 984,
+        "scope": "SDUInventoryRequestHandler.do_GET",
+        "description": "Delegates non-API GET requests directly to super().do_GET() without path or extension filtering."
+      },
+      {
+        "kind": "sink",
+        "file": "http/server.py",
+        "line": 715,
+        "scope": "SimpleHTTPRequestHandler.send_head",
+        "description": "Translates requested URI to absolute filesystem path and opens the target file for streaming to client."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "backend/server.py",
+        "line": 975,
+        "description": "def __init__(self, *args, **kwargs): super().__init__(*args, directory=PROJECT_ROOT, **kwargs)"
+      },
+      {
+        "file": "backend/server.py",
+        "line": 984,
+        "description": "def do_GET(self): if self.path.startswith('/api'): ... else: super().do_GET()"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "network_routing",
+        "description": "HTTP server is running and accessible over TCP port 8080."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Unauthenticated remote network client",
+      "payloads": [
+        "GET /.env HTTP/1.1",
+        "GET /.git/config HTTP/1.1"
+      ],
+      "instructions": [
+        "Send an HTTP GET request to http://localhost:8080/.env",
+        "Send an HTTP GET request to http://localhost:8080/.git/config"
+      ],
+      "observed_result": "Server returns HTTP 200 OK with the contents of .env including DB_PASSWORD and STAFF_AUTH_SECRET."
+    },
+    "remediation": {
+      "strategy": "Override translate_path in SDUInventoryRequestHandler or validate request paths in do_GET to reject requests for hidden dotfiles, parent directories, and sensitive system files with HTTP 404/403.",
+      "code_changes": [
+        {
+          "file_name": "backend/server.py",
+          "fixed_code": "def translate_path(self, path):\n    clean_path = path.split('?', 1)[0].split('#', 1)[0]\n    parts = [p for p in clean_path.split('/') if p]\n    if any(p.startswith('.') for p in parts) or any(p in ('backend', 'tests', 'scripts', '.venv', 'data') for p in parts):\n        return None\n    return super().translate_path(path)"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "critical",
+        "reason": "Direct unauthenticated HTTP GET requests reliably retrieve sensitive files without any special privileges or prerequisite conditions."
+      },
+      "impact": {
+        "score": "critical",
+        "reason": "Exposure of database credentials and cryptographic secrets allows full administrative compromise of PostgreSQL database and application state."
+      },
+      "overall_severity": "critical"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Live HTTP GET requests to /.env returned HTTP 200 with sensitive environment secrets."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "sdu-sec-002-missing-api-authentication",
+    "title": "Missing Server-Side Authentication and Authorization on Administrative API Endpoints",
+    "description": "Administrative actions executed via POST /api (including approveRequisition, completeRequisition, rejectRequisition, restockItem, adjustStock, saveUser, deleteUser, addDepartment, saveItem, deleteItem) are not gated by server-side authentication tokens or authorization checks. Authentication is only verified client-side in staff.html via sessionStorage.",
+    "root_cause": "backend/server.py:1044-1080 dispatches POST action strings directly to database mutation handlers without verifying a valid session token, authorization header, or secret signature.",
+    "intended_behavior": "All administrative mutation endpoints must require and verify a valid cryptographic session token or HMAC Bearer token generated upon successful staff authentication before processing privileged operations.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "backend/server.py",
+        "line": 1020,
+        "scope": "SDUInventoryRequestHandler.do_POST",
+        "description": "Receives JSON payload from unauthenticated caller at /api."
+      },
+      {
+        "kind": "propagation",
+        "file": "backend/server.py",
+        "line": 1044,
+        "scope": "SDUInventoryRequestHandler.do_POST",
+        "description": "Maps action string to administrative handler functions without checking caller authentication state."
+      },
+      {
+        "kind": "sink",
+        "file": "backend/server.py",
+        "line": 440,
+        "scope": "SDUInventoryRequestHandler.handle_approve_requisition",
+        "description": "Executes SQL UPDATE and inserts stock transaction records on behalf of an unverified caller."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "backend/server.py",
+        "line": 1044,
+        "description": "actions = {'approveRequisition': self.handle_approve_requisition, 'adjustStock': self.handle_adjust_stock, 'saveUser': self.handle_save_user, ...} handler = actions.get(action)"
+      },
+      {
+        "file": "staff.html",
+        "line": 1584,
+        "description": "if (sessionStorage.getItem('staff_auth') !== 'true') { showLoginModal(); }"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "network_routing",
+        "description": "Network access to POST /api endpoint on port 8080."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Unauthenticated network client",
+      "payloads": [
+        "{\"action\": \"adjustStock\", \"id\": 1, \"new_quantity\": 999, \"reason\": \"unauthenticated_test\"}"
+      ],
+      "instructions": [
+        "Send POST /api with Content-Type: application/json containing an administrative action and no authorization credentials."
+      ],
+      "observed_result": "The server executes the request and returns success status with updated stock quantity."
+    },
+    "remediation": {
+      "strategy": "Implement server-side authentication verification in do_POST for all administrative actions, requiring an Authorization Bearer token signed with STAFF_AUTH_SECRET.",
+      "code_changes": [
+        {
+          "file_name": "backend/server.py",
+          "fixed_code": "STAFF_ACTIONS = {'approveRequisition', 'completeRequisition', 'rejectRequisition', 'restockItem', 'adjustStock', 'saveUser', 'deleteUser', 'addDepartment', 'saveItem', 'deleteItem'}\nif action in STAFF_ACTIONS:\n    auth_header = self.headers.get('Authorization', '')\n    if not self.verify_staff_auth(auth_header):\n        self.send_json_response({'status': 'error', 'message': 'Unauthorized'}, status_code=401)\n        return"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "high",
+        "reason": "Administrative endpoints can be invoked by anyone with network reachability using standard HTTP clients."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Allows unauthorized manipulation of stock inventory, approving or rejecting requisitions, and tampering with user accounts."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Code review confirms absence of authentication middleware in do_POST dispatch table."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "sdu-sec-003-stored-xss-portals",
+    "title": "Stored Cross-Site Scripting (XSS) via Unsanitized Requisition and User Attributes",
+    "description": "Requisition attributes (such as requester, dept, purpose, and reject_reason) and item names are inserted directly into DOM innerHTML templates in staff.html and index.html without HTML entity escaping. An attacker submitting a requisition with HTML tags can execute arbitrary JavaScript in the context of staff members viewing the requisition queue.",
+    "root_cause": "staff.html:1081-1083 interpolates user-controlled string properties directly into innerHTML string literals without calling an HTML sanitizer or escape function.",
+    "intended_behavior": "All dynamic user-controlled strings rendered into the DOM must be properly escaped using an HTML entity encoder (e.g. replacing &, <, >, \", ' with named entities) or inserted via textContent.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "index.html",
+        "line": 1257,
+        "scope": "submitRequisition",
+        "description": "Collects requester, dept, and purpose values from form inputs and sends to /api."
+      },
+      {
+        "kind": "propagation",
+        "file": "backend/server.py",
+        "line": 382,
+        "scope": "SDUInventoryRequestHandler.handle_create_requisition",
+        "description": "Stores unsanitized text strings into requisitions database table."
+      },
+      {
+        "kind": "sink",
+        "file": "staff.html",
+        "line": 1081,
+        "scope": "renderRequisitions",
+        "description": "Interpolates raw req.requester and req.purpose values directly into card.innerHTML."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "staff.html",
+        "line": 1081,
+        "description": "<div>${vIcons.user} <strong>ผู้ขอเบิก:</strong> ${req.requester}</div>"
+      },
+      {
+        "file": "staff.html",
+        "line": 1083,
+        "description": "<div style=\"grid-column: 1 / -1;\">${vIcons.fileText} <strong>วัตถุประสงค์:</strong> ${req.purpose}</div>"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "user_interaction",
+        "description": "A staff administrator views pending requisitions on staff.html."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Authenticated or unauthenticated requisition submitter",
+      "payloads": [
+        "<img src=x onerror=alert(document.domain)>",
+        "<svg onload=fetch('/api',{method:'POST',body:JSON.stringify({action:'adjustStock',id:1,new_quantity:0})})>"
+      ],
+      "instructions": [
+        "Submit a requisition with purpose containing '<img src=x onerror=alert(1)>'",
+        "Open staff.html and observe the requisition list rendering."
+      ],
+      "observed_result": "Browser interprets raw HTML tags from requisition purpose and executes inline JavaScript in staff portal origin."
+    },
+    "remediation": {
+      "strategy": "Define an escapeHtml helper function and wrap all untrusted requisition and inventory field interpolations across staff.html and index.html.",
+      "code_changes": [
+        {
+          "file_name": "staff.html",
+          "fixed_code": "function escapeHtml(str) {\n    if (str === null || str === undefined) return '';\n    return String(str).replace(/[&<>'\"/]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', \"'\": '&#39;', '\"': '&quot;', '/': '&#x2F;' }[tag] || tag));\n}"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requires submitting a requisition containing payload and an administrator viewing the dashboard."
+      },
+      "impact": {
+        "score": "high",
+        "reason": "Allows execution of arbitrary JavaScript within staff portal context, enabling session hijacking and unauthorized API invocations."
+      },
+      "overall_severity": "high"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Inspection of staff.html template strings confirms direct interpolation of user inputs into innerHTML."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "sdu-sec-004-plaintext-password-storage",
+    "title": "Plaintext Password Storage and Insecure Hardcoded Fallback Credentials",
+    "description": "User account passwords in the users table are stored and compared in plaintext. Additionally, when creating a new user or updating an account without specifying a password, the system falls back to a hardcoded default password 'sdu1234'.",
+    "root_cause": "backend/server.py:734 sets password = data.get('password') or 'sdu1234' without hashing, and backend/server.py:795 compares password != valid_pass using plaintext string equality.",
+    "intended_behavior": "User passwords must be salted and hashed using a modern one-way key derivation function (e.g. PBKDF2-HMAC-SHA256, bcrypt, or Argon2) prior to storage, and login comparisons must use constant-time cryptographic hash verification.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "backend/server.py",
+        "line": 724,
+        "scope": "SDUInventoryRequestHandler.handle_save_user",
+        "description": "Receives password string from user creation request."
+      },
+      {
+        "kind": "propagation",
+        "file": "backend/server.py",
+        "line": 734,
+        "scope": "SDUInventoryRequestHandler.handle_save_user",
+        "description": "Assigns plaintext password with fallback to 'sdu1234' and persists directly into PostgreSQL users table."
+      },
+      {
+        "kind": "sink",
+        "file": "backend/server.py",
+        "line": 795,
+        "scope": "SDUInventoryRequestHandler.handle_login_user",
+        "description": "Validates user authentication via direct plaintext comparison if password != valid_pass."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "backend/server.py",
+        "line": 734,
+        "description": "password = data.get('password') or 'sdu1234'"
+      },
+      {
+        "file": "backend/server.py",
+        "line": 795,
+        "description": "if password != valid_pass: self.send_json_response({'status': 'error', 'message': 'รหัสผ่านไม่ถูกต้อง'}, status_code=401)"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "data_state",
+        "description": "Users exist in PostgreSQL users table."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Actor with database read access or database backup file",
+      "payloads": [
+        "SELECT id, username, password FROM users;"
+      ],
+      "instructions": [
+        "Inspect the password column of the users table in database sdu_inventory."
+      ],
+      "observed_result": "Password values appear in cleartext without any hashing or cryptographic protection."
+    },
+    "remediation": {
+      "strategy": "Hash user passwords using hashlib.pbkdf2_hmac with SHA-256 and a random 16-byte salt, storing salt and hash in the database, and verify via hmac.compare_digest.",
+      "code_changes": [
+        {
+          "file_name": "backend/server.py",
+          "fixed_code": "def hash_password(password: str) -> str:\n    salt = os.urandom(16)\n    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 600000)\n    return f\"{salt.hex()}:{dk.hex()}\""
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "medium",
+        "reason": "Requires read access to database, backup archives, or SQL leakage."
+      },
+      "impact": {
+        "score": "medium",
+        "reason": "Exposes cleartext credentials of all system users, enabling account takeover and credential stuffing."
+      },
+      "overall_severity": "medium"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Verified directly in backend/server.py:734 and schema_postgres.sql."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "sdu-sec-005-permissive-cors",
+    "title": "Permissive Wildcard Cross-Origin Resource Sharing (CORS) Policy",
+    "description": "The backend server includes Access-Control-Allow-Origin: * on all HTTP responses, allowing any third-party origin in a client browser to interact with local/intranet API endpoints.",
+    "root_cause": "backend/server.py:990 sets Access-Control-Allow-Origin to wildcard * unconditionally.",
+    "intended_behavior": "In production, CORS headers should either restrict allowed origins to an explicit trusted allowlist or be omitted when requests originate from the same host.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "backend/server.py",
+        "line": 989,
+        "scope": "SDUInventoryRequestHandler.send_cors_headers",
+        "description": "Invoked during request handling to append cross-origin headers."
+      },
+      {
+        "kind": "sink",
+        "file": "backend/server.py",
+        "line": 990,
+        "scope": "SDUInventoryRequestHandler.send_cors_headers",
+        "description": "Writes header Access-Control-Allow-Origin: * to client response."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "backend/server.py",
+        "line": 990,
+        "description": "self.send_header('Access-Control-Allow-Origin', '*')"
+      }
+    ],
+    "conditions": [
+      {
+        "kind": "user_interaction",
+        "description": "An intranet user visits an attacker-controlled website on the same workstation or browser session."
+      }
+    ],
+    "execution": {
+      "attacker_perspective": "Third-party website visited by intranet user",
+      "payloads": [
+        "fetch('http://localhost:8080/api', {method: 'POST', body: JSON.stringify({action: 'getInventory'})})"
+      ],
+      "instructions": [
+        "Initiate a cross-origin XMLHttpRequest or fetch from an external domain to http://localhost:8080/api."
+      ],
+      "observed_result": "Browser permits the cross-origin response reading because of Access-Control-Allow-Origin: *."
+    },
+    "remediation": {
+      "strategy": "Restrict CORS origin header to configured domains or remove wildcard in production.",
+      "code_changes": [
+        {
+          "file_name": "backend/server.py",
+          "fixed_code": "allowed_origin = os.environ.get('ALLOWED_ORIGIN', 'http://localhost:8080')\nself.send_header('Access-Control-Allow-Origin', allowed_origin)"
+        }
+      ]
+    },
+    "severity": {
+      "likelihood": {
+        "score": "low",
+        "reason": "Requires an intranet user to open an untrusted webpage while having active network reachability to the server."
+      },
+      "impact": {
+        "score": "low",
+        "reason": "Allows unauthorized cross-origin reading of inventory balances and requisition details."
+      },
+      "overall_severity": "low"
+    },
+    "confidence": {
+      "score": "high",
+      "reason": "Verified directly in backend/server.py:990."
+    }
+  }
+]
+

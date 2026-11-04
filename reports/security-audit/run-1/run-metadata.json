@@ -1,0 +1,27 @@
+{
+  "run_id": "run-1",
+  "repo": "stock-order-sdu",
+  "target": "Digital Stock & Requisition System for Suan Dusit University",
+  "source_ref": "HEAD",
+  "profile": "standard",
+  "scope_paths": [
+    "backend/server.py",
+    "index.html",
+    "staff.html",
+    "portal.html",
+    "schema_postgres.sql",
+    ".env",
+    "docker-compose.yml"
+  ],
+  "budget": null,
+  "execution_policy": "sandboxed-source-and-local-only",
+  "selected_companion_files": [
+    "docs/API_SPEC.md",
+    "docs/SCHEMA.md",
+    "docs/system_requirements_specification.md"
+  ],
+  "prior_run_paths": [],
+  "shared_file_owners": {},
+  "run_status": "complete"
+}
+

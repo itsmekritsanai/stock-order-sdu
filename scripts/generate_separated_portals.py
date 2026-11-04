@@ -2897,13 +2897,11 @@ staff_html = f'''<!DOCTYPE html>
               </div>
 
               <div class="sig-box">
-                <div id="pdfReceiverSigArea">
-                  <!-- Signature will be placed here -->
-                </div>
+                <div style="height: 50px;"></div>
                 <div class="sig-line"></div>
                 <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
                 <div style="font-size: 0.75rem; color: #666;">ผู้รับพัสดุ</div>
-                <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">21 ต.ค. 2569</div>
+                <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
               </div>
             </div>
           </div>
@@ -2912,39 +2910,7 @@ staff_html = f'''<!DOCTYPE html>
     </main>
   </div>
 
-  <!-- MODAL: E-SIGNATURE PAD -->
-  <div class="modal-overlay" id="signatureModal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>{svg_icons['pen_tool']} ลงนามรับมอบพัสดุ (E-Signature)</h3>
-        <button class="close-btn" onclick="closeSignatureModal()">{svg_icons['x']}</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 0.875rem; color: var(--neutral-600);">
-          ผู้รับของ: <strong id="sigModalRequesterName" style="color: var(--neutral-900);">นางสาววาสนา จันทร์จ่าย</strong> 
-          (<span id="sigModalDocNo">REQ-256910-0042</span>)
-        </p>
 
-        <div class="signature-pad-container">
-          <canvas id="signaturePad"></canvas>
-          <div class="signature-placeholder" id="sigPlaceholder">ใช้นิ้วหรือเมาส์เซ็นลายมือชื่อที่นี่</div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-size: 0.75rem; color: var(--neutral-400);">ระบบจะนำลายเซ็นไปประทับในเอกสารใบเบิก PDF ทันที</span>
-          <button class="btn btn-outline" style="font-size: 0.75rem; padding: 4px 8px;" onclick="clearSignature()">
-            ล้างลายเซ็น
-          </button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeSignatureModal()">ยกเลิก</button>
-        <button class="btn btn-success" onclick="confirmSignatureAndComplete()">
-          {svg_icons['check']} ยืนยันจ่ายของและบันทึกลายเซ็น
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
@@ -3314,14 +3280,14 @@ staff_html = f'''<!DOCTYPE html>
                 <button class="btn btn-outline" onclick="previewDocInPdf('${{req.id}}')">
                   ${{vIcons.eye}} ดูตัวอย่างใบเบิก PDF
                 </button>
-                <button class="btn btn-success" onclick="openSignatureModal('${{req.id}}')">
-                  ${{vIcons.pen}} จ่ายของและเซ็นชื่อรับ (E-Signature)
+                <button class="btn btn-success" onclick="confirmCompleteRequisition('${{req.id}}')">
+                  ${{vIcons.check}} จ่ายพัสดุเรียบร้อย
                 </button>
               ` : ''}}
 
               ${{req.status === 'COMPLETED' ? `
                 <button class="btn btn-outline" onclick="previewDocInPdf('${{req.id}}')">
-                  ${{vIcons.printer}} พิมพ์ใบเบิก PDF (มีลายเซ็นแล้ว)
+                  ${{vIcons.printer}} พิมพ์ใบเบิกทางการ (PDF)
                 </button>
               ` : ''}}
 
@@ -3473,92 +3439,33 @@ staff_html = f'''<!DOCTYPE html>
       }});
     }}
 
-    // E-Signature
-    let canvas, ctx, isDrawing = false, hasDrawnSignature = false;
-    function initSignaturePad() {{
-      canvas = document.getElementById('signaturePad');
-      ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * 2;
-      canvas.height = rect.height * 2;
-      ctx.scale(2, 2);
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      function getPos(e) {{
-        const r = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {{ x: clientX - r.left, y: clientY - r.top }};
-      }}
-      function startDraw(e) {{
-        e.preventDefault(); isDrawing = true; hasDrawnSignature = true;
-        const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
-        document.getElementById('sigPlaceholder').style.display = 'none';
-      }}
-      function draw(e) {{
-        if (!isDrawing) return; e.preventDefault();
-        const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke();
-      }}
-      function stopDraw(e) {{ if (isDrawing) {{ isDrawing = false; ctx.closePath(); }} }}
-
-      canvas.onmousedown = startDraw;
-      canvas.onmousemove = draw;
-      canvas.onmouseup = stopDraw;
-      canvas.onmouseleave = stopDraw;
-      canvas.ontouchstart = startDraw;
-      canvas.ontouchmove = draw;
-      canvas.ontouchend = stopDraw;
-    }}
-
-    function openSignatureModal(docNo) {{
+    // Complete Requisition (No Signature required)
+    function confirmCompleteRequisition(docNo) {{
       const reqs = getReqsDB();
-      currentActiveReqForSig = reqs.find(r => r.id === docNo);
-      if (!currentActiveReqForSig) return;
+      const req = reqs.find(r => r.id === docNo);
+      if (!req) return;
 
-      document.getElementById('sigModalRequesterName').innerText = currentActiveReqForSig.requester;
-      document.getElementById('sigModalDocNo').innerText = currentActiveReqForSig.id;
-      document.getElementById('signatureModal').classList.add('open');
+      Swal.fire({{
+        title: 'ยืนยันการจ่ายพัสดุ?',
+        html: `
+          <div style="font-size: 0.95rem; color: #475569; margin: 0.5rem 0; text-align: left;">
+            <div>เลขที่คำขอ: <strong style="color: #0f172a;">${{docNo}}</strong></div>
+            <div>ผู้ขอเบิก: <strong style="color: #0f172a;">${{req.requester}}</strong> (${{req.dept}})</div>
+            <div style="margin-top: 8px; color: #16a34a; font-weight: 600;">
+              ระบบจะทำการตัดยอดสต๊อกคงคลังจริงทันที
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#059669',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ยืนยันจ่ายพัสดุ',
+        cancelButtonText: 'ยกเลิก'
+      }}).then((res) => {{
+        if (!res.isConfirmed) return;
 
-      setTimeout(() => {{
-        initSignaturePad();
-        clearSignature();
-      }}, 100);
-    }}
-
-    function closeSignatureModal() {{
-      document.getElementById('signatureModal').classList.remove('open');
-    }}
-
-    function clearSignature() {{
-      hasDrawnSignature = false;
-      if (ctx && canvas) {{
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        document.getElementById('sigPlaceholder').style.display = 'block';
-      }}
-    }}
-
-    function confirmSignatureAndComplete() {{
-      if (!currentActiveReqForSig) return;
-      if (!hasDrawnSignature) {{
-        Swal.fire({{
-          icon: 'warning',
-          title: 'กรุณาลงลายมือชื่อ',
-          text: 'กรุณาให้ผู้รับพัสดุเซ็นชื่อบนกรอบกระดานดิจิทัลก่อนกดยืนยันการจ่ายของครับ',
-          confirmButtonColor: '#1e40af',
-          confirmButtonText: 'ตกลง'
-        }});
-        return;
-      }}
-      const sigDataUrl = canvas.toDataURL('image/png');
-      const reqs = getReqsDB();
-      const items = getItemsDB();
-
-      const req = reqs.find(r => r.id === currentActiveReqForSig.id);
-      if (req) {{
-        req.signature = sigDataUrl;
+        const items = getItemsDB();
         req.status = 'COMPLETED';
         req.updated_at = new Date().toISOString();
 
@@ -3568,34 +3475,28 @@ staff_html = f'''<!DOCTYPE html>
           if (itm) {{
             const deductQty = i.approvedPieces ?? i.totalPieces;
             itm.on_hand_pieces = Math.max(0, itm.on_hand_pieces - deductQty);
-            itm.reserved_pieces = Math.max(0, itm.reserved_pieces - deductQty);
+            itm.reserved_pieces = Math.max(0, (itm.reserved_pieces || 0) - deductQty);
           }}
         }});
 
         saveReqsDB(reqs);
         saveItemsDB(items);
         postToMySQLAPI('completeRequisition', {{
-          docNo: req.id,
-          signature: sigDataUrl
+          docNo: req.id
         }});
-      }}
 
-      closeSignatureModal();
-      renderStaffRequisitions('APPROVED');
-      renderInventoryTable();
+        renderStaffRequisitions('APPROVED');
+        renderInventoryTable();
 
-      Swal.fire({{
-        icon: 'success',
-        title: 'บันทึกการจ่ายของและเซ็นรับสำเร็จ!',
-        html: `
-          <div style="margin: 0.5rem 0; color: #475569; font-size: 0.95rem;">
-            ระบบได้ตัดยอดสต๊อกคงคลังและประทับตราลายเซ็นดิจิทัลลงในเอกสารเรียบร้อยแล้ว
-          </div>
-        `,
-        confirmButtonColor: '#059669',
-        confirmButtonText: 'ดูใบเบิก PDF (พร้อมลายเซ็น)'
-      }}).then(() => {{
-        previewDocInPdf(currentActiveReqForSig.id);
+        Swal.fire({{
+          icon: 'success',
+          title: 'จ่ายพัสดุเรียบร้อยแล้ว',
+          text: `คำขอ ${{docNo}} ดำเนินการตัดยอดสต๊อกคงคลังจริงเรียบร้อยแล้ว`,
+          confirmButtonColor: '#059669',
+          confirmButtonText: 'ดูใบเบิกทางการ (PDF)'
+        }}).then(() => {{
+          previewDocInPdf(req.id);
+        }});
       }});
     }}
 
@@ -3672,27 +3573,56 @@ staff_html = f'''<!DOCTYPE html>
       }});
     }}
 
-    function openStockAdjustModal() {{
+    function openStockAdjustModal(preselectedItemId = null) {{
       const items = getItemsDB();
-      const options = items.map(i => `<option value="${{i.id}}">${{i.name}} (คงคลังปัจจุบัน: ${{i.on_hand_pieces.toLocaleString()}} ${{i.unit_piece_name}})</option>`).join('');
 
       Swal.fire({{
         title: 'ปรับยอดสต๊อกจริง (Stock Adjustment)',
         html: `
-          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เลือกรายการพัสดุ:</label>
-              <select id="swalAdjItem" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
-                ${{options}}
-              </select>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">
+                เลือกรายการพัสดุ: *
+              </label>
+              <div style="position: relative;">
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="text" id="swalAdjSearchInput" class="swal2-input" 
+                         placeholder="🔍 พิมพ์ชื่อพัสดุเพื่อค้นหา..." 
+                         autocomplete="off"
+                         style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                  <button type="button" id="swalAdjToggleBtn" 
+                          style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center;">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+                <input type="hidden" id="swalAdjItem" value="">
+
+                <!-- Dropdown list -->
+                <div id="swalAdjDropdownList" 
+                     style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 220px; overflow-y: auto; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); z-index: 9999; display: none;">
+                </div>
+              </div>
+
+              <!-- Selected Item Info Badge -->
+              <div id="swalAdjItemBadge" 
+                   style="margin-top: 6px; font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 ยอดคงคลังปัจจุบัน: <strong>0</strong> ชิ้น</span>
+                <span style="color: #64748b;">หมวด: -</span>
+              </div>
             </div>
+
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">ยอดคงคลังจริงที่ตรวจนับได้ (หน่วยย่อย):</label>
-              <input type="number" id="swalAdjNewQty" min="0" placeholder="ระบุยอดคงคลังจริงจากการตรวจนับ" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span>ยอดคงคลังจริงที่ตรวจนับได้ (หน่วยย่อย): *</span>
+                <span id="swalAdjUnitBadge" style="font-size: 0.775rem; color: #475569; background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">หน่วยนับ: <strong id="swalAdjUnitLabel">ชิ้น</strong></span>
+              </label>
+              <input type="number" id="swalAdjNewQty" min="0" placeholder="ระบุยอดคงคลังจริงจากการตรวจนับ" class="swal2-input" 
+                     style="width: 100%; margin: 0; height: 42px; font-size: 1rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; padding: 0.5rem 0.75rem;">
             </div>
+
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เหตุผลในการปรับยอดสต๊อก *:</label>
-              <select id="swalAdjReason" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เหตุผลในการปรับยอดสต๊อก: *</label>
+              <select id="swalAdjReason" class="swal2-select" style="width: 100%; margin: 0; font-family: inherit; font-size: 0.9rem; padding: 0.55rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; background: white;">
                 <option value="ตรวจนับสต๊อกประจำงวดบัญชี">ตรวจนับสต๊อกประจำงวดบัญชี</option>
                 <option value="พัสดุชำรุด / เสื่อมสภาพ">พัสดุชำรุด / เสื่อมสภาพ</option>
                 <option value="พัสดุสูญหาย / คลาดเคลื่อน">พัสดุสูญหาย / คลาดเคลื่อน</option>
@@ -3706,11 +3636,141 @@ staff_html = f'''<!DOCTYPE html>
         cancelButtonColor: '#64748b',
         confirmButtonText: 'บันทึกการปรับยอด',
         cancelButtonText: 'ยกเลิก',
+        didOpen: () => {{
+          const searchInput = document.getElementById('swalAdjSearchInput');
+          const dropdownList = document.getElementById('swalAdjDropdownList');
+          const hiddenInput = document.getElementById('swalAdjItem');
+          const badgeEl = document.getElementById('swalAdjItemBadge');
+          const unitLabelEl = document.getElementById('swalAdjUnitLabel');
+          const toggleBtn = document.getElementById('swalAdjToggleBtn');
+
+          function renderList(query = '') {{
+            const cleanQuery = query.trim().toLowerCase();
+            const filtered = items.filter(i =>
+              !cleanQuery ||
+              (i.name && i.name.toLowerCase().includes(cleanQuery)) ||
+              (i.category && i.category.toLowerCase().includes(cleanQuery))
+            );
+
+            if (filtered.length === 0) {{
+              dropdownList.innerHTML = `
+                <div style="padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.875rem;">
+                  ไม่พบรายการพัสดุที่ตรงกับคำค้น "${{query}}"
+                </div>
+              `;
+              return;
+            }}
+
+            dropdownList.innerHTML = filtered.map(i => {{
+              const isSelected = Number(hiddenInput.value) === Number(i.id);
+              return `
+                <div class="swal-adj-item-row" data-id="${{i.id}}" style="
+                  padding: 8px 12px;
+                  cursor: pointer;
+                  border-bottom: 1px solid #f1f5f9;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  background: ${{isSelected ? '#eff6ff' : 'white'}};
+                  transition: background 0.15s;
+                ">
+                  <div style="text-align: left;">
+                    <div style="font-weight: 600; font-size: 0.875rem; color: ${{isSelected ? '#1e40af' : '#1e293b'}};">${{i.name}}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">${{i.category || 'พัสดุทั่วไป'}}</div>
+                  </div>
+                  <span style="font-size: 0.75rem; background: ${{i.on_hand_pieces > 0 ? '#dcfce7' : '#fee2e2'}}; color: ${{i.on_hand_pieces > 0 ? '#166534' : '#991b1b'}}; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; margin-left: 8px;">
+                    ${{Number(i.on_hand_pieces).toLocaleString()}} ${{i.unit_piece_name}}
+                  </span>
+                </div>
+              `;
+            }}).join('');
+
+            dropdownList.querySelectorAll('.swal-adj-item-row').forEach(row => {{
+              row.addEventListener('click', () => {{
+                const id = parseInt(row.getAttribute('data-id'), 10);
+                selectItem(id);
+              }});
+              row.addEventListener('mouseenter', () => {{
+                row.style.background = '#f8fafc';
+              }});
+              row.addEventListener('mouseleave', () => {{
+                const id = parseInt(row.getAttribute('data-id'), 10);
+                row.style.background = (Number(hiddenInput.value) === id) ? '#eff6ff' : 'white';
+              }});
+            }});
+          }}
+
+          function selectItem(id) {{
+            const itm = items.find(i => Number(i.id) === Number(id));
+            if (!itm) return;
+            hiddenInput.value = itm.id;
+            searchInput.value = itm.name;
+            if (badgeEl) {{
+              badgeEl.innerHTML = `
+                <span>📦 ยอดคงคลังปัจจุบัน: <strong style="color: #1e40af;">${{Number(itm.on_hand_pieces).toLocaleString()}}</strong> ${{itm.unit_piece_name}}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">หมวด: ${{itm.category || 'ทั่วไป'}}</span>
+              `;
+            }}
+            if (unitLabelEl) {{
+              unitLabelEl.innerText = itm.unit_piece_name;
+            }}
+            const qtyInput = document.getElementById('swalAdjNewQty');
+            if (qtyInput) {{
+              qtyInput.placeholder = `ระบุยอดใหม่ (ปัจจุบัน: ${{itm.on_hand_pieces.toLocaleString()}} ${{itm.unit_piece_name}})`;
+            }}
+            closeDropdown();
+          }}
+
+          function openDropdown() {{
+            dropdownList.style.display = 'block';
+            renderList(searchInput.value);
+          }}
+
+          function closeDropdown() {{
+            dropdownList.style.display = 'none';
+          }}
+
+          searchInput.addEventListener('focus', () => {{
+            openDropdown();
+          }});
+
+          searchInput.addEventListener('input', (e) => {{
+            dropdownList.style.display = 'block';
+            renderList(e.target.value);
+          }});
+
+          if (toggleBtn) {{
+            toggleBtn.addEventListener('click', (e) => {{
+              e.stopPropagation();
+              if (dropdownList.style.display === 'block') {{
+                closeDropdown();
+              }} else {{
+                searchInput.focus();
+                openDropdown();
+              }}
+            }});
+          }}
+
+          document.addEventListener('click', (e) => {{
+            if (!dropdownList.contains(e.target) && e.target !== searchInput && e.target !== toggleBtn && !toggleBtn.contains(e.target)) {{
+              closeDropdown();
+            }}
+          }});
+
+          const defaultItem = (preselectedItemId !== null ? items.find(i => Number(i.id) === Number(preselectedItemId)) : null) || items[0];
+          if (defaultItem) {{
+            selectItem(defaultItem.id);
+          }}
+        }},
         preConfirm: () => {{
           const itemId = parseInt(document.getElementById('swalAdjItem').value, 10);
           const rawVal = document.getElementById('swalAdjNewQty').value;
           const newQty = parseInt(rawVal, 10);
           const reason = document.getElementById('swalAdjReason').value;
+          if (!itemId) {{
+            Swal.showValidationMessage('กรุณาเลือกรายการพัสดุที่ต้องการปรับยอดครับ');
+            return false;
+          }}
           if (rawVal === '' || isNaN(newQty) || newQty < 0) {{
             Swal.showValidationMessage('กรุณาระบุยอดคงคลังจริงที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป) ครับ');
             return false;
@@ -4144,8 +4204,8 @@ staff_html = f'''<!DOCTYPE html>
     }}
 
     function openUserModal(userId = null) {{
-      const users = getUsersDB();
-      const existing = userId !== null ? users.find(u => Number(u.id) === Number(userId)) : null;
+      const currentUsers = getUsersDB();
+      const existing = userId !== null ? currentUsers.find(u => Number(u.id) === Number(userId)) : null;
       const deptNames = getAllDeptNames();
 
       const deptOptionsHtml = deptNames.map(d =>

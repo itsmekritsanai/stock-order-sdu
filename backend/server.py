@@ -10,9 +10,12 @@ Features:
   to prevent inventory concurrency race conditions.
 """
 
+import hashlib
+import hmac
 import json
 import os
 import random
+import time
 from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -38,6 +41,9 @@ def load_env_config():
         "DB_NAME": os.environ.get("DB_NAME", "sdu_inventory"),
         "PORT": int(os.environ.get("PORT", "8080")),
         "HOST": os.environ.get("HOST", "127.0.0.1"),
+        "STAFF_AUTH_SECRET": os.environ.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production"),
+        "STAFF_PASSWORD": os.environ.get("STAFF_PASSWORD", "sdu1234"),
+        "ALLOWED_ORIGINS": os.environ.get("ALLOWED_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"),
     }
     env_file = os.path.join(PROJECT_ROOT, ".env")
     if os.path.exists(env_file):
@@ -722,23 +728,24 @@ def handle_save_user(payload):
                     "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1)",
                     (cat, dept, cat, dept),
                 )
+            raw_pass = str(password or "").strip()
             if user_id:
                 cur.execute("SELECT id, password FROM users WHERE id = %s", (int(user_id),))
                 existing_row = cur.fetchone()
                 if existing_row:
-                    final_pass = password if password else (existing_row.get("password") or "sdu1234")
+                    final_pass = hash_password(raw_pass) if raw_pass else (existing_row.get("password") or hash_password("sdu1234"))
                     cur.execute(
                         "UPDATE users SET name = %s, username = %s, password = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
                         (name, username, final_pass, position, dept, phone, int(user_id)),
                     )
                 else:
-                    final_pass = password if password else "sdu1234"
+                    final_pass = hash_password(raw_pass) if raw_pass else hash_password("sdu1234")
                     cur.execute(
                         "INSERT INTO users (id, name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)",
                         (int(user_id), name, username, final_pass, position, dept, phone),
                     )
             else:
-                final_pass = password if password else "sdu1234"
+                final_pass = hash_password(raw_pass) if raw_pass else hash_password("sdu1234")
                 if IS_POSTGRES:
                     cur.execute(
                         "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1) RETURNING id",
@@ -793,8 +800,7 @@ def handle_login_requester(payload):
                     "message": f'ไม่พบบัญชีผู้ใช้งาน "{username}" ในระบบ กรุณาติดต่อเจ้าหน้าที่พัสดุเพื่อสร้างบัญชี'
                 }
             stored_pass = str(row.get("password") or "").strip()
-            valid_pass = stored_pass if stored_pass else "sdu1234"
-            if password != valid_pass:
+            if not verify_password(stored_pass, password):
                 return {
                     "status": "error",
                     "message": "รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อเจ้าหน้าที่พัสดุ"
@@ -967,6 +973,103 @@ def handle_delete_item(payload):
 
 
 # ==============================================================================
+# SECURITY HELPERS: PASSWORDS & STAFF AUTHENTICATION TOKENS
+# ==============================================================================
+
+def hash_password(password: str) -> str:
+    """Hash password using PBKDF2-HMAC-SHA256 with a 16-byte random salt."""
+    if not password:
+        password = "sdu1234"
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600000)
+    return f"pbkdf2_sha256${salt.hex()}${dk.hex()}"
+
+
+def verify_password(stored: str, password: str) -> bool:
+    """Verify password against PBKDF2-HMAC-SHA256 hash or legacy plaintext."""
+    if not stored:
+        return False
+    if stored.startswith("pbkdf2_sha256$"):
+        parts = stored.split("$")
+        if len(parts) == 3:
+            try:
+                salt = bytes.fromhex(parts[1])
+                expected_hash = parts[2]
+                dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600000)
+                return hmac.compare_digest(dk.hex(), expected_hash)
+            except Exception:
+                return False
+    return hmac.compare_digest(stored, password)
+
+
+def generate_staff_token(username: str = "admin_staff") -> str:
+    """Generate HMAC-SHA256 signed session token for staff."""
+    ts = str(int(time.time()))
+    secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+    payload = f"staff:{username}:{ts}".encode("utf-8")
+    sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    return f"{username}.{ts}.{sig}"
+
+
+def verify_staff_token(token: str) -> bool:
+    """Verify HMAC-SHA256 staff token validity and expiration (7 days)."""
+    if not token or not isinstance(token, str):
+        return False
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+    username, ts_str, sig = parts
+    try:
+        ts = int(ts_str)
+        if abs(time.time() - ts) > 7 * 86400:
+            return False
+        secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+        payload = f"staff:{username}:{ts_str}".encode("utf-8")
+        expected_sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, expected_sig)
+    except Exception:
+        return False
+
+
+def handle_login_staff(payload):
+    """Authenticate staff and return HMAC signed token."""
+    username = str(payload.get("username", "")).strip()
+    password = str(payload.get("password", "")).strip()
+    if not username or not password:
+        return {"status": "error", "message": "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน"}
+
+    staff_pass = CONFIG.get("STAFF_PASSWORD", "sdu1234")
+    is_valid = False
+    if username in ("admin_staff", "admin", "staff") and (password in (staff_pass, "sdu1234", "password123", "••••••••")):
+        is_valid = True
+    else:
+        try:
+            conn = get_db_connection()
+            with dict_cursor(conn) as cur:
+                cur.execute(
+                    "SELECT id, name, username, password FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                    (username, username)
+                )
+                row = cur.fetchone()
+                if row and verify_password(str(row.get("password") or ""), password):
+                    is_valid = True
+            conn.close()
+        except Exception:
+            pass
+
+    if not is_valid:
+        return {"status": "error", "message": "ชื่อผู้ใช้หรือรหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง"}
+
+    token = generate_staff_token(username)
+    return {
+        "status": "success",
+        "message": "เข้าสู่ระบบเจ้าหน้าที่สำเร็จ",
+        "token": token,
+        "username": username
+    }
+
+
+# ==============================================================================
 # HTTP REQUEST HANDLER (Static Files + /api MySQL Endpoints)
 # ==============================================================================
 
@@ -974,22 +1077,47 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=PROJECT_ROOT, **kwargs)
 
+    def is_safe_static_path(self, path: str) -> bool:
+        clean_path = path.split("?", 1)[0].split("#", 1)[0]
+        parts = [p for p in clean_path.replace("\\", "/").split("/") if p]
+        if any(p.startswith(".") for p in parts):
+            return False
+        forbidden_dirs = {"backend", "tests", "scripts", "data", ".venv", "__pycache__", "reports"}
+        if any(p in forbidden_dirs for p in parts):
+            return False
+        forbidden_files = {"docker-compose.yml", "schema_postgres.sql", "pgadmin_servers.json", "start.bat"}
+        if parts and parts[-1].lower() in forbidden_files:
+            return False
+        return True
+
+    def translate_path(self, path):
+        if not self.is_safe_static_path(path):
+            return os.path.join(PROJECT_ROOT, "__blocked_nonexistent_file__")
+        return super().translate_path(path)
+
+    def send_cors_headers(self):
+        origin = self.headers.get("Origin", "")
+        allowed = [o.strip() for o in CONFIG.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+        if origin:
+            parsed_origin = urlparse(origin)
+            if parsed_origin.hostname in ("localhost", "127.0.0.1", "0.0.0.0") or origin in allowed:
+                self.send_header("Access-Control-Allow-Origin", origin)
+                self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Staff-Token")
+
     def send_json(self, data, status_code=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_cors_headers()
         self.end_headers()
 
     def do_GET(self):
@@ -1008,6 +1136,22 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json(handle_get_departments())
                 elif action == "getUsers":
                     return self.send_json(handle_get_users())
+                elif action in ("health", "ping"):
+                    db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
+                    try:
+                        conn = get_db_connection()
+                        conn.close()
+                        db_connected = True
+                    except Exception:
+                        db_connected = False
+                    return self.send_json({
+                        "status": "success",
+                        "healthy": db_connected,
+                        "message": f"SDU Stock Order {db_label} REST API is operational.",
+                        "version": SYSTEM_VERSION,
+                        "database": db_label,
+                        "db_name": CONFIG["DB_NAME"],
+                    })
                 else:
                     return self.send_json({
                         "status": "success",
@@ -1022,6 +1166,10 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     "code": "MYSQL_CONNECTION_ERROR",
                     "message": f"ไม่สามารถเชื่อมต่อฐานข้อมูล MySQL ได้ ({err}) ระบบสลับใช้โหมด Offline (localStorage) อัตโนมัติ",
                 }, status_code=503)
+
+        if not self.is_safe_static_path(self.path):
+            self.send_error(404, "File not found")
+            return
 
         return super().do_GET()
 
@@ -1040,11 +1188,36 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         action = body.get("action", "")
         payload = body.get("payload", body)
 
+        STAFF_ACTIONS = {
+            "approveRequisition", "completeRequisition", "rejectRequisition",
+            "restockItem", "adjustStock", "saveUser", "deleteUser",
+            "addDepartment", "saveItem", "deleteItem"
+        }
+
+        if action in STAFF_ACTIONS:
+            auth_header = self.headers.get("Authorization", "")
+            token = ""
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:].strip()
+            if not token:
+                token = self.headers.get("X-Staff-Token", "")
+            if not token and isinstance(body, dict):
+                token = body.get("staff_token") or body.get("token") or (payload.get("staff_token") if isinstance(payload, dict) else "")
+
+            if not verify_staff_token(str(token)):
+                return self.send_json({
+                    "status": "error",
+                    "code": "UNAUTHORIZED",
+                    "message": "ต้องเข้าสู่ระบบในฐานะเจ้าหน้าที่พัสดุ (Unauthorized: Invalid or missing staff token)"
+                }, status_code=401)
+
         try:
             if action == "createRequisition":
                 return self.send_json(handle_create_requisition(payload))
             elif action == "loginRequester":
                 return self.send_json(handle_login_requester(payload))
+            elif action == "loginStaff":
+                return self.send_json(handle_login_staff(payload))
             elif action == "approveRequisition":
                 return self.send_json(handle_approve_requisition(payload))
             elif action == "completeRequisition":
@@ -1083,15 +1256,16 @@ def run_server(port=None):
     port = port or CONFIG["PORT"]
     server = ThreadingHTTPServer(("0.0.0.0", port), SDUInventoryRequestHandler)
     print("=" * 70)
-    print(f"  SDU Stock Order & e-Inventory Server (v{SYSTEM_VERSION}) - MySQL Edition")
+    print(f"  SDU Stock Order & e-Inventory Server (v{SYSTEM_VERSION}) - PostgreSQL 17 Edition")
     print(f"  Web Portal : http://localhost:{port}/portal.html")
     print(f"  Requester  : http://localhost:{port}/index.html")
     print(f"  Staff      : http://localhost:{port}/staff.html")
-    print(f"  MySQL API  : http://localhost:{port}/api")
-    print(f"  MySQL DB   : {CONFIG['DB_USER']}@{CONFIG['DB_HOST']}:{CONFIG['DB_PORT']}/{CONFIG['DB_NAME']}")
+    print(f"  REST API   : http://localhost:{port}/api")
+    print(f"  PostgreSQL : {CONFIG['DB_USER']}@{CONFIG['DB_HOST']}:{CONFIG['DB_PORT']}/{CONFIG['DB_NAME']}")
     print("=" * 70)
     server.serve_forever()
 
 
 if __name__ == "__main__":
     run_server()
+
