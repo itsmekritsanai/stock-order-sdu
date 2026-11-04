@@ -298,25 +298,66 @@
 
     /* Clean Print Isolation - Only the A4 document prints */
     @media print {
-      body * {
-        visibility: hidden !important;
+      @page {
+        size: A4 portrait;
+        margin: 1.2cm 1.5cm;
       }
-      #printablePdf, #printablePdf * {
+      html, body {
+        width: 100% !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: white !important;
+      }
+      header, footer, nav, .nav-container, .cart-drawer, .btn, .close-btn,
+      .modal-header, .modal-footer, .pdf-preview-actions, #requesterLoginScreen,
+      .category-tabs, .search-box, .stat-grid, .order-history-box {
+        display: none !important;
+      }
+      .modal-overlay, #requisitionPdfModal {
+        position: static !important;
+        display: block !important;
+        inset: auto !important;
+        background: none !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        opacity: 1 !important;
         visibility: visible !important;
       }
+      .modal-card {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        transform: none !important;
+        overflow: visible !important;
+        background: white !important;
+      }
+      .modal-body {
+        padding: 0 !important;
+        background: white !important;
+        overflow: visible !important;
+        display: block !important;
+      }
       #printablePdf {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
+        position: static !important;
         width: 100% !important;
         max-width: 100% !important;
-        padding: 2cm 2.5cm !important;
+        padding: 0 !important;
         margin: 0 !important;
         box-shadow: none !important;
         background: white !important;
+        visibility: visible !important;
+        display: block !important;
       }
-      header, footer, .modal-header, .modal-footer, .pdf-preview-actions, .close-btn, .btn, .cart-drawer, .nav-container {
-        display: none !important;
+      #printablePdf * {
+        visibility: visible !important;
       }
     }
 
@@ -2121,7 +2162,159 @@
     }
 
     function printRequisitionPdf() {
-      window.print();
+      const printContent = document.getElementById('printablePdf');
+      if (!printContent) {
+        window.print();
+        return;
+      }
+
+      // Create an isolated hidden iframe to guarantee clean A4 printout without blank pages
+      let iframe = document.getElementById('pdfPrintIframe');
+      if (iframe) {
+        iframe.remove();
+      }
+      iframe = document.createElement('iframe');
+      iframe.id = 'pdfPrintIframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+          <meta charset="UTF-8">
+          <title>ใบขอเบิกพัสดุ มหาวิทยาลัยสวนดุสิต</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 1.2cm 1.5cm;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              background: white;
+              color: #000;
+              font-family: 'Sarabun', sans-serif;
+              font-size: 14px;
+              line-height: 1.5;
+            }
+            .pdf-page {
+              width: 100%;
+              max-width: 100%;
+              margin: 0 auto;
+              padding: 0;
+              background: white;
+            }
+            .pdf-header {
+              text-align: center;
+              margin-bottom: 1.25rem;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .pdf-header img {
+              height: 70px;
+              width: auto;
+              object-fit: contain;
+              margin-bottom: 0.4rem;
+            }
+            .pdf-header h2 {
+              font-size: 1.35rem;
+              font-weight: 700;
+              margin: 0 0 0.25rem 0;
+            }
+            .pdf-header p {
+              font-size: 0.9rem;
+              color: #444;
+              margin: 0;
+            }
+            .pdf-meta-table {
+              width: 100%;
+              margin-bottom: 1.25rem;
+              border-collapse: collapse;
+              font-size: 0.95rem;
+            }
+            .pdf-meta-table td {
+              padding: 4px 0;
+              vertical-align: top;
+            }
+            .pdf-items-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 1.25rem 0;
+              font-size: 0.92rem;
+            }
+            .pdf-items-table th, .pdf-items-table td {
+              border: 1px solid #333;
+              padding: 7px 9px;
+            }
+            .pdf-items-table th {
+              background-color: #f3f4f6 !important;
+              font-weight: 600;
+              text-align: center;
+            }
+            .pdf-signatures {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 1rem;
+              margin-top: 2rem;
+              text-align: center;
+              font-size: 0.85rem;
+              page-break-inside: avoid;
+            }
+            .sig-box {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-end;
+              height: 130px;
+            }
+            .sig-img-preview {
+              max-height: 55px;
+              max-width: 130px;
+              margin-bottom: 4px;
+            }
+            .sig-line {
+              width: 80%;
+              border-bottom: 1px dotted #333;
+              margin-bottom: 6px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="pdf-page">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+        </html>
+      `);
+      doc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (e) {
+          console.warn('Iframe print fallback to window.print():', e);
+          window.print();
+        }
+      }, 250);
     }
 
     // Requester Authentication State & Handlers
