@@ -62,3 +62,4 @@ stateDiagram-v2
 
 1. **Uniqueness:** Department names within the same institution must be unique.
 2. **Deletion Cascade Prevention:** A department cannot be deleted if active users (`users` table) belong to it. The system must verify `user_count == 0` before allowing deletion.
+

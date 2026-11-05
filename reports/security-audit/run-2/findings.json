@@ -1,0 +1,85 @@
+[
+  {
+    "id": "sdu-sec-006-url-decode-path-traversal",
+    "title": "URL-Encoding Filter Bypass in is_safe_static_path Leading to Full Sensitive File & Source Code Disclosure",
+    "severity": "CRITICAL",
+    "cwe": "CWE-22 / CWE-552",
+    "affected_files": [
+      "backend/server.py:1273-1289"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "curl.exe -i http://127.0.0.1:8080/%2eenv and curl.exe -i http://127.0.0.1:8080/%62ackend/server.py",
+    "description": "is_safe_static_path checks self.path without URL-decoding (unquoting) it first. Requesting %2eenv or %62ackend/server.py bypasses the dotfile and forbidden directory string matching, and SimpleHTTPRequestHandler then unquotes and serves the file.",
+    "remediation": "Call urllib.parse.unquote() on the path, resolve the canonical realpath with os.path.realpath, and ensure it strictly resides inside allowed public directories."
+  },
+  {
+    "id": "sdu-sec-007-negative-quantity-stock-injection",
+    "title": "Missing Bounds & Arithmetic Integrity Validation in handle_create_requisition (Negative Stock Injection)",
+    "severity": "HIGH",
+    "cwe": "CWE-1284 / CWE-20",
+    "affected_files": [
+      "backend/server.py:348-420",
+      "backend/server.py:467-493"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "POST /api action=createRequisition with totalPieces: -1250 and qtyBoxes: -5 succeeds and can be approved/completed to artificially inflate on-hand inventory.",
+    "description": "handle_create_requisition checks if total_pieces > available, but does not verify that total_pieces > 0 and that total_pieces equals (qty_boxes * ratio) + qty_pieces.",
+    "remediation": "Enforce qty_boxes >= 0, qty_pieces >= 0, and verify total_pieces == (qty_boxes * db_item['pieces_per_box']) + qty_pieces, with total_pieces > 0."
+  },
+  {
+    "id": "sdu-sec-008-stored-xss-catalog-items",
+    "title": "Stored Cross-Site Scripting (XSS) via Unescaped Item Attributes in Catalog and Inventory Displays",
+    "severity": "HIGH",
+    "cwe": "CWE-79",
+    "affected_files": [
+      "index.html:1574-1590",
+      "staff.html:2098-2101",
+      "scripts/generate_separated_portals.py"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "Creating an item with name or image containing attribute breakouts (e.g. \" onerror=\"alert(1)\" x=\") executes JavaScript in any user or staff browser rendering the catalog.",
+    "description": "In renderItemGrid (index.html) and renderInventoryTable (staff.html), item attributes (name, unit_box_name, unit_piece_name, image_piece, image_box) are interpolated directly into innerHTML without escapeHtml().",
+    "remediation": "Apply escapeHtml() to all dynamic item fields before string template interpolation."
+  },
+  {
+    "id": "sdu-sec-009-unbounded-content-length-dos",
+    "title": "Uncontrolled Resource Consumption via Unbounded Content-Length in HTTP POST Handler",
+    "severity": "MEDIUM",
+    "cwe": "CWE-400 / CWE-770",
+    "affected_files": [
+      "backend/server.py:1374-1375"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "Sending Content-Length: 2147483648 causes the server to attempt a 2GB memory allocation via self.rfile.read(content_length).",
+    "description": "do_POST directly reads the full length specified by the client header without an enforced maximum byte limit.",
+    "remediation": "Enforce MAX_BODY_SIZE = 10 * 1024 * 1024 (10MB) and return HTTP 413 Payload Too Large if Content-Length exceeds this threshold."
+  },
+  {
+    "id": "sdu-sec-010-unauthenticated-requisition-creation",
+    "title": "Missing Caller Authentication on Requisition Creation Allowing Identity Spoofing",
+    "severity": "MEDIUM",
+    "cwe": "CWE-287 / CWE-306",
+    "affected_files": [
+      "backend/server.py:348-356",
+      "backend/server.py:1409-1410"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "Direct POST /api action=createRequisition with arbitrary requester name ('นางสาววาสนา จันทร์จ่าย') succeeds without requiring any session token or password.",
+    "description": "While the frontend enforces login before showing the submission form, the backend REST endpoint accepts arbitrary requester names and departments from any unauthenticated caller.",
+    "remediation": "Require requester session tokens or validate requester identity against the authenticated user."
+  },
+  {
+    "id": "sdu-sec-011-default-staff-secret",
+    "title": "Use of Hard-Coded Default STAFF_AUTH_SECRET in Configuration and Fallback",
+    "severity": "LOW",
+    "cwe": "CWE-798",
+    "affected_files": [
+      ".env:34",
+      "backend/server.py:44"
+    ],
+    "reproduced_locally": true,
+    "proof_of_concept": "Computing HMAC-SHA256 signature using the default secret allows forging valid staff tokens without knowing the staff password.",
+    "description": "Default placeholder value 'sdu_inventory_staff_secret_token_change_in_production' is present in .env and server code default fallback.",
+    "remediation": "Generate a cryptographically secure random token on startup if unset, or log a fatal configuration error in production if the default secret is retained."
+  }
+]

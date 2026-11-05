@@ -47,3 +47,4 @@ This workspace is governed by the custom skill:
      ```powershell
      .venv\Scripts\pytest tests/test_stock_logic.py
      ```
+

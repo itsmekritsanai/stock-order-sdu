@@ -1,0 +1,76 @@
+{
+  "units": [
+    {
+      "id": "http-web::file-system-static",
+      "surface": "HTTP Web",
+      "boundary": "File System / Web Root",
+      "subsystem": "Static File Server",
+      "attack_class": "Resource & File Handling (Path Traversal / URL Encoding)",
+      "status": "confirmed",
+      "result": "sdu-sec-006-url-decode-path-traversal"
+    },
+    {
+      "id": "rest-api::requisition-integrity",
+      "surface": "REST API",
+      "boundary": "Business Logic & State Machine",
+      "subsystem": "Requisition Creation & Processing",
+      "attack_class": "Input Validation & Integer Bounds",
+      "status": "confirmed",
+      "result": "sdu-sec-007-negative-quantity-stock-injection"
+    },
+    {
+      "id": "browser-ui::dom-xss-catalog",
+      "surface": "Browser UI",
+      "boundary": "DOM / Client-Side UI",
+      "subsystem": "Catalog & Inventory Table Rendering",
+      "attack_class": "Stored Cross-Site Scripting (XSS)",
+      "status": "confirmed",
+      "result": "sdu-sec-008-stored-xss-catalog-items"
+    },
+    {
+      "id": "http-transport::payload-dos",
+      "surface": "HTTP Transport",
+      "boundary": "Server Memory & Process",
+      "subsystem": "POST Body Ingestion",
+      "attack_class": "Resource Exhaustion & Denial of Service",
+      "status": "confirmed",
+      "result": "sdu-sec-009-unbounded-content-length-dos"
+    },
+    {
+      "id": "rest-api::requester-identity",
+      "surface": "REST API",
+      "boundary": "Authentication & Session",
+      "subsystem": "Requisition Origin Verification",
+      "attack_class": "Access Control & Identity Spoofing",
+      "status": "confirmed",
+      "result": "sdu-sec-010-unauthenticated-requisition-creation"
+    },
+    {
+      "id": "crypto::hmac-secret-management",
+      "surface": "Cryptography",
+      "boundary": "Secret Management",
+      "subsystem": "Staff Authentication Token",
+      "attack_class": "Hard-Coded / Insecure Default Credentials",
+      "status": "confirmed",
+      "result": "sdu-sec-011-default-staff-secret"
+    },
+    {
+      "id": "database-queries::sql-injection",
+      "surface": "Database",
+      "boundary": "SQL Relational Layer",
+      "subsystem": "PostgreSQL 17 Driver & Handlers",
+      "attack_class": "SQL Injection",
+      "status": "covered",
+      "result": "Clean (All queries use parameterized placeholders)"
+    },
+    {
+      "id": "rest-api::state-machine-bypass",
+      "surface": "REST API",
+      "boundary": "State Transition Gate",
+      "subsystem": "Approval & Handover Workflow",
+      "attack_class": "State Machine Bypass (CWE-841)",
+      "status": "covered",
+      "result": "Clean (Protected against double completion / invalid transitions)"
+    }
+  ]
+}

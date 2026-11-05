@@ -51,3 +51,4 @@ This reference outlines the system architecture, dual-portal segregation, backen
 * **Tables:** `departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`.
 * **Web & API Server:** `backend/server.py` using Python `ThreadingHTTPServer` and `psycopg2-binary`.
 * **Concurrency Protection:** ACID Transactions and row-level locking via `SELECT ... FOR UPDATE` during approvals and stock handovers.
+

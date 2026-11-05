@@ -106,3 +106,4 @@ flowchart TD
 - [Business Logic & State Machine](./references/business-logic-and-state-machine.md)
 - [Versioning & Testing Protocol](./references/versioning-and-testing.md)
 - [Automated Verification Script](./scripts/verify_rules.py)
+
