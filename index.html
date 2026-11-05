@@ -513,9 +513,21 @@
     .card-body { padding: 1.15rem; display: flex; flex-direction: column; flex: 1; }
     .item-title { font-size: 0.95rem; font-weight: 600; color: var(--neutral-900); line-height: 1.4; margin-bottom: 0.5rem; min-height: 2.8rem; }
     .ratio-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--neutral-600); background: var(--neutral-100); padding: 4px 8px; border-radius: 6px; margin-bottom: 0.75rem; width: fit-content; }
-    .stock-info { background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .stock-info { background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: 8px; padding: 0.5rem 0.75rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s ease; }
     .stock-label { font-size: 0.75rem; color: var(--primary); font-weight: 500; }
     .stock-value { font-size: 0.875rem; font-weight: 700; color: var(--primary); }
+    .stock-info.low {
+      background: var(--danger-light);
+      border-color: #fca5a5;
+    }
+    .stock-info.low .stock-label {
+      color: #991b1b;
+      font-weight: 600;
+    }
+    .stock-info.low .stock-value {
+      color: var(--danger);
+      font-weight: 700;
+    }
     .card-actions { margin-top: auto; display: flex; flex-direction: column; gap: 0.6rem; }
     .qty-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .qty-col label { font-size: 0.7rem; color: var(--neutral-600); display: block; margin-bottom: 2px; }
@@ -1544,8 +1556,17 @@
 
       grid.innerHTML = filtered.map(item => {
         const availablePieces = Math.max(0, item.on_hand_pieces - item.reserved_pieces);
+        const minAlert = (item.min_alert !== undefined && item.min_alert !== null) ? Number(item.min_alert) : 10;
+        const isLow = availablePieces <= minAlert;
         const stockStr = formatStockDisplay(availablePieces, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit);
         const imgSrc = item.current_img_mode === 'box' ? item.image_box : item.image_piece;
+
+        let statusLabel = 'พร้อมให้เบิก (Available):';
+        if (availablePieces === 0) {
+          statusLabel = '❌ หมดสต๊อกชั่วคราว:';
+        } else if (isLow) {
+          statusLabel = '⚠️ พร้อมให้เบิก (เหลือน้อย):';
+        }
 
         return `
           <div class="item-card">
@@ -1567,8 +1588,8 @@
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${item.unit_piece_name}</span>
               `}
-              <div class="stock-info">
-                <span class="stock-label">พร้อมให้เบิก (Available):</span>
+              <div class="stock-info ${isLow ? 'low' : ''}">
+                <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
               </div>
               <div class="card-actions">
