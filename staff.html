@@ -1430,36 +1430,58 @@
       });
     }
 
-    function openStockInModal() {
+    function openStockInModal(preselectedItemId = null) {
       const items = getItemsDB();
-      const options = items.map(i => {
-        const ratioTxt = i.is_multi_unit ? ` [1 ${i.unit_box_name} = ${i.pieces_per_box} ${i.unit_piece_name}]` : '';
-        return `<option value="${i.id}">${i.name}${ratioTxt} (คงเหลือ: ${i.on_hand_pieces.toLocaleString()} ${i.unit_piece_name})</option>`;
-      }).join('');
 
       Swal.fire({
         title: 'บันทึกรับเข้าพัสดุใหม่ (Stock-In)',
         html: `
-          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">เลือกรายการพัสดุ:</label>
-              <select id="swalStockItem" class="swal2-select" style="width: 100%; margin: 4px 0 0 0; font-family: inherit; font-size: 0.9rem; padding: 0.5rem; border-radius: 8px; border: 1px solid #cbd5e1;">
-                ${options}
-              </select>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">
+                เลือกรายการพัสดุ: *
+              </label>
+              <div style="position: relative;">
+                <div style="position: relative; display: flex; align-items: center;">
+                  <input type="text" id="swalStockSearchInput" class="swal2-input" 
+                         placeholder="🔍 พิมพ์ชื่อพัสดุเพื่อค้นหา (เช่น ซอง, กระดาษ, แม็ก)..." 
+                         autocomplete="off"
+                         style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
+                  <button type="button" id="swalStockToggleBtn" 
+                          style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center;">
+                    <svg class="svg-icon" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                </div>
+                <!-- Hidden input swalStockItem to maintain backward compatibility -->
+                <input type="hidden" id="swalStockItem" value="">
+
+                <!-- Dropdown list -->
+                <div id="swalStockDropdownList" 
+                     style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 220px; overflow-y: auto; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); z-index: 9999; display: none;">
+                </div>
+              </div>
+
+              <!-- Selected Item Info Badge -->
+              <div id="swalStockItemBadge" 
+                   style="margin-top: 6px; font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <span>📦 คงเหลือปัจจุบัน: <strong>0</strong></span>
+                <span style="color: #64748b;">อัตราส่วน: -</span>
+              </div>
             </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <div>
-                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนหน่วยใหญ่ (กล่อง/ห่อ):</label>
-                <input type="number" id="swalStockBoxes" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+                <label id="swalStockBoxLabel" style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">จำนวนหน่วยใหญ่ (กล่อง/ห่อ):</label>
+                <input type="number" id="swalStockBoxes" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 0; height: 42px; font-size: 1rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; padding: 0.5rem 0.75rem;">
               </div>
               <div>
-                <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">จำนวนหน่วยย่อย (ชิ้น/ซอง/ใบ):</label>
-                <input type="number" id="swalStockQty" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 1rem; border-radius: 8px;">
+                <label id="swalStockPieceLabel" style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">จำนวนหน่วยย่อย (ชิ้น/ซอง/ใบ):</label>
+                <input type="number" id="swalStockQty" min="0" placeholder="0" class="swal2-input" style="width: 100%; margin: 0; height: 42px; font-size: 1rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; padding: 0.5rem 0.75rem;">
               </div>
             </div>
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">หมายเหตุ / เลขที่ใบส่งของ (ถ้ามี):</label>
-              <input type="text" id="swalStockNote" placeholder="เช่น PO-2569-001 หรือ รับเข้าประจำเดือน..." class="swal2-input" style="width: 100%; margin: 4px 0 0 0; height: 42px; font-size: 0.9rem; border-radius: 8px;">
+              <label style="font-size: 0.85rem; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">หมายเหตุ / เลขที่ใบส่งของ (ถ้ามี):</label>
+              <input type="text" id="swalStockNote" placeholder="เช่น PO-2569-001 หรือ รับเข้าประจำเดือน..." class="swal2-input" style="width: 100%; margin: 0; height: 42px; font-size: 0.9rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; padding: 0.5rem 0.75rem;">
             </div>
           </div>
         `,
@@ -1468,8 +1490,131 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ยืนยันรับเข้าคลัง',
         cancelButtonText: 'ยกเลิก',
+        didOpen: () => {
+          const searchInput = document.getElementById('swalStockSearchInput');
+          const dropdownList = document.getElementById('swalStockDropdownList');
+          const hiddenInput = document.getElementById('swalStockItem');
+          const badgeEl = document.getElementById('swalStockItemBadge');
+          const toggleBtn = document.getElementById('swalStockToggleBtn');
+          const boxLabelEl = document.getElementById('swalStockBoxLabel');
+          const pieceLabelEl = document.getElementById('swalStockPieceLabel');
+
+          function renderList(query = '') {
+            const cleanQuery = query.trim().toLowerCase();
+            const filtered = items.filter(i =>
+              !cleanQuery ||
+              (i.name && i.name.toLowerCase().includes(cleanQuery)) ||
+              (i.category && i.category.toLowerCase().includes(cleanQuery))
+            );
+
+            if (filtered.length === 0) {
+              dropdownList.innerHTML = `
+                <div style="padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.875rem;">
+                  ไม่พบรายการพัสดุที่ตรงกับ "${query}"
+                </div>
+              `;
+              return;
+            }
+
+            dropdownList.innerHTML = filtered.map(i => {
+              const isSelected = Number(hiddenInput.value) === Number(i.id);
+              const ratioTxt = i.is_multi_unit ? `1 ${i.unit_box_name} = ${i.pieces_per_box} ${i.unit_piece_name}` : `1 ${i.unit_piece_name}`;
+              return `
+                <div class="swal-stock-item-row" data-id="${i.id}" style="
+                  padding: 8px 12px;
+                  cursor: pointer;
+                  border-bottom: 1px solid #f1f5f9;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  background: ${isSelected ? '#eff6ff' : 'white'};
+                  transition: background 0.15s;
+                ">
+                  <div style="text-align: left;">
+                    <div style="font-weight: 600; font-size: 0.875rem; color: ${isSelected ? '#1e40af' : '#1e293b'};">${i.name}</div>
+                    <div style="font-size: 0.75rem; color: #64748b;">${i.category || 'พัสดุทั่วไป'} • <span style="color: #475569;">[${ratioTxt}]</span></div>
+                  </div>
+                  <span style="font-size: 0.75rem; background: ${i.on_hand_pieces > 0 ? '#dcfce7' : '#fee2e2'}; color: ${i.on_hand_pieces > 0 ? '#166534' : '#991b1b'}; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; margin-left: 8px;">
+                    ${Number(i.on_hand_pieces).toLocaleString()} ${i.unit_piece_name}
+                  </span>
+                </div>
+              `;
+            }).join('');
+
+            dropdownList.querySelectorAll('.swal-stock-item-row').forEach(row => {
+              row.addEventListener('click', () => {
+                const id = parseInt(row.getAttribute('data-id'), 10);
+                selectItem(id);
+              });
+              row.addEventListener('mouseenter', () => {
+                row.style.background = '#f8fafc';
+              });
+              row.addEventListener('mouseleave', () => {
+                const id = parseInt(row.getAttribute('data-id'), 10);
+                row.style.background = (Number(hiddenInput.value) === id) ? '#eff6ff' : 'white';
+              });
+            });
+          }
+
+          function selectItem(id) {
+            const itm = items.find(i => Number(i.id) === Number(id));
+            if (!itm) return;
+            hiddenInput.value = itm.id;
+            searchInput.value = itm.name;
+
+            const ratioTxt = itm.is_multi_unit ? `1 ${itm.unit_box_name} = ${itm.pieces_per_box} ${itm.unit_piece_name}` : `1 ${itm.unit_piece_name}`;
+            if (badgeEl) {
+              badgeEl.innerHTML = `
+                <span>📦 คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">อัตราส่วน: ${ratioTxt}</span>
+              `;
+            }
+            if (boxLabelEl) {
+              boxLabelEl.innerHTML = `จำนวนหน่วยใหญ่ (<strong>${itm.unit_box_name || 'กล่อง'}</strong>):`;
+            }
+            if (pieceLabelEl) {
+              pieceLabelEl.innerHTML = `จำนวนหน่วยย่อย (<strong>${itm.unit_piece_name || 'ชิ้น'}</strong>):`;
+            }
+            dropdownList.style.display = 'none';
+          }
+
+          searchInput.addEventListener('focus', () => {
+            renderList(searchInput.value);
+            dropdownList.style.display = 'block';
+          });
+          searchInput.addEventListener('input', (e) => {
+            renderList(e.target.value);
+            dropdownList.style.display = 'block';
+          });
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (dropdownList.style.display === 'block') {
+              dropdownList.style.display = 'none';
+            } else {
+              renderList(searchInput.value);
+              dropdownList.style.display = 'block';
+              searchInput.focus();
+            }
+          });
+
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('#swalStockDropdownList') && e.target !== searchInput && e.target !== toggleBtn) {
+              dropdownList.style.display = 'none';
+            }
+          });
+
+          // Preselect first item or preselectedItemId
+          const initId = preselectedItemId || (items.length > 0 ? items[0].id : null);
+          if (initId) {
+            selectItem(initId);
+          }
+        },
         preConfirm: () => {
           const itemId = parseInt(document.getElementById('swalStockItem').value, 10);
+          if (!itemId) {
+            Swal.showValidationMessage('กรุณาเลือกรายการพัสดุจากรายการค้นหา');
+            return false;
+          }
           const boxes = parseInt(document.getElementById('swalStockBoxes').value, 10) || 0;
           const pieces = parseInt(document.getElementById('swalStockQty').value, 10) || 0;
           if (boxes <= 0 && pieces <= 0) {
