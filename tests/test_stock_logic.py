@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.3"
+        assert SYSTEM_VERSION == "3.0.6"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -323,6 +323,11 @@ class TestApiHandlers:
     def test_handle_save_item_validation(self):
         res = server.handle_save_item({"name": ""})
         assert res["status"] == "error"
+
+    def test_handle_save_item_partial_min_alert(self):
+        res = server.handle_save_item({"id": 1, "min_alert": 250})
+        assert res["status"] == "success"
+        assert res["id"] == 1
 
     def test_handle_delete_item_validation(self):
         res = server.handle_delete_item({"id": 0})

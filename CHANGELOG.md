@@ -21,6 +21,26 @@
 
 ---
 
+## [3.0.6] - 2026-11-05
+### Added
+- **Department Management CRUD (`staff.html`, `backend/server.py`, `scripts/generate_separated_portals.py`):** เพิ่มระบบบริหารจัดการกลุ่มงาน/หน่วยงานภายใน สวท. ครบวงจรสำหรับเจ้าหน้าที่พัสดุ ทั้งการเพิ่มหน่วยงานใหม่ แก้ไขชื่อหน่วยงาน และลบหน่วยงาน พร้อมระบบตรวจสอบการมีบุคลากรสังกัด (User Cascade Prevention)
+- **Stock Alert Threshold Configuration (`staff.html`, `backend/server.py`):** เจ้าหน้าที่สามารถปรับแต่งเกณฑ์แจ้งเตือนสต๊อกต่ำ (`min_alert`) ของแต่ละพัสดุได้โดยตรงจากคอลัมน์สถานะสต๊อกในตารางพัสดุ พร้อมรองรับ Partial Update ใน API `handle_save_item`
+- **Searchable Combobox for Restock & Stock Adjustment (`staff.html`):** อัปเกรดช่องเลือกพัสดุในหน้าต่างรับพัสดุเข้าคลัง (`openRestockModal`) และปรับยอดสต๊อกจริง (`openStockAdjustModal`) เป็น Combobox ค้นหาชื่อพัสดุได้แบบ Real-time พร้อมแสดงยอดคงเหลือปัจจุบัน
+
+### Changed
+- **Strict No-Emoji UI Policy Enforcement:** นำ Emoji ทั้งหมดออกจากหน้าจอ UI (`index.html`, `staff.html`, `portal.html`, และ `scripts/generate_separated_portals.py`) เปลี่ยนมาใช้ Stroke-based SVG Vector Icons (`vIcons`) และ CSS Badges ตามข้อกำหนดการออกแบบอย่างเคร่งครัด
+- **Low Stock UI Indicator (`index.html`):** เน้นแถบสถานะเป็นสีแดงเมื่อพัสดุมีสถานะเหลือน้อยหรือหมดสต๊อกชั่วคราว
+- **Single Source of Truth Synchronization (`scripts/generate_separated_portals.py`):** ซิงโครไนซ์สคริปต์ตัวสร้างระบบให้ครอบคลุมการทำงานล่าสุดทั้งหมด พร้อมตัดการพึ่งพาการ Escape ปีกกาซ้ำซ้อน
+- **System Version Bump to v3.0.6:** ซิงค์เลขเวอร์ชันให้สอดคล้องกันทั่วทั้งระบบ (`CHANGELOG.md`, `server.py`, `generate_separated_portals.py`, `portal.html`, `index.html`, `staff.html`, `test_stock_logic.py`)
+
+### Fixed
+- **Clean A4 Requisition PDF Print (`index.html`, `staff.html`):** แก้ไขปัญหาหน้าว่างเวลาสั่งพิมพ์ PDF ด้วยการแยกหน้าเอกสาร A4 พิมพ์ผ่าน Hidden Iframe โดยเฉพาะ ป้องกันไม่ให้ส่วนประกอบหน้าเว็บอื่นติดเข้ามาในหน้าพิมพ์
+
+### Security
+- **Requisition State Machine Enforcement (CWE-841):** ป้องกันการข้ามขั้นตอนวงจรคำขอเบิก (Bypass) ป้องกันการอนุมัติหรือตัดสต๊อกซ้ำซ้อนในระดับฐานข้อมูล
+
+---
+
 ## [3.0.5] - 2026-11-04
 ### Added
 - **Comprehensive Data Dictionary (docs/DATA_DICTIONARY.md):** จัดทำพจนานุกรมข้อมูลฉบับสมบูรณ์ครอบคลุมทั้ง 6 ตารางบน PostgreSQL 17 พร้อม Mermaid ERD, รายละเอียด Data Types, Constraints, Default Values, Business Rules และ Status Enums

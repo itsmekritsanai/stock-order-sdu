@@ -725,7 +725,7 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.3) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.6) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
@@ -741,6 +741,9 @@
       trash: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>`,
       pen: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="m18 2 4 4-12 12H6v-4L18 2z"/><path d="m15 5 4 4"/><path d="M2 22h20"/></svg>`,
       check: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+      checkCircle: `<svg class="svg-icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+      alertTriangle: `<svg class="svg-icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>`,
+      bell: `<svg class="svg-icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,
       x: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`,
       eye: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
       printer: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
@@ -1444,7 +1447,7 @@
               <div style="position: relative;">
                 <div style="position: relative; display: flex; align-items: center;">
                   <input type="text" id="swalStockSearchInput" class="swal2-input" 
-                         placeholder="🔍 พิมพ์ชื่อพัสดุเพื่อค้นหา (เช่น ซอง, กระดาษ, แม็ก)..." 
+                         placeholder="พิมพ์ชื่อพัสดุเพื่อค้นหา (เช่น ซอง, กระดาษ, แม็ก)..." 
                          autocomplete="off"
                          style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
                   <button type="button" id="swalStockToggleBtn" 
@@ -1464,7 +1467,7 @@
               <!-- Selected Item Info Badge -->
               <div id="swalStockItemBadge" 
                    style="margin-top: 6px; font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span>📦 คงเหลือปัจจุบัน: <strong>0</strong></span>
+                <span>คงเหลือปัจจุบัน: <strong>0</strong></span>
                 <span style="color: #64748b;">อัตราส่วน: -</span>
               </div>
             </div>
@@ -1565,7 +1568,7 @@
             const ratioTxt = itm.is_multi_unit ? `1 ${itm.unit_box_name} = ${itm.pieces_per_box} ${itm.unit_piece_name}` : `1 ${itm.unit_piece_name}`;
             if (badgeEl) {
               badgeEl.innerHTML = `
-                <span>📦 คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
+                <span>คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
                 <span style="font-size: 0.75rem; color: #64748b;">อัตราส่วน: ${ratioTxt}</span>
               `;
             }
@@ -1662,7 +1665,7 @@
               <div style="position: relative;">
                 <div style="position: relative; display: flex; align-items: center;">
                   <input type="text" id="swalAdjSearchInput" class="swal2-input" 
-                         placeholder="🔍 พิมพ์ชื่อพัสดุเพื่อค้นหา..." 
+                         placeholder="พิมพ์ชื่อพัสดุเพื่อค้นหา..." 
                          autocomplete="off"
                          style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
                   <button type="button" id="swalAdjToggleBtn" 
@@ -1681,7 +1684,7 @@
               <!-- Selected Item Info Badge -->
               <div id="swalAdjItemBadge" 
                    style="margin-top: 6px; font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span>📦 ยอดคงคลังปัจจุบัน: <strong>0</strong> ชิ้น</span>
+                <span>ยอดคงคลังปัจจุบัน: <strong>0</strong> ชิ้น</span>
                 <span style="color: #64748b;">หมวด: -</span>
               </div>
             </div>
@@ -1782,7 +1785,7 @@
             searchInput.value = itm.name;
             if (badgeEl) {
               badgeEl.innerHTML = `
-                <span>📦 ยอดคงคลังปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
+                <span>ยอดคงคลังปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
                 <span style="font-size: 0.75rem; color: #64748b;">หมวด: ${itm.category || 'ทั่วไป'}</span>
               `;
             }
@@ -2102,15 +2105,15 @@
             <td>
               <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
                 <span style="background: ${isLow ? 'var(--danger-light)' : '#dcfce7'}; color: ${isLow ? 'var(--danger)' : '#166534'}; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px;">
-                  ${isLow ? '⚠️ ต่ำกว่าเกณฑ์' : '🟢 ปกติ'}
+                  ${isLow ? `${vIcons.alertTriangle} ต่ำกว่าเกณฑ์` : `${vIcons.checkCircle} ปกติ`}
                 </span>
                 <button type="button" class="btn-min-alert-badge" onclick="promptSetMinAlert(${item.id})" 
                         style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 2px 6px; font-size: 0.75rem; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s;"
                         onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#3b82f6'; this.style.color='#1e40af';"
                         onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.color='#334155';"
                         title="คลิกเพื่อปรับเกณฑ์เตือนจำนวนพัสดุ">
-                  <span>🔔 เตือนที่: <strong>${(item.min_alert || 0).toLocaleString()}</strong> ${item.unit_piece_name}</span>
-                  <span style="color: #3b82f6; font-size: 0.75rem;">✏️</span>
+                  <span style="display: inline-flex; align-items: center; gap: 4px;">${vIcons.bell} เตือนที่: <strong>${(item.min_alert || 0).toLocaleString()}</strong> ${item.unit_piece_name}</span>
+                  <span style="color: #3b82f6; display: inline-flex; align-items: center;">${vIcons.pen}</span>
                 </button>
               </div>
             </td>
@@ -2155,7 +2158,7 @@
       const currentMin = itm.min_alert !== undefined ? Number(itm.min_alert) : 20;
 
       const { value: newMin } = await Swal.fire({
-        title: '🔔 ตั้งค่าเกณฑ์แจ้งเตือนสต๊อกต่ำ',
+        title: 'ตั้งค่าเกณฑ์แจ้งเตือนสต๊อกต่ำ',
         html: `
           <div style="text-align: left; font-size: 0.9rem; margin-top: 0.5rem;">
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem;">
@@ -2165,7 +2168,7 @@
                 ${itm.is_multi_unit ? `• อัตราส่วน: 1 ${escapeHtml(itm.unit_box_name)} = ${itm.pieces_per_box} ${escapeHtml(itm.unit_piece_name)}` : ''}
               </div>
               <div style="font-size: 0.8rem; color: #059669; margin-top: 4px;">
-                📦 ยอดพร้อมเบิกปัจจุบัน: <strong>${Math.max(0, itm.on_hand_pieces - itm.reserved_pieces).toLocaleString()}</strong> ${escapeHtml(itm.unit_piece_name)}
+                ยอดพร้อมเบิกปัจจุบัน: <strong>${Math.max(0, itm.on_hand_pieces - itm.reserved_pieces).toLocaleString()}</strong> ${escapeHtml(itm.unit_piece_name)}
               </div>
             </div>
 
@@ -2175,7 +2178,7 @@
             <input type="number" id="swal-prompt-min-alert" class="swal2-input" min="0" value="${currentMin}" 
                    style="margin: 0; width: 100%; height: 42px; font-size: 1.05rem; font-weight: 600; text-align: center; border-radius: 8px;">
             <div style="font-size: 0.775rem; color: #64748b; margin-top: 6px;">
-              💡 เมื่อยอดพัสดุในห้องคลังลดลงจนเหลือเท่ากับหรือน้อยกว่าเกณฑ์นี้ ระบบจะเปลี่ยนแถบสถานะเป็น <strong style="color: #dc2626;">สีแดง</strong> ทั้งในหน้าเจ้าหน้าที่และหน้าขอเบิกพัสดุ
+              เมื่อยอดพัสดุในห้องคลังลดลงจนเหลือเท่ากับหรือน้อยกว่าเกณฑ์นี้ ระบบจะเปลี่ยนแถบสถานะเป็น <strong style="color: #dc2626;">สีแดง</strong> ทั้งในหน้าเจ้าหน้าที่และหน้าขอเบิกพัสดุ
             </div>
           </div>
         `,
@@ -2699,17 +2702,17 @@
           </td>
           <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${escapeHtml(d.name)}')">
-              ✏️ แก้ไขชื่อ
+              ${vIcons.pen} แก้ไขชื่อ
             </button>
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${escapeHtml(d.name)}', ${d.user_count || 0})">
-              🗑️ ลบ
+              ${vIcons.trash} ลบ
             </button>
           </td>
         </tr>
       `).join('');
 
       Swal.fire({
-        title: '🏛️ จัดการกลุ่มงาน / หน่วยงาน (สวท.)',
+        title: 'จัดการกลุ่มงาน / หน่วยงาน (สวท.)',
         width: '760px',
         html: `
           <div style="text-align: left; margin-top: 0.5rem; font-size: 0.9rem;">
@@ -2882,7 +2885,7 @@
             <div style="text-align: left; font-size: 0.9rem;">
               <p>กลุ่มงาน <strong>"${escapeHtml(name)}"</strong> ยังมีบุคลากรสังกัดอยู่จำนวน <strong>${userCount} ท่าน</strong></p>
               <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; padding: 10px; color: #991b1b; margin-top: 8px;">
-                ⚠️ กรุณาแก้ไขหรือเปลี่ยนสังกัดของบุคลากรกลุ่มนี้ให้เรียบร้อยก่อน จึงจะสามารถลบหน่วยงานออกจากระบบได้
+                กรุณาแก้ไขหรือเปลี่ยนสังกัดของบุคลากรกลุ่มนี้ให้เรียบร้อยก่อน จึงจะสามารถลบหน่วยงานออกจากระบบได้
               </div>
             </div>
           `,

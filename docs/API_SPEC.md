@@ -40,6 +40,8 @@
 | `POST`| Payload `action: "saveUser"` | `saveUser` | เจ้าหน้าที่ | เพิ่มหรือแก้ไขรายชื่อบุคลากร (User) |
 | `POST`| Payload `action: "deleteUser"` | `deleteUser` | เจ้าหน้าที่ | ลบรายชื่อบุคลากรออกจากระบบ |
 | `POST`| Payload `action: "addDepartment"` | `addDepartment` | เจ้าหน้าที่ | เพิ่มกลุ่มงาน/หน่วยงานใหม่เข้าสู่ตาราง `departments` |
+| `POST`| Payload `action: "updateDepartment"` | `updateDepartment` | เจ้าหน้าที่ | แก้ไขชื่อกลุ่มงาน/หน่วยงาน |
+| `POST`| Payload `action: "deleteDepartment"` | `deleteDepartment` | เจ้าหน้าที่ | ลบกลุ่มงาน/หน่วยงานที่ไม่มีบุคลากรสังกัด |
 | `POST`| Payload `action: "loginRequester"` | `loginRequester` | สาธารณะ | ตรวจสอบรหัสผ่านผู้ขอเบิก (Requester Authentication) |
 | `POST`| Payload `action: "loginStaff"` | `loginStaff` | เจ้าหน้าที่ | เข้าสู่ระบบเจ้าหน้าที่พัสดุ และรับ HMAC-SHA256 Token สำหรับยืนยันสิทธิ์ API |
 | `GET` | `?action=health` | `health` | สาธารณะ | ตรวจสอบสถานะการทำงานของ REST API และการเชื่อมต่อฐานข้อมูล |
@@ -309,8 +311,57 @@
   "status": "success",
   "healthy": true,
   "message": "SDU Stock Order PostgreSQL 17 REST API is operational.",
-  "version": "3.0.3",
+  "version": "3.0.6",
   "database": "PostgreSQL 17",
   "db_name": "sdu_inventory"
+}
+```
+
+
+---
+
+### 3.14 `POST /api` (Action: `updateDepartment`)
+แก้ไขชื่อกลุ่มงาน/หน่วยงานในตาราง `departments`
+
+* **Headers:** `Authorization: Bearer <staff_hmac_token>`
+* **Request Payload:**
+```json
+{
+  "action": "updateDepartment",
+  "id": 6,
+  "name": "กลุ่มงานพัฒนาวิชาการและนวัตกรรมการเรียนรู้"
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "แก้ไขชื่อกลุ่มงานเรียบร้อยแล้ว",
+  "id": 6,
+  "name": "กลุ่มงานพัฒนาวิชาการและนวัตกรรมการเรียนรู้"
+}
+```
+
+---
+
+### 3.15 `POST /api` (Action: `deleteDepartment`)
+ลบกลุ่มงาน/หน่วยงานออกจากระบบ (ปฏิเสธหากยังมีบุคลากรสังกัดอยู่)
+
+* **Headers:** `Authorization: Bearer <staff_hmac_token>`
+* **Request Payload:**
+```json
+{
+  "action": "deleteDepartment",
+  "id": 6
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "ลบกลุ่มงานเรียบร้อยแล้ว",
+  "id": 6
 }
 ```

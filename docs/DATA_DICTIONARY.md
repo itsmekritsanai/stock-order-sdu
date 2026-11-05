@@ -8,7 +8,7 @@
 | คุณสมบัติ (Property) | รายละเอียด (Specification) |
 | :--- | :--- |
 | **ชื่อระบบงาน** | ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (SDU Stock Order) |
-| **เวอร์ชันสถาปัตยกรรม** | v3.0.5 (PostgreSQL 17 Edition) |
+| **เวอร์ชันสถาปัตยกรรม** | v3.0.6 (PostgreSQL 17 Edition) |
 | **ระบบจัดการฐานข้อมูล (RDBMS)** | PostgreSQL 17 (`postgres:17-alpine`) / MySQL Fallback |
 | **ชื่อฐานข้อมูล (Database Name)** | `sdu_inventory` |
 | **สคีมาหลัก (Schema)** | `public` |
