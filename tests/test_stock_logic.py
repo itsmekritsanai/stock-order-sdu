@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.11"
+        assert SYSTEM_VERSION == "3.0.12"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -461,25 +461,39 @@ class TestRequisitionStateMachineSafety:
 
     def test_complete_already_completed_requisition_rejected(self):
         """A COMPLETED requisition must NOT be completed again (prevent double stock deduction)."""
-        res = server.handle_complete_requisition({"docNo": "REQ-256910-0042", "signature": "test"})
+        res = server.handle_complete_requisition({"docNo": "REQ-256910-0001", "signature": "test"})
         assert res["status"] == "error"
         assert res.get("code") in ("ALREADY_COMPLETED", "INVALID_STATE")
 
     def test_complete_pending_or_rejected_requisition_rejected(self):
         """A REJECTED or PENDING requisition must NOT be completed directly."""
-        res = server.handle_complete_requisition({"docNo": "REQ-256910-0043", "signature": "test"})
-        assert res["status"] == "error"
-        assert res.get("code") in ("NOT_APPROVED", "INVALID_STATE")
+        conn = server.get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO requisitions (id, date, requester, dept, purpose, status)
+                    VALUES ('REQ-TEST-PENDING-99', '21 ต.ค. 2569', 'Tester', 'สวท.', 'Test', 'PENDING')
+                    ON CONFLICT (id) DO UPDATE SET status = 'PENDING';
+                """)
+            conn.commit()
+            res = server.handle_complete_requisition({"docNo": "REQ-TEST-PENDING-99", "signature": "test"})
+            assert res["status"] == "error"
+            assert res.get("code") in ("NOT_APPROVED", "INVALID_STATE")
+        finally:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM requisitions WHERE id = 'REQ-TEST-PENDING-99';")
+            conn.commit()
+            conn.close()
 
     def test_approve_already_approved_or_completed_rejected(self):
         """An already COMPLETED or APPROVED requisition must NOT be approved again."""
-        res = server.handle_approve_requisition({"docNo": "REQ-256910-0042"})
+        res = server.handle_approve_requisition({"docNo": "REQ-256910-0001"})
         assert res["status"] == "error"
         assert res.get("code") in ("INVALID_STATE", "ALREADY_COMPLETED")
 
     def test_reject_already_completed_requisition_rejected(self):
         """A COMPLETED requisition cannot be rejected after goods handover."""
-        res = server.handle_reject_requisition({"docNo": "REQ-256910-0042", "reason": "test"})
+        res = server.handle_reject_requisition({"docNo": "REQ-256910-0001", "reason": "test"})
         assert res["status"] == "error"
         assert res.get("code") in ("ALREADY_COMPLETED", "INVALID_STATE")
 
@@ -627,51 +641,70 @@ class TestSecurityAuditRun2Patches:
     def test_complete_and_reject_actions_store_dates(self):
         """Test backend handle_complete_requisition and handle_reject_requisition record dates."""
         import server
-        # Create a test requisition
-        created = server.handle_create_requisition({
-            "dept": "สำนักงานผู้อำนวยการ",
-            "requester": "ทดสอบ วันที่",
-            "phone": "081-111-2222",
-            "purpose": "ทดสอบบันทึกวันที่จ่ายของและวันที่ยกเลิก",
-            "items": [{"itemId": 1, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ซอง"}]
-        })
-        assert created["status"] == "success"
-        doc_no = created["docNo"]
+        # Create a test requisition with item 3 (กระดาษคำตอบ) which has ample in-stock balance
+        doc_no = None
+        doc_no2 = None
+        try:
+            created = server.handle_create_requisition({
+                "dept": "สำนักงานผู้อำนวยการ",
+                "requester": "ทดสอบ วันที่",
+                "phone": "081-111-2222",
+                "purpose": "ทดสอบบันทึกวันที่จ่ายของและวันที่ยกเลิก",
+                "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ใบ"}]
+            })
+            assert created["status"] == "success"
+            doc_no = created["docNo"]
 
-        # Approve it first
-        appr = server.handle_approve_requisition({"docNo": doc_no, "items": [{"itemId": 1, "approvedPieces": 1}]})
-        assert appr["status"] == "success"
+            # Approve it first
+            appr = server.handle_approve_requisition({"docNo": doc_no, "items": [{"itemId": 3, "approvedPieces": 1}]})
+            assert appr["status"] == "success"
 
-        # Complete it
-        comp = server.handle_complete_requisition({"docNo": doc_no, "signature": "test_sig"})
-        assert comp["status"] == "success"
-        assert "completed_date" in comp or "completedDate" in comp
-        assert comp.get("completed_date") != ""
+            # Complete it
+            comp = server.handle_complete_requisition({"docNo": doc_no, "signature": "test_sig"})
+            assert comp["status"] == "success"
+            assert "completed_date" in comp or "completedDate" in comp
+            assert comp.get("completed_date") != ""
 
-        # Verify getRequisitions returns completed_date
-        reqs = server.handle_get_requisitions({"status": ["COMPLETED"]})
-        target = next((r for r in reqs["data"] if r["id"] == doc_no), None)
-        assert target is not None
-        assert target["completed_date"] != ""
-        assert "completed_at" in target and target["completed_at"] != ""
+            # Verify getRequisitions returns completed_date
+            reqs = server.handle_get_requisitions({"status": ["COMPLETED"]})
+            target = next((r for r in reqs["data"] if r["id"] == doc_no), None)
+            assert target is not None
+            assert target["completed_date"] != ""
+            assert "completed_at" in target and target["completed_at"] != ""
 
-        # Test reject with another requisition
-        created2 = server.handle_create_requisition({
-            "dept": "สำนักงานผู้อำนวยการ",
-            "requester": "ทดสอบ วันที่ยกเลิก",
-            "phone": "081-111-3333",
-            "purpose": "ทดสอบวันที่ยกเลิก",
-            "items": [{"itemId": 1, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ซอง"}]
-        })
-        doc_no2 = created2["docNo"]
-        rej = server.handle_reject_requisition({"docNo": doc_no2, "reason": "ทดสอบยกเลิกคำขอ"})
-        assert rej["status"] == "success"
-        assert "rejected_date" in rej or "rejectedDate" in rej
-        assert rej.get("rejected_date") != ""
+            # Test reject with another requisition
+            created2 = server.handle_create_requisition({
+                "dept": "สำนักงานผู้อำนวยการ",
+                "requester": "ทดสอบ วันที่ยกเลิก",
+                "phone": "081-111-3333",
+                "purpose": "ทดสอบวันที่ยกเลิก",
+                "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ใบ"}]
+            })
+            assert created2["status"] == "success"
+            doc_no2 = created2["docNo"]
+            rej = server.handle_reject_requisition({"docNo": doc_no2, "reason": "ทดสอบยกเลิกคำขอ"})
+            assert rej["status"] == "success"
+            assert "rejected_date" in rej or "rejectedDate" in rej
+            assert rej.get("rejected_date") != ""
 
-        # Verify getRequisitions returns rejected_date
-        reqs2 = server.handle_get_requisitions({"status": ["REJECTED"]})
-        target2 = next((r for r in reqs2["data"] if r["id"] == doc_no2), None)
-        assert target2 is not None
-        assert target2["rejected_date"] != ""
-        assert "rejected_at" in target2 and target2["rejected_at"] != ""
+            # Verify getRequisitions returns rejected_date
+            reqs2 = server.handle_get_requisitions({"status": ["REJECTED"]})
+            target2 = next((r for r in reqs2["data"] if r["id"] == doc_no2), None)
+            assert target2 is not None
+            assert target2["rejected_date"] != ""
+            assert "rejected_at" in target2 and target2["rejected_at"] != ""
+        finally:
+            # Clean up test requisitions to keep production database clean
+            conn = server.get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    for d in [doc_no, doc_no2]:
+                        if d:
+                            cur.execute("DELETE FROM stock_transactions WHERE reference_id = %s", (d,))
+                            cur.execute("DELETE FROM requisition_items WHERE requisition_id = %s", (d,))
+                            cur.execute("DELETE FROM requisitions WHERE id = %s", (d,))
+                    # Restore on_hand for item 3
+                    cur.execute("UPDATE inventory_items SET on_hand_pieces = 32000, reserved_pieces = 0 WHERE id = 3")
+                conn.commit()
+            finally:
+                conn.close()
