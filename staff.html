@@ -725,7 +725,7 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.6) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.7) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
@@ -1171,10 +1171,14 @@
                 </tr>
               </thead>
               <tbody>
-                ${req.items.map(item => `
+                ${req.items.map(item => {
+                  const safeName = escapeHtml(item.name);
+                  const safeBox = escapeHtml(item.unitBox);
+                  const safePiece = escapeHtml(item.unitPiece);
+                  return `
                   <tr>
-                    <td><strong>${item.name}</strong></td>
-                    <td>${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${item.unitBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${item.unitPiece}` : ''} (${item.totalPieces.toLocaleString()} ${item.unitPiece})</td>
+                    <td><strong>${safeName}</strong></td>
+                    <td>${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''} (${item.totalPieces.toLocaleString()} ${safePiece})</td>
                     <td style="font-weight: 600; color: var(--accent);">
                       ${req.status === 'PENDING' ? `
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -1182,7 +1186,7 @@
                                  value="${item.approvedPieces ?? item.totalPieces}"
                                  min="0" max="${item.totalPieces}"
                                  style="width: 85px; padding: 4px 6px; border: 1px solid var(--neutral-300); border-radius: 6px; font-family: inherit; font-weight: 600; text-align: right;">
-                          <span>${item.unitPiece}</span>
+                          <span>${safePiece}</span>
                         </div>
                       ` : `${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${item.unitPiece}`}
                     </td>
@@ -1192,6 +1196,8 @@
                         : `<span style="color: var(--accent);">พร้อมจ่าย</span>`}
                     </td>
                   </tr>
+                  `;
+                }).join('')}
                 `).join('')}
               </tbody>
             </table>
@@ -2050,14 +2056,20 @@
       document.getElementById('pdfReceiverName').innerText = req.requester;
 
       const tbody = document.getElementById('pdfItemsTbody');
-      tbody.innerHTML = req.items.map((item, idx) => `
+      tbody.innerHTML = req.items.map((item, idx) => {
+        const safeName = escapeHtml(item.name);
+        const safeBox = escapeHtml(item.unitBox);
+        const safePiece = escapeHtml(item.unitPiece);
+        return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td>${item.name}</td>
-          <td style="text-align: center;">${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${item.unitBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${item.unitPiece}` : ''}</td>
-          <td style="text-align: center; font-weight: bold; color: #166534;">${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${item.unitPiece}</td>
+          <td>${safeName}</td>
+          <td style="text-align: center;">${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''}</td>
+          <td style="text-align: center; font-weight: bold; color: #166534;">${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${safePiece}</td>
           <td style="text-align: center;">${req.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'ครบถ้วน'}</td>
         </tr>
+        `;
+      }).join('');
       `).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
@@ -2071,6 +2083,14 @@
 
     // Inventory Table
     function formatStockDisplay(totalPieces, ratio, boxName, pieceName, isMulti) {
+      const safePiece = escapeHtml(pieceName);
+      const safeBox = escapeHtml(boxName);
+      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${safePiece}`;
+      const boxes = Math.floor(totalPieces / ratio);
+      const pieces = totalPieces % ratio;
+      if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
+      if (boxes > 0) return `${boxes} ${safeBox}`;
+      return `${pieces} ${safePiece}`;
       if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
       const boxes = Math.floor(totalPieces / ratio);
       const pieces = totalPieces % ratio;

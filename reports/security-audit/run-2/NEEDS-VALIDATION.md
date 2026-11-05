@@ -22,3 +22,4 @@ This document tracks security assumptions and external deployment conditions tha
 - **Validation Steps:**
   1. Verify the production `.env` file permissions (`chmod 600 .env`).
   2. Confirm `STAFF_AUTH_SECRET` contains at least 32 bytes of cryptographically secure random data.
+

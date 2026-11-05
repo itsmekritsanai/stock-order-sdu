@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.6"
+SYSTEM_VERSION = "3.0.7"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -1694,6 +1694,14 @@ requester_template = r'''<!DOCTYPE html>
 
     // Catalog Rendering
     function formatStockDisplay(totalPieces, ratio, boxName, pieceName, isMulti) {
+      const safePiece = escapeHtml(pieceName);
+      const safeBox = escapeHtml(boxName);
+      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${safePiece}`;
+      const boxes = Math.floor(totalPieces / ratio);
+      const pieces = totalPieces % ratio;
+      if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
+      if (boxes > 0) return `${boxes} ${safeBox}`;
+      return `${pieces} ${safePiece}`;
       if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
       const boxes = Math.floor(totalPieces / ratio);
       const pieces = totalPieces % ratio;
@@ -1729,6 +1737,11 @@ requester_template = r'''<!DOCTYPE html>
         const stockStr = formatStockDisplay(availablePieces, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit);
         const imgSrc = item.current_img_mode === 'box' ? item.image_box : item.image_piece;
 
+        const safeName = escapeHtml(item.name);
+        const safeBoxName = escapeHtml(item.unit_box_name);
+        const safePieceName = escapeHtml(item.unit_piece_name);
+        const safeImgSrc = escapeHtml(imgSrc);
+
         let statusLabel = 'พร้อมให้เบิก (Available):';
         if (availablePieces === 0) {
           statusLabel = 'หมดสต๊อกชั่วคราว:';
@@ -1739,22 +1752,22 @@ requester_template = r'''<!DOCTYPE html>
         return `
           <div class="item-card">
             <div class="item-image-wrapper">
-              <img src="${imgSrc}" class="item-img" alt="${item.name}" onerror="this.onerror=null; this.src='assets/logo_sdu.png'">
+              <img src="${safeImgSrc}" class="item-img" alt="${safeName}" onerror="this.onerror=null; this.src='assets/logo_sdu.png'">
               ${item.is_multi_unit ? `
                 <div class="image-toggle-pills">
                   <button class="img-pill-btn ${item.current_img_mode !== 'box' ? 'active' : ''}" 
                           onclick="toggleItemImg(${item.id}, 'piece')">รูปชิ้น</button>
                   <button class="img-pill-btn ${item.current_img_mode === 'box' ? 'active' : ''}" 
-                          onclick="toggleItemImg(${item.id}, 'box')">รูป${item.unit_box_name}</button>
+                          onclick="toggleItemImg(${item.id}, 'box')">รูป${safeBoxName}</button>
                 </div>
               ` : ''}
             </div>
             <div class="card-body">
-              <h3 class="item-title">${item.name}</h3>
+              <h3 class="item-title">${safeName}</h3>
               ${item.is_multi_unit ? `
-                <span class="ratio-badge">${vIcons.layers} 1 ${item.unit_box_name} = ${item.pieces_per_box.toLocaleString()} ${item.unit_piece_name}</span>
+                <span class="ratio-badge">${vIcons.layers} 1 ${safeBoxName} = ${item.pieces_per_box.toLocaleString()} ${safePieceName}</span>
               ` : `
-                <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${item.unit_piece_name}</span>
+                <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
@@ -1764,12 +1777,12 @@ requester_template = r'''<!DOCTYPE html>
                 <div class="qty-inputs">
                   ${item.is_multi_unit ? `
                     <div class="qty-col">
-                      <label>จำนวน (${item.unit_box_name})</label>
+                      <label>จำนวน (${safeBoxName})</label>
                       <input type="number" id="qty-box-${item.id}" class="qty-input" min="0" placeholder="0">
                     </div>
                   ` : ''}
                   <div class="qty-col" style="${!item.is_multi_unit ? 'grid-column: span 2;' : ''}">
-                    <label>จำนวน (${item.unit_piece_name})</label>
+                    <label>จำนวน (${safePieceName})</label>
                     <input type="number" id="qty-piece-${item.id}" class="qty-input" min="0" placeholder="0">
                   </div>
                 </div>
@@ -1892,14 +1905,17 @@ requester_template = r'''<!DOCTYPE html>
       }
 
       list.innerHTML = cart.map((c, idx) => {
+        const safeName = escapeHtml(c.name);
+        const safeBox = escapeHtml(c.unitBox);
+        const safePiece = escapeHtml(c.unitPiece);
         let qtyText = c.qtyBoxes > 0 && c.qtyPieces > 0 ? 
-          `${c.qtyBoxes} ${c.unitBox} + ${c.qtyPieces} ${c.unitPiece} (รวม ${c.totalPieces.toLocaleString()} ${c.unitPiece})` :
-          (c.qtyBoxes > 0 ? `${c.qtyBoxes} ${c.unitBox} (รวม ${c.totalPieces.toLocaleString()} ${c.unitPiece})` : `${c.qtyPieces} ${c.unitPiece}`);
+          `${c.qtyBoxes} ${safeBox} + ${c.qtyPieces} ${safePiece} (รวม ${c.totalPieces.toLocaleString()} ${safePiece})` :
+          (c.qtyBoxes > 0 ? `${c.qtyBoxes} ${safeBox} (รวม ${c.totalPieces.toLocaleString()} ${safePiece})` : `${c.qtyPieces} ${safePiece}`);
 
         return `
           <div class="cart-item-card">
             <div class="cart-item-details">
-              <h4>${c.name}</h4>
+              <h4>${safeName}</h4>
               <div class="cart-item-qty">จำนวนที่ขอเบิก: <strong>${qtyText}</strong></div>
             </div>
             <button class="cart-item-remove" onclick="removeCartItem(${idx})" title="ลบออก">${vIcons.trash}</button>
@@ -2209,14 +2225,17 @@ requester_template = r'''<!DOCTYPE html>
         }
 
         const itemsRows = (req.items || []).map(it => {
+          const safeName = escapeHtml(it.name);
+          const safeBox = escapeHtml(it.unitBox);
+          const safePiece = escapeHtml(it.unitPiece);
           let reqQty = it.qtyBoxes > 0 && it.qtyPieces > 0 ?
-            it.qtyBoxes + ' ' + it.unitBox + ' + ' + it.qtyPieces + ' ' + it.unitPiece :
-            (it.qtyBoxes > 0 ? it.qtyBoxes + ' ' + it.unitBox : it.qtyPieces + ' ' + it.unitPiece);
-          let appQty = it.approvedPieces !== undefined ? it.approvedPieces.toLocaleString() + ' ' + it.unitPiece : '-';
+            it.qtyBoxes + ' ' + safeBox + ' + ' + it.qtyPieces + ' ' + safePiece :
+            (it.qtyBoxes > 0 ? it.qtyBoxes + ' ' + safeBox : it.qtyPieces + ' ' + safePiece);
+          let appQty = it.approvedPieces !== undefined ? it.approvedPieces.toLocaleString() + ' ' + safePiece : '-';
           let appColor = (req.status === 'APPROVED' || req.status === 'COMPLETED') ? 'var(--accent)' : 'var(--neutral-600)';
           return `
             <tr>
-              <td>${it.name}</td>
+              <td>${safeName}</td>
               <td style="text-align: right; font-weight: 500;">${reqQty}</td>
               <td style="text-align: right; font-weight: 600; color: ${appColor};">${appQty}</td>
             </tr>
@@ -3806,10 +3825,14 @@ staff_template = r'''<!DOCTYPE html>
                 </tr>
               </thead>
               <tbody>
-                ${req.items.map(item => `
+                ${req.items.map(item => {
+                  const safeName = escapeHtml(item.name);
+                  const safeBox = escapeHtml(item.unitBox);
+                  const safePiece = escapeHtml(item.unitPiece);
+                  return `
                   <tr>
-                    <td><strong>${item.name}</strong></td>
-                    <td>${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${item.unitBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${item.unitPiece}` : ''} (${item.totalPieces.toLocaleString()} ${item.unitPiece})</td>
+                    <td><strong>${safeName}</strong></td>
+                    <td>${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''} (${item.totalPieces.toLocaleString()} ${safePiece})</td>
                     <td style="font-weight: 600; color: var(--accent);">
                       ${req.status === 'PENDING' ? `
                         <div style="display: flex; align-items: center; gap: 6px;">
@@ -3817,7 +3840,7 @@ staff_template = r'''<!DOCTYPE html>
                                  value="${item.approvedPieces ?? item.totalPieces}"
                                  min="0" max="${item.totalPieces}"
                                  style="width: 85px; padding: 4px 6px; border: 1px solid var(--neutral-300); border-radius: 6px; font-family: inherit; font-weight: 600; text-align: right;">
-                          <span>${item.unitPiece}</span>
+                          <span>${safePiece}</span>
                         </div>
                       ` : `${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${item.unitPiece}`}
                     </td>
@@ -3827,6 +3850,8 @@ staff_template = r'''<!DOCTYPE html>
                         : `<span style="color: var(--accent);">พร้อมจ่าย</span>`}
                     </td>
                   </tr>
+                  `;
+                }).join('')}
                 `).join('')}
               </tbody>
             </table>
@@ -4685,14 +4710,20 @@ staff_template = r'''<!DOCTYPE html>
       document.getElementById('pdfReceiverName').innerText = req.requester;
 
       const tbody = document.getElementById('pdfItemsTbody');
-      tbody.innerHTML = req.items.map((item, idx) => `
+      tbody.innerHTML = req.items.map((item, idx) => {
+        const safeName = escapeHtml(item.name);
+        const safeBox = escapeHtml(item.unitBox);
+        const safePiece = escapeHtml(item.unitPiece);
+        return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
-          <td>${item.name}</td>
-          <td style="text-align: center;">${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${item.unitBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${item.unitPiece}` : ''}</td>
-          <td style="text-align: center; font-weight: bold; color: #166534;">${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${item.unitPiece}</td>
+          <td>${safeName}</td>
+          <td style="text-align: center;">${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''}</td>
+          <td style="text-align: center; font-weight: bold; color: #166534;">${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${safePiece}</td>
           <td style="text-align: center;">${req.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'ครบถ้วน'}</td>
         </tr>
+        `;
+      }).join('');
       `).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
@@ -4706,6 +4737,14 @@ staff_template = r'''<!DOCTYPE html>
 
     // Inventory Table
     function formatStockDisplay(totalPieces, ratio, boxName, pieceName, isMulti) {
+      const safePiece = escapeHtml(pieceName);
+      const safeBox = escapeHtml(boxName);
+      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${safePiece}`;
+      const boxes = Math.floor(totalPieces / ratio);
+      const pieces = totalPieces % ratio;
+      if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
+      if (boxes > 0) return `${boxes} ${safeBox}`;
+      return `${pieces} ${safePiece}`;
       if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
       const boxes = Math.floor(totalPieces / ratio);
       const pieces = totalPieces % ratio;

@@ -195,3 +195,4 @@ The static placeholder `"sdu_inventory_staff_secret_token_change_in_production"`
 
 #### Remediation
 Log a prominent warning if the default secret is used, or generate an ephemeral random secret at server boot when `STAFF_AUTH_SECRET` is unset or equals the default placeholder.
+

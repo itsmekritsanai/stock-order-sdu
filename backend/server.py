@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.0.6"
+SYSTEM_VERSION = "3.0.7"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -361,18 +361,43 @@ def handle_create_requisition(payload):
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
-            # Verify stock availability with row-level read check
+            # Verify stock availability, bounds, and arithmetic consistency with row-level read check
             for req_item in items:
-                item_id = int(req_item.get("itemId"))
-                total_pieces = int(req_item.get("totalPieces") or 0)
+                try:
+                    item_id = int(req_item.get("itemId") or 0)
+                    qty_boxes = int(req_item.get("qtyBoxes") or 0)
+                    qty_pieces = int(req_item.get("qtyPieces") or 0)
+                    total_pieces = int(req_item.get("totalPieces") or 0)
+                except (ValueError, TypeError):
+                    conn.rollback()
+                    return {"status": "error", "message": "จำนวนพัสดุต้องเป็นตัวเลขจำนวนเต็มที่ถูกต้อง"}
+
+                if item_id <= 0:
+                    conn.rollback()
+                    return {"status": "error", "message": "รหัสพัสดุ (itemId) ไม่ถูกต้อง"}
+
+                if qty_boxes < 0 or qty_pieces < 0 or total_pieces <= 0 or (qty_boxes == 0 and qty_pieces == 0):
+                    conn.rollback()
+                    return {"status": "error", "message": "จำนวนพัสดุที่ขอเบิกต้องมากกว่า 0 และไม่สามารถเป็นค่าลบได้"}
+
                 cur.execute(
-                    "SELECT id, name, on_hand_pieces, reserved_pieces, pieces_per_box FROM inventory_items WHERE id = %s FOR UPDATE",
+                    "SELECT id, name, is_multi_unit, on_hand_pieces, reserved_pieces, pieces_per_box FROM inventory_items WHERE id = %s FOR UPDATE",
                     (item_id,),
                 )
                 db_item = cur.fetchone()
                 if not db_item:
                     conn.rollback()
                     return {"status": "error", "message": f"ไม่พบพัสดุรหัส {item_id} ในฐานข้อมูล"}
+
+                # Arithmetic consistency validation
+                ratio = max(1, int(db_item.get("pieces_per_box") or 1))
+                expected_total = (qty_boxes * ratio) + qty_pieces if db_item.get("is_multi_unit") else qty_pieces
+                if total_pieces != expected_total or expected_total <= 0:
+                    conn.rollback()
+                    return {
+                        "status": "error",
+                        "message": f"จำนวนรวมของพัสดุ ({total_pieces}) ไม่ตรงกับสูตรคำนวณจริง ({expected_total})",
+                    }
 
                 available = max(0, int(db_item["on_hand_pieces"]) - int(db_item["reserved_pieces"]))
                 if total_pieces > available:
@@ -433,6 +458,13 @@ def handle_create_requisition(payload):
 
 
 def handle_approve_requisition(payload):
+    for i in payload.get("items", []):
+        try:
+            if "approvedPieces" in i and int(i["approvedPieces"]) < 0:
+                return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องไม่น้อยกว่า 0"}
+        except (ValueError, TypeError):
+            return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องเป็นตัวเลขที่ถูกต้อง"}
+
     doc_no = str(payload.get("docNo") or payload.get("id") or "").strip()
     approved_overrides = {
         int(i["itemId"]): int(i["approvedPieces"])
@@ -472,6 +504,10 @@ def handle_approve_requisition(payload):
                 inv = cur.fetchone()
                 if not inv:
                     continue
+
+                if approved_qty < 0:
+                    conn.rollback()
+                    return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องไม่น้อยกว่า 0"}
 
                 avail = max(0, int(inv["on_hand_pieces"]) - int(inv["reserved_pieces"]))
                 if approved_qty > avail:
@@ -857,9 +893,11 @@ def handle_login_requester(payload):
                     "message": "รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อเจ้าหน้าที่พัสดุ"
                 }
 
+            req_token = generate_requester_token(row.get("username") or username, row["name"])
             return {
                 "status": "success",
                 "message": "เข้าสู่ระบบสำเร็จ",
+                "token": req_token,
                 "user": {
                     "id": int(row["id"]),
                     "name": row["name"],
@@ -1195,6 +1233,36 @@ def verify_password(stored: str, password: str) -> bool:
     return hmac.compare_digest(stored, password)
 
 
+def generate_requester_token(username: str, name: str = "") -> str:
+    """Generate HMAC-SHA256 signed session token for authenticated requesters."""
+    ts = str(int(time.time()))
+    secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+    payload = f"requester:{username}:{ts}".encode("utf-8")
+    sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+    return f"{username}.{ts}.{sig}"
+
+
+def verify_requester_token(token: str, username: str = "") -> bool:
+    """Verify HMAC-SHA256 requester token validity and expiration (30 days)."""
+    if not token or not isinstance(token, str):
+        return False
+    parts = token.rsplit(".", 2)
+    if len(parts) != 3:
+        return False
+    u, ts_str, sig = parts
+    if username and u != username:
+        return False
+    try:
+        ts = int(ts_str)
+        if abs(time.time() - ts) > 30 * 86400:
+            return False
+        secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+        payload = f"requester:{u}:{ts_str}".encode("utf-8")
+        expected_sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, expected_sig)
+    except Exception:
+        return False
+
 def generate_staff_token(username: str = "admin_staff") -> str:
     """Generate HMAC-SHA256 signed session token for staff."""
     ts = str(int(time.time()))
@@ -1208,7 +1276,7 @@ def verify_staff_token(token: str) -> bool:
     """Verify HMAC-SHA256 staff token validity and expiration (7 days)."""
     if not token or not isinstance(token, str):
         return False
-    parts = token.split(".")
+    parts = token.rsplit(".", 2)
     if len(parts) != 3:
         return False
     username, ts_str, sig = parts
@@ -1267,20 +1335,56 @@ def handle_login_staff(payload):
 # ==============================================================================
 
 class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
+    directory = PROJECT_ROOT
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=PROJECT_ROOT, **kwargs)
 
     def is_safe_static_path(self, path: str) -> bool:
+        from urllib.parse import unquote
         clean_path = path.split("?", 1)[0].split("#", 1)[0]
+        # Recursively unquote to prevent double percent-encoding bypasses (e.g. %252e)
+        prev = ""
+        while clean_path != prev:
+            prev = clean_path
+            clean_path = unquote(clean_path)
+
         parts = [p for p in clean_path.replace("\\", "/").split("/") if p]
-        if any(p.startswith(".") for p in parts):
+        if any(p.startswith(".") or ".." in p for p in parts):
             return False
-        forbidden_dirs = {"backend", "tests", "scripts", "data", ".venv", "__pycache__", "reports"}
-        if any(p in forbidden_dirs for p in parts):
+
+        forbidden_dirs = {
+            "backend", "tests", "scripts", "data", ".venv", "__pycache__",
+            "reports", ".agents", ".bugscope", ".git", ".github", ".pytest_cache"
+        }
+        if any(p.lower() in forbidden_dirs for p in parts):
             return False
-        forbidden_files = {"docker-compose.yml", "schema_postgres.sql", "pgadmin_servers.json", "start.bat"}
+
+        forbidden_files = {
+            "docker-compose.yml", "schema_postgres.sql", "schema.sql",
+            "pgadmin_servers.json", "start.bat", ".env", ".env.example",
+            "agents.md", ".cursorrules", "requirements.txt"
+        }
         if parts and parts[-1].lower() in forbidden_files:
             return False
+
+        # Verify resolved canonical realpath remains strictly within PROJECT_ROOT
+        try:
+            resolved = os.path.realpath(super().translate_path(clean_path))
+            real_root = os.path.realpath(PROJECT_ROOT)
+            if not resolved.startswith(real_root):
+                return False
+            rel = os.path.relpath(resolved, real_root).replace("\\", "/")
+            rel_parts = [rp for rp in rel.split("/") if rp]
+            if any(rp.startswith(".") for rp in rel_parts):
+                return False
+            if any(rp.lower() in forbidden_dirs for rp in rel_parts):
+                return False
+            if rel_parts and rel_parts[-1].lower() in forbidden_files:
+                return False
+        except Exception:
+            return False
+
         return True
 
     def translate_path(self, path):
@@ -1371,7 +1475,22 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         if parsed.path.rstrip("/") != "/api":
             return self.send_json({"status": "error", "message": "Not Found"}, status_code=404)
 
-        content_length = int(self.headers.get("Content-Length", 0))
+        MAX_BODY_SIZE = 10 * 1024 * 1024  # 10 MB maximum request body size limit
+        try:
+            content_length = int(self.headers.get("Content-Length", 0))
+        except (ValueError, TypeError):
+            return self.send_json({"status": "error", "code": "INVALID_HEADER", "message": "Invalid Content-Length header"}, status_code=400)
+
+        if content_length < 0:
+            return self.send_json({"status": "error", "code": "INVALID_HEADER", "message": "Content-Length cannot be negative"}, status_code=400)
+
+        if content_length > MAX_BODY_SIZE:
+            return self.send_json({
+                "status": "error",
+                "code": "PAYLOAD_TOO_LARGE",
+                "message": f"ขนาดข้อมูลเกินกำหนดสูงสุด ({MAX_BODY_SIZE // (1024*1024)} MB)"
+            }, status_code=413)
+
         raw_body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
         try:
             body = json.loads(raw_body)
@@ -1460,6 +1579,8 @@ def run_server(port=None):
     print(f"  Staff      : http://localhost:{port}/staff.html")
     print(f"  REST API   : http://localhost:{port}/api")
     print(f"  PostgreSQL : {CONFIG['DB_USER']}@{CONFIG['DB_HOST']}:{CONFIG['DB_PORT']}/{CONFIG['DB_NAME']}")
+    if CONFIG.get("STAFF_AUTH_SECRET") == "sdu_inventory_staff_secret_token_change_in_production":
+        print("  [SECURITY WARNING] Using default STAFF_AUTH_SECRET placeholder! Set a secure secret in .env")
     print("=" * 70)
     server.serve_forever()
 

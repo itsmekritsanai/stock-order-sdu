@@ -64,3 +64,4 @@ flowchart TD
 1. **Unauthenticated External Attacker:** Can send arbitrary HTTP requests to port 8080. Aims to read sensitive secrets (`.env`, source code), bypass authentication, forge orders, or crash the server.
 2. **Authenticated Requester:** University personnel. Aims to requisition supplies legitimately, but could attempt privilege escalation to staff functions or inject malicious quantities/content.
 3. **Warehouse Staff (Privileged Operator):** Holds HMAC session token. Aims to manage inventory, approve orders, and manage users.
+

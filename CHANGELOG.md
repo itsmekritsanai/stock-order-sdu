@@ -21,6 +21,21 @@
 
 ---
 
+## [3.0.7] - 2026-11-05
+### Security
+- **URL-Encoded Path Traversal & Dotfile Filter Bypass (`backend/server.py`, `sdu-sec-006`, Critical / CWE-22, CWE-552):** แก้ไขช่องโหว่การใช้ Percent-encoding (`/%2eenv`, `/%62ackend/server.py`) หลบเลี่ยงตัวกรองไฟล์ความลับและโฟลเดอร์ระบบ ด้วยการถอดรหัส URL แบบ Recursive (`unquote`), ตรวจสอบ Path Segments, และบังคับใช้ Canonical Realpath Check ให้อยู่ภายใต้ `PROJECT_ROOT` อย่างเข้มงวด
+- **Negative Quantity Injection & Arithmetic Mismatch (`backend/server.py`, `sdu-sec-007`, High / CWE-1284, CWE-840):** บังคับตรวจสอบขอบเขตตัวเลขจำนวนพัสดุในคำขอเบิก (`qtyBoxes >= 0`, `qtyPieces >= 0`, `totalPieces > 0`), คำนวณยอดรวมบนเซิร์ฟเวอร์ด้วยอัตราส่วนจริง (`expected_total`), และปฏิเสธการขอเบิกหรืออนุมัติยอดที่เป็นค่าลบ
+- **Stored XSS Sanitization in Catalog & Portal Tables (`index.html`, `staff.html`, `scripts/generate_separated_portals.py`, `sdu-sec-008`, High / CWE-79):** ทำความสะอาดข้อมูล (`escapeHtml`) ชื่อพัสดุ หน่วยนับ รูปภาพ และข้อมูลผู้ใช้งานทั้งหมดก่อนแทรกเข้า DOM ใน `renderCatalog`, `renderCartDrawer`, `renderMyRequisitionsModal`, `renderInventoryTable`, `renderStaffRequisitions`, `viewPdfRequisition`, และ `formatStockDisplay`
+- **Request Body Size Limit & DoS Prevention (`backend/server.py`, `sdu-sec-009`, Medium / CWE-400, CWE-770):** จำกัดขนาดข้อมูลคำขอผ่าน HTTP POST สูงสุดไม่เกิน 10 MB (`MAX_BODY_SIZE`) ตรวจสอบความถูกต้องของ Header `Content-Length` และตอบกลับ HTTP 413 Payload Too Large หากเกินกำหนด
+- **HMAC Authenticated Session for Requesters (`backend/server.py`, `sdu-sec-010`, Medium / CWE-287, CWE-306):** เพิ่มการออกและตรวจสอบลายเซ็นดิจิทัล HMAC-SHA256 Token สำหรับผู้ขอเบิก ป้องกันการสวมรอยผู้ใช้ในระดับเครือข่าย พร้อมรองรับชื่อผู้ใช้ที่มีจุดทศนิยม
+- **Default Authentication Secret Startup Alert (`backend/server.py`, `sdu-sec-011`, Low / CWE-798, CWE-1188):** เพิ่มการแจ้งเตือนความปลอดภัยระดับ Server Console ขณะเริ่มต้นทำงาน หากยังใช้ค่ารหัสลับมาตรฐาน (`STAFF_AUTH_SECRET`) เพื่อกระตุ้นให้เปลี่ยนเป็นกุญแจที่มีความปลอดภัยสูง
+
+### Changed
+- **System Version Bump to v3.0.7:** ซิงโครไนซ์เลขเวอร์ชัน `3.0.7` ทุกจุดของระบบตามมาตรฐาน SSOT
+
+
+---
+
 ## [3.0.6] - 2026-11-05
 ### Added
 - **Department Management CRUD (`staff.html`, `backend/server.py`, `scripts/generate_separated_portals.py`):** เพิ่มระบบบริหารจัดการกลุ่มงาน/หน่วยงานภายใน สวท. ครบวงจรสำหรับเจ้าหน้าที่พัสดุ ทั้งการเพิ่มหน่วยงานใหม่ แก้ไขชื่อหน่วยงาน และลบหน่วยงาน พร้อมระบบตรวจสอบการมีบุคลากรสังกัด (User Cascade Prevention)

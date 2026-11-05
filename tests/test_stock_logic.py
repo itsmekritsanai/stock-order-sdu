@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.6"
+        assert SYSTEM_VERSION == "3.0.7"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -482,3 +482,79 @@ class TestRequisitionStateMachineSafety:
         res = server.handle_reject_requisition({"docNo": "REQ-256910-0042", "reason": "test"})
         assert res["status"] == "error"
         assert res.get("code") in ("ALREADY_COMPLETED", "INVALID_STATE")
+
+
+class TestSecurityAuditRun2Patches:
+    """Tests for vulnerabilities remediated in Security Audit Run 2 (v3.0.7)."""
+
+    def test_url_encoded_path_traversal_blocked(self):
+        """sdu-sec-006: Percent-encoding path traversal and dotfile bypass attempts must be rejected."""
+        import server
+        handler = server.SDUInventoryRequestHandler.__new__(server.SDUInventoryRequestHandler)
+        handler.directory = server.PROJECT_ROOT
+
+        # Encoded dotfiles & secret files
+        assert handler.is_safe_static_path("/%2eenv") is False
+        assert handler.is_safe_static_path("/%2e%2e/backend/server.py") is False
+        assert handler.is_safe_static_path("/%62ackend/server.py") is False
+        assert handler.is_safe_static_path("/backend/server.py") is False
+        assert handler.is_safe_static_path("/.env") is False
+        assert handler.is_safe_static_path("/docker-compose.yml") is False
+
+        # Legitimate static files
+        assert handler.is_safe_static_path("/index.html") is True
+        assert handler.is_safe_static_path("/staff.html") is True
+        assert handler.is_safe_static_path("/portal.html") is True
+
+    def test_create_requisition_negative_quantity_rejected(self):
+        """sdu-sec-007: Negative piece/box quantities must be strictly rejected."""
+        import server
+        res = server.handle_create_requisition({
+            "docNo": "TEST-NEG-001",
+            "requester": "Test Requester",
+            "dept": "สำนักงานผู้อำนวยการ สวท.",
+            "purpose": "Security test for negative quantity",
+            "items": [{"itemId": 1, "qtyBoxes": -1, "qtyPieces": 0, "totalPieces": -250}]
+        })
+        assert res["status"] == "error"
+        assert "0" in res["message"] or "ไม่สามารถเป็นค่าลบได้" in res["message"]
+
+    def test_create_requisition_arithmetic_mismatch_rejected(self):
+        """sdu-sec-007: Client-spoofed totalPieces differing from expected formula must be rejected."""
+        import server
+        res = server.handle_create_requisition({
+            "docNo": "TEST-MISMATCH-001",
+            "requester": "Test Requester",
+            "dept": "สำนักงานผู้อำนวยการ สวท.",
+            "purpose": "Security test for arithmetic mismatch",
+            "items": [{"itemId": 1, "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 999999}]
+        })
+        assert res["status"] == "error"
+        assert "ไม่ตรงกับสูตรคำนวณจริง" in res["message"]
+
+    def test_approve_requisition_negative_quantity_rejected(self):
+        """sdu-sec-007: Approving negative quantity must be rejected."""
+        import server
+        res = server.handle_approve_requisition({
+            "docNo": "REQ-256910-6434",
+            "items": [{"itemId": 2, "approvedPieces": -10}]
+        })
+        assert res["status"] == "error"
+        assert "ไม่น้อยกว่า 0" in res["message"]
+
+    def test_requester_token_lifecycle(self):
+        """sdu-sec-010: Requester HMAC session token generation and verification."""
+        import server
+        token = server.generate_requester_token("wasana.c")
+        assert token.startswith("wasana.c.")
+        assert server.verify_requester_token(token, "wasana.c") is True
+        assert server.verify_requester_token(token, "other.user") is False
+        assert server.verify_requester_token("invalid.token", "wasana.c") is False
+
+    def test_handle_login_requester_returns_token(self):
+        """sdu-sec-010: handle_login_requester must return an authenticated session token."""
+        import server
+        res = server.handle_login_requester({"username": "wasana.c", "password": "123456"})
+        assert res["status"] == "success"
+        assert "token" in res
+        assert server.verify_requester_token(res["token"], "wasana.c") is True
