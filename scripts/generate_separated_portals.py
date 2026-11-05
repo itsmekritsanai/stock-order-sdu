@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.10"
+SYSTEM_VERSION = "3.0.11"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -193,6 +193,10 @@ initial_requisitions = [
     "status": "APPROVED",
     "signature": None,
     "reject_reason": "",
+    "completed_at": None,
+    "completed_date": "",
+    "rejected_at": None,
+    "rejected_date": "",
     "created_at": "2026-10-21T03:15:00.000Z",
     "updated_at": "2026-10-21T03:30:00.000Z",
     "items": [
@@ -281,6 +285,16 @@ requester_template = r'''<!DOCTYPE html>
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function getThaiDatetime(dateObj = new Date()) {
+      const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      const day = dateObj.getDate();
+      const month = thaiMonths[dateObj.getMonth()];
+      const thaiYear = dateObj.getFullYear() + 543;
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${day} ${month} ${thaiYear} ${hours}:${minutes} น.`;
     }
 
     if (typeof Swal === 'undefined') {
@@ -2049,10 +2063,14 @@ requester_template = r'''<!DOCTYPE html>
             requester: requester,
             phone: phone,
             purpose: purpose,
-            date: "21 ต.ค. 2569 " + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) + " น.",
+            date: getThaiDatetime(),
             status: "PENDING",
             signature: null,
             reject_reason: "",
+            completed_at: null,
+            completed_date: "",
+            rejected_at: null,
+            rejected_date: "",
             created_at: nowIso,
             updated_at: nowIso,
             items: cart.map(c => ({
@@ -2292,9 +2310,19 @@ requester_template = r'''<!DOCTYPE html>
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
                 <span>${escapeHtml(req.purpose || '-')}</span>
               </div>
+              ${req.status === 'COMPLETED' && (req.completed_date || req.completedDate) ? `
+              <div style="grid-column: 1 / -1; background: #ecfdf5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #a7f3d0; display: flex; align-items: center; gap: 6px;">
+                ${vIcons.check} <strong>วันที่จ่ายของ:</strong> ${escapeHtml(req.completed_date || req.completedDate)}
+              </div>
+              ` : ''}
               ${req.status === 'REJECTED' && (req.reject_reason || req.rejectReason) ? `
               <div style="grid-column: 1 / -1; background: var(--danger-light); color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">
-                <strong>เหตุผลที่ไม่อนุมัติ:</strong> ${req.reject_reason || req.rejectReason}
+                <div style="margin-bottom: 3px;"><strong>เหตุผลที่ไม่อนุมัติ:</strong> ${escapeHtml(req.reject_reason || req.rejectReason)}</div>
+                ${(req.rejected_date || req.rejectedDate) ? `
+                <div style="font-size: 0.8rem; color: #7f1d1d; display: flex; align-items: center; gap: 4px;">
+                  ${vIcons.clock} <strong>วันที่ยกเลิก:</strong> ${escapeHtml(req.rejected_date || req.rejectedDate)}
+                </div>
+                ` : ''}
               </div>
               ` : ''}
             </div>
@@ -2370,10 +2398,11 @@ requester_template = r'''<!DOCTYPE html>
       }).join('');
 
       const sigBox = document.getElementById('pdfSigOfficerBox');
+      const payDate = req.completed_date || req.completedDate || (req.status === 'COMPLETED' ? req.date : '');
       if (req.signature) {
-        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
+        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">${payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
       } else {
-        sigBox.innerHTML = `<div>ลงชื่อ.......................................................</div>`;
+        sigBox.innerHTML = `<div>ลงชื่อ.......................................................</div>${req.status === 'COMPLETED' && payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
       }
 
       const modal = document.getElementById('requisitionPdfModal');
@@ -2803,6 +2832,16 @@ staff_template = r'''<!DOCTYPE html>
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function getThaiDatetime(dateObj = new Date()) {
+      const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      const day = dateObj.getDate();
+      const month = thaiMonths[dateObj.getMonth()];
+      const thaiYear = dateObj.getFullYear() + 543;
+      const hours = String(dateObj.getHours()).padStart(2, '0');
+      const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${day} ${month} ${thaiYear} ${hours}:${minutes} น.`;
     }
 
     if (typeof Swal === 'undefined') {
@@ -3868,9 +3907,19 @@ staff_template = r'''<!DOCTYPE html>
               <div>${vIcons.building} <strong>หน่วยงาน:</strong> ${escapeHtml(req.dept)}</div>
               <div>${vIcons.user} <strong>ผู้ขอเบิก:</strong> ${escapeHtml(req.requester)} (${escapeHtml(req.phone || '-')})</div>
               <div style="grid-column: 1 / -1;">${vIcons.fileText} <strong>วัตถุประสงค์:</strong> ${escapeHtml(req.purpose)}</div>
-              ${req.status === 'REJECTED' && reasonStr ? `
+              ${req.status === 'COMPLETED' && (req.completed_date || req.completedDate) ? `
+                <div style="grid-column: 1 / -1; background: #ecfdf5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #a7f3d0; display: flex; align-items: center; gap: 6px;">
+                  ${vIcons.check} <strong>วันที่จ่ายของ:</strong> ${escapeHtml(req.completed_date || req.completedDate)}
+                </div>
+              ` : ''}
+              ${req.status === 'REJECTED' ? `
                 <div style="grid-column: 1 / -1; background: var(--danger-light); color: #991b1b; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #fecaca;">
-                  <strong>เหตุผลที่ไม่อนุมัติ / ยกเลิก:</strong> ${escapeHtml(reasonStr)}
+                  ${reasonStr ? `<div style="margin-bottom: 3px;"><strong>เหตุผลที่ไม่อนุมัติ / ยกเลิก:</strong> ${escapeHtml(reasonStr)}</div>` : ''}
+                  ${(req.rejected_date || req.rejectedDate) ? `
+                    <div style="font-size: 0.8rem; color: #7f1d1d; display: flex; align-items: center; gap: 4px;">
+                      ${vIcons.clock} <strong>วันที่ยกเลิก:</strong> ${escapeHtml(req.rejected_date || req.rejectedDate)}
+                    </div>
+                  ` : ''}
                 </div>
               ` : ''}
             </div>
@@ -4070,12 +4119,17 @@ staff_template = r'''<!DOCTYPE html>
               });
               saveItemsDB(items);
             }
+            const now = new Date();
+            const thaiNow = getThaiDatetime(now);
             req.status = 'REJECTED';
             req.reject_reason = result.value.trim();
             req.rejectReason = result.value.trim();
-            req.updated_at = new Date().toISOString();
+            req.rejected_at = now.toISOString();
+            req.rejected_date = thaiNow;
+            req.rejectedDate = thaiNow;
+            req.updated_at = now.toISOString();
             saveReqsDB(reqs);
-            postToMySQLAPI('rejectRequisition', { docNo: docNo, reason: req.reject_reason });
+            postToMySQLAPI('rejectRequisition', { docNo: docNo, reason: req.reject_reason, rejected_date: thaiNow });
             renderStaffRequisitions(currentStaffStatus);
             renderInventoryTable();
 
@@ -4118,8 +4172,13 @@ staff_template = r'''<!DOCTYPE html>
         if (!res.isConfirmed) return;
 
         const items = getItemsDB();
+        const now = new Date();
+        const thaiNow = getThaiDatetime(now);
         req.status = 'COMPLETED';
-        req.updated_at = new Date().toISOString();
+        req.completed_at = now.toISOString();
+        req.completed_date = thaiNow;
+        req.completedDate = thaiNow;
+        req.updated_at = now.toISOString();
 
         // Deduct permanently from On-Hand and release Reserved
         req.items.forEach(i => {
@@ -4134,7 +4193,8 @@ staff_template = r'''<!DOCTYPE html>
         saveReqsDB(reqs);
         saveItemsDB(items);
         postToMySQLAPI('completeRequisition', {
-          docNo: req.id
+          docNo: req.id,
+          completed_date: thaiNow
         });
 
         renderStaffRequisitions('APPROVED');
@@ -4806,7 +4866,8 @@ staff_template = r'''<!DOCTYPE html>
       if (sigArea) sigArea.innerHTML = '';
       const recTimeEl = document.getElementById('pdfReceiveTime');
       if (recTimeEl) {
-        recTimeEl.innerText = req.status === 'COMPLETED' ? `จ่ายพัสดุเมื่อ: ${req.date || ''}` : 'วันที่ ........../........../..........';
+        const payDate = req.completed_date || req.completedDate;
+        recTimeEl.innerText = req.status === 'COMPLETED' ? `วันที่จ่ายของ: ${payDate || req.date || ''}` : 'วันที่ ........../........../..........';
       }
       switchStaffView('pdf');
     }

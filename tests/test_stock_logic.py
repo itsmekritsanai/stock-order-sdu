@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.10"
+        assert SYSTEM_VERSION == "3.0.11"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -602,3 +602,76 @@ class TestSecurityAuditRun2Patches:
             assert "min-height: calc(297mm - 2.5cm)" in html_text, f"{portal_name} missing print min-height A4 calculation"
             assert "min-height: 1050px" in html_text, f"{portal_name} missing screen modal min-height"
             assert "margin-top: auto" in html_text, f"{portal_name} missing margin-top: auto on signatures"
+
+    def test_schema_has_completed_and_rejected_dates(self):
+        """Verify schema_postgres.sql contains completed_date and rejected_date fields."""
+        schema_path = os.path.join(PROJECT_ROOT, "backend", "schema_postgres.sql")
+        with open(schema_path, "r", encoding="utf-8") as f:
+            sql = f.read()
+        assert "completed_at TIMESTAMP DEFAULT NULL" in sql
+        assert "completed_date VARCHAR(100) DEFAULT NULL" in sql
+        assert "rejected_at TIMESTAMP DEFAULT NULL" in sql
+        assert "rejected_date VARCHAR(100) DEFAULT NULL" in sql
+
+    def test_requisition_dates_tracked_in_portals(self):
+        """Verify that index.html and staff.html render distribution date and cancellation date."""
+        for p_name in ["index.html", "staff.html"]:
+            p_path = os.path.join(PROJECT_ROOT, p_name)
+            with open(p_path, "r", encoding="utf-8") as f:
+                html = f.read()
+            assert "completed_date" in html or "completedDate" in html
+            assert "rejected_date" in html or "rejectedDate" in html
+            assert "วันที่จ่ายของ" in html
+            assert "วันที่ยกเลิก" in html
+
+    def test_complete_and_reject_actions_store_dates(self):
+        """Test backend handle_complete_requisition and handle_reject_requisition record dates."""
+        import server
+        # Create a test requisition
+        created = server.handle_create_requisition({
+            "dept": "สำนักงานผู้อำนวยการ",
+            "requester": "ทดสอบ วันที่",
+            "phone": "081-111-2222",
+            "purpose": "ทดสอบบันทึกวันที่จ่ายของและวันที่ยกเลิก",
+            "items": [{"itemId": 1, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ซอง"}]
+        })
+        assert created["status"] == "success"
+        doc_no = created["docNo"]
+
+        # Approve it first
+        appr = server.handle_approve_requisition({"docNo": doc_no, "items": [{"itemId": 1, "approvedPieces": 1}]})
+        assert appr["status"] == "success"
+
+        # Complete it
+        comp = server.handle_complete_requisition({"docNo": doc_no, "signature": "test_sig"})
+        assert comp["status"] == "success"
+        assert "completed_date" in comp or "completedDate" in comp
+        assert comp.get("completed_date") != ""
+
+        # Verify getRequisitions returns completed_date
+        reqs = server.handle_get_requisitions({"status": ["COMPLETED"]})
+        target = next((r for r in reqs["data"] if r["id"] == doc_no), None)
+        assert target is not None
+        assert target["completed_date"] != ""
+        assert "completed_at" in target and target["completed_at"] != ""
+
+        # Test reject with another requisition
+        created2 = server.handle_create_requisition({
+            "dept": "สำนักงานผู้อำนวยการ",
+            "requester": "ทดสอบ วันที่ยกเลิก",
+            "phone": "081-111-3333",
+            "purpose": "ทดสอบวันที่ยกเลิก",
+            "items": [{"itemId": 1, "qtyBoxes": 0, "qtyPieces": 1, "totalPieces": 1, "unitBox": "กล่อง", "unitPiece": "ซอง"}]
+        })
+        doc_no2 = created2["docNo"]
+        rej = server.handle_reject_requisition({"docNo": doc_no2, "reason": "ทดสอบยกเลิกคำขอ"})
+        assert rej["status"] == "success"
+        assert "rejected_date" in rej or "rejectedDate" in rej
+        assert rej.get("rejected_date") != ""
+
+        # Verify getRequisitions returns rejected_date
+        reqs2 = server.handle_get_requisitions({"status": ["REJECTED"]})
+        target2 = next((r for r in reqs2["data"] if r["id"] == doc_no2), None)
+        assert target2 is not None
+        assert target2["rejected_date"] != ""
+        assert "rejected_at" in target2 and target2["rejected_at"] != ""

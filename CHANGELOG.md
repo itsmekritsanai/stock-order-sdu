@@ -21,6 +21,15 @@
 
 ---
 
+## [3.0.11] - 2026-11-05
+### Added
+- **Distribution & Cancellation Date Tracking (`backend/server.py`, `backend/schema_postgres.sql`, `scripts/generate_separated_portals.py`, `index.html`, `staff.html`):** เพิ่มการจัดเก็บและแสดงผลวันที่จ่ายของ (`completed_date`, `completed_at`) เมื่อเจ้าหน้าที่บันทึกส่งมอบพัสดุสำเร็จ และวันที่ยกเลิก (`rejected_date`, `rejected_at`) เมื่อมีคำขอถูกปฏิเสธหรือยกเลิกรายการ
+- **Bilingual Thai Buddhist Era DateTime Format:** เพิ่มฟังก์ชัน `getThaiDatetime()` ใน JavaScript ฝั่ง Frontend และซิงค์กับ `format_thai_datetime()` ฝั่ง Python Backend (รูปแบบ `ว ดดด ปปปป ชช:นน น.` เช่น `5 พ.ย. 2569 13:45 น.`) บันทึกลงตารางฐานข้อมูล PostgreSQL 17 อย่างแม่นยำ
+- **UI Date Indicators Across Portals:** แสดงวันที่จ่ายของสำเร็จและวันที่ยกเลิกคำขอในพอร์ทัลผู้ขอเบิก (`renderMyRequisitionsModal`), พอร์ทัลเจ้าหน้าที่ (`renderStaffRequisitions`), หน้าพรีวิวใบเบิกพัสดุทางการ (`previewDocInPdf`, `openRequisitionPdf`) และระบบติดตามสถานะคำขอ (`handle_track_requisition`)
+- **System Version Bump to v3.0.11:** ซิงโครไนซ์เลขเวอร์ชัน `3.0.11` ทุกจุดของระบบตามมาตรฐาน SSOT และ Stock Order Rules
+
+---
+
 ## [3.0.10] - 2026-11-05
 ### Fixed
 - **PDF Signature Layout Bottom Alignment (`scripts/generate_separated_portals.py`, `index.html`, `staff.html`):** ปรับปรุงระบบพิมพ์ใบขอเบิกพัสดุ (PDF Requisition Slip) และหน้าต่างพรีวิวเอกสาร ให้บล็อกลายเซ็น (`.pdf-footer-section`, `.pdf-signatures`, และข้อความรับมอบพัสดุ `.pdf-ack-note`) จัดวางอยู่ชิดขอบล่างสุดของหน้ากระดาษ A4 เสมอ (Bottom-aligned) แม้รายการพัสดุที่ขอเบิกจะมีจำนวนน้อย โดยใช้ CSS Flexbox Column Layout ร่วมกับ `min-height: calc(297mm - 2.5cm)` และ `margin-top: auto` ป้องกันการลอยอยู่ใต้ตารางรายการแบบเดิม พร้อมรับประกันความเสถียรในการพิมพ์ที่ไม่ทำให้เกิดหน้ากระดาษว่างเปล่าส่วนเกิน

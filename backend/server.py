@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.0.10"
+SYSTEM_VERSION = "3.0.11"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -237,6 +237,12 @@ def handle_get_requisitions(params):
                 "signature": r["signature"],
                 "reject_reason": r["reject_reason"] or "",
                 "rejectReason": r["reject_reason"] or "",
+                "completed_at": str(r["completed_at"]) if r.get("completed_at") else "",
+                "completed_date": r.get("completed_date") or "",
+                "completedDate": r.get("completed_date") or "",
+                "rejected_at": str(r["rejected_at"]) if r.get("rejected_at") else "",
+                "rejected_date": r.get("rejected_date") or "",
+                "rejectedDate": r.get("rejected_date") or "",
                 "created_at": str(r["created_at"]) if r.get("created_at") else "",
                 "updated_at": str(r["updated_at"]) if r.get("updated_at") else "",
                 "items": items_map.get(rid, []),
@@ -281,6 +287,13 @@ def handle_track_requisition(params):
                 "status": req["status"],
                 "signature": req["signature"],
                 "reject_reason": req["reject_reason"] or "",
+                "rejectReason": req["reject_reason"] or "",
+                "completed_at": str(req["completed_at"]) if req.get("completed_at") else "",
+                "completed_date": req.get("completed_date") or "",
+                "completedDate": req.get("completed_date") or "",
+                "rejected_at": str(req["rejected_at"]) if req.get("rejected_at") else "",
+                "rejected_date": req.get("rejected_date") or "",
+                "rejectedDate": req.get("rejected_date") or "",
                 "items": [
                     {
                         "itemId": int(it["item_id"]),
@@ -602,9 +615,12 @@ def handle_complete_requisition(payload):
                     (item_id, -approved_qty, new_on_hand, doc_no, f"จ่ายพัสดุตามใบเบิก {doc_no}"),
                 )
 
+            now = datetime.now()
+            completed_date = str(payload.get("completed_date") or payload.get("completedDate") or format_thai_datetime(now)).strip()
+
             cur.execute(
-                "UPDATE requisitions SET status = 'COMPLETED', signature = %s WHERE id = %s",
-                (signature, doc_no),
+                "UPDATE requisitions SET status = 'COMPLETED', signature = %s, completed_at = %s, completed_date = %s WHERE id = %s",
+                (signature, now, completed_date, doc_no),
             )
 
         conn.commit()
@@ -612,7 +628,10 @@ def handle_complete_requisition(payload):
             "status": "success",
             "docNo": doc_no,
             "statusNow": "COMPLETED",
-            "message": "บันทึกลายเซ็นและตัดยอดคงคลังจริงใน MySQL เรียบร้อยแล้ว",
+            "completed_at": str(now),
+            "completed_date": completed_date,
+            "completedDate": completed_date,
+            "message": "บันทึกจ่ายพัสดุสำเร็จและตัดยอดคงคลังจริงเรียบร้อยแล้ว",
         }
     except Exception as e:
         conn.rollback()
@@ -668,9 +687,12 @@ def handle_reject_requisition(payload):
                             (new_reserved, item_id),
                         )
 
+            now = datetime.now()
+            rejected_date = str(payload.get("rejected_date") or payload.get("rejectedDate") or format_thai_datetime(now)).strip()
+
             cur.execute(
-                "UPDATE requisitions SET status = 'REJECTED', reject_reason = %s WHERE id = %s",
-                (reason, doc_no),
+                "UPDATE requisitions SET status = 'REJECTED', reject_reason = %s, rejected_at = %s, rejected_date = %s WHERE id = %s",
+                (reason, now, rejected_date, doc_no),
             )
 
         conn.commit()
@@ -678,7 +700,10 @@ def handle_reject_requisition(payload):
             "status": "success",
             "docNo": doc_no,
             "statusNow": "REJECTED",
-            "message": "ปฏิเสธคำขอและคืนยอดพัสดุใน MySQL เรียบร้อยแล้ว",
+            "rejected_at": str(now),
+            "rejected_date": rejected_date,
+            "rejectedDate": rejected_date,
+            "message": "ปฏิเสธคำขอและคืนยอดพัสดุเรียบร้อยแล้ว",
         }
     except Exception as e:
         conn.rollback()
