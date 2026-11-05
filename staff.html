@@ -562,7 +562,7 @@
                   <th>คงคลังจริง (On-Hand)</th>
                   <th>ยอดจอง (Reserved)</th>
                   <th>พร้อมเบิก (Available)</th>
-                  <th>สถานะสต๊อก</th>
+                  <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
                   <th style="width: 150px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
@@ -2100,15 +2100,19 @@
               ${formatStockDisplay(available, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit)}
             </td>
             <td>
-              ${isLow ? `
-                <span style="background: var(--danger-light); color: var(--danger); font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">
-                  ต่ำกว่าเกณฑ์ (${item.min_alert})
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                <span style="background: ${isLow ? 'var(--danger-light)' : '#dcfce7'}; color: ${isLow ? 'var(--danger)' : '#166534'}; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px;">
+                  ${isLow ? '⚠️ ต่ำกว่าเกณฑ์' : '🟢 ปกติ'}
                 </span>
-              ` : `
-                <span style="background: #dcfce7; color: #166534; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">
-                  ปกติ
-                </span>
-              `}
+                <button type="button" class="btn-min-alert-badge" onclick="promptSetMinAlert(${item.id})" 
+                        style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 2px 6px; font-size: 0.75rem; color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s;"
+                        onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#3b82f6'; this.style.color='#1e40af';"
+                        onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#cbd5e1'; this.style.color='#334155';"
+                        title="คลิกเพื่อปรับเกณฑ์เตือนจำนวนพัสดุ">
+                  <span>🔔 เตือนที่: <strong>${(item.min_alert || 0).toLocaleString()}</strong> ${item.unit_piece_name}</span>
+                  <span style="color: #3b82f6; font-size: 0.75rem;">✏️</span>
+                </button>
+              </div>
             </td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openItemModal(${item.id})">
@@ -2140,6 +2144,69 @@
         reader.onload = (e) => resolve(e.target.result);
         reader.onerror = () => resolve(null);
         reader.readAsDataURL(fileInput.files[0]);
+      });
+    }
+
+    async function promptSetMinAlert(itemId) {
+      const items = getItemsDB();
+      const itm = items.find(i => Number(i.id) === Number(itemId));
+      if (!itm) return;
+
+      const currentMin = itm.min_alert !== undefined ? Number(itm.min_alert) : 20;
+
+      const { value: newMin } = await Swal.fire({
+        title: '🔔 ตั้งค่าเกณฑ์แจ้งเตือนสต๊อกต่ำ',
+        html: `
+          <div style="text-align: left; font-size: 0.9rem; margin-top: 0.5rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem;">
+              <div style="font-weight: 700; color: #0f172a; margin-bottom: 4px;">${escapeHtml(itm.name)}</div>
+              <div style="font-size: 0.8rem; color: #64748b;">
+                หน่วยนับ: <strong>${escapeHtml(itm.unit_piece_name)}</strong> 
+                ${itm.is_multi_unit ? `• อัตราส่วน: 1 ${escapeHtml(itm.unit_box_name)} = ${itm.pieces_per_box} ${escapeHtml(itm.unit_piece_name)}` : ''}
+              </div>
+              <div style="font-size: 0.8rem; color: #059669; margin-top: 4px;">
+                📦 ยอดพร้อมเบิกปัจจุบัน: <strong>${Math.max(0, itm.on_hand_pieces - itm.reserved_pieces).toLocaleString()}</strong> ${escapeHtml(itm.unit_piece_name)}
+              </div>
+            </div>
+
+            <label style="font-weight: 600; color: #334155; display: block; margin-bottom: 6px;">
+              แจ้งเตือนเมื่อยอดพร้อมเบิกเหลือน้อยกว่าหรือเท่ากับ (${escapeHtml(itm.unit_piece_name)}): *
+            </label>
+            <input type="number" id="swal-prompt-min-alert" class="swal2-input" min="0" value="${currentMin}" 
+                   style="margin: 0; width: 100%; height: 42px; font-size: 1.05rem; font-weight: 600; text-align: center; border-radius: 8px;">
+            <div style="font-size: 0.775rem; color: #64748b; margin-top: 6px;">
+              💡 เมื่อยอดพัสดุในห้องคลังลดลงจนเหลือเท่ากับหรือน้อยกว่าเกณฑ์นี้ ระบบจะเปลี่ยนแถบสถานะเป็น <strong style="color: #dc2626;">สีแดง</strong> ทั้งในหน้าเจ้าหน้าที่และหน้าขอเบิกพัสดุ
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'บันทึกเกณฑ์เตือน',
+        cancelButtonText: 'ยกเลิก',
+        preConfirm: () => {
+          const val = document.getElementById('swal-prompt-min-alert').value;
+          if (val === '' || isNaN(val) || Number(val) < 0) {
+            Swal.showValidationMessage('กรุณาระบุจำนวนเกณฑ์เตือนเป็นตัวเลขตั้งแต่ 0 ขึ้นไป');
+            return false;
+          }
+          return Math.max(0, parseInt(val, 10));
+        }
+      });
+
+      if (newMin === undefined) return;
+
+      itm.min_alert = newMin;
+      saveItemsDB(items);
+      await postToMySQLAPI('saveItem', { id: itm.id, min_alert: newMin });
+      renderInventoryTable();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกเกณฑ์เตือนสำเร็จ!',
+        text: `ตั้งค่าเกณฑ์เตือนพัสดุ "${itm.name}" เป็น ${newMin.toLocaleString()} ${itm.unit_piece_name} เรียบร้อยแล้ว`,
+        timer: 1600,
+        showConfirmButton: false
       });
     }
 

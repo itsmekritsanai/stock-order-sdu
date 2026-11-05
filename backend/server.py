@@ -803,6 +803,8 @@ def handle_save_user(payload):
                     row = cur.fetchone()
                     user_id = row["id"] if row else None
                 else:
+                    if not name:
+                        return {"status": "error", "message": "กรุณาระบุชื่อรายการพัสดุ"}
                     cur.execute(
                         "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1)",
                         (name, username, final_pass, position, dept, phone),
@@ -1043,15 +1045,38 @@ def handle_save_item(payload):
     image_piece = str(payload.get("image_piece") or "assets/images/แฟ้มเสนอ เล่ม.jpeg").strip()
     image_box = str(payload.get("image_box") or image_piece).strip()
 
-    if not name:
+    if not item_id and not name:
         return {"status": "error", "message": "กรุณาระบุชื่อรายการพัสดุ"}
 
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
             if item_id:
-                cur.execute("SELECT id FROM inventory_items WHERE id = %s", (int(item_id),))
-                if cur.fetchone():
+                cur.execute("SELECT * FROM inventory_items WHERE id = %s", (int(item_id),))
+                existing = cur.fetchone()
+                if existing:
+                    # Support partial updates (e.g. updating min_alert only)
+                    if not name:
+                        name = existing["name"]
+                    if "category" not in payload:
+                        category = existing["category"]
+                    if "is_multi_unit" not in payload:
+                        is_multi_unit = existing["is_multi_unit"]
+                    if "unit_piece_name" not in payload:
+                        unit_piece_name = existing["unit_piece_name"]
+                    if "unit_box_name" not in payload:
+                        unit_box_name = existing["unit_box_name"]
+                    if "pieces_per_box" not in payload:
+                        pieces_per_box = existing["pieces_per_box"]
+                    if "on_hand_pieces" not in payload:
+                        on_hand_pieces = existing["on_hand_pieces"]
+                    if "min_alert" not in payload:
+                        min_alert = existing["min_alert"]
+                    if "image_piece" not in payload:
+                        image_piece = existing["image_piece"]
+                    if "image_box" not in payload:
+                        image_box = existing["image_box"]
+
                     cur.execute(
                         """
                         UPDATE inventory_items
