@@ -21,6 +21,14 @@
 
 ---
 
+## [3.0.9] - 2026-11-05
+### Changed
+- **University Brand Logo Tab Favicon (`portal.html`, `index.html`, `staff.html`, `assets/`, `favicon.ico`):** ปรับเปลี่ยนโลโก้บนแท็บเบราว์เซอร์ (Browser Tab Favicon) ในทุกพอร์ทัลเป็นตราสัญลักษณ์ทางการของมหาวิทยาลัยสวนดุสิต (`assets/logo_sdu.png`) พร้อมสร้างชุดไอคอนความละเอียดสูงครอบคลุมทุกขนาด (`favicon.ico` Multi-res, `favicon-16x16.png`, `favicon-32x32.png`, `favicon-48x48.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, และ `favicon.svg`) เพื่อความคมชัด สวยงาม และสะท้อนอัตลักษณ์ของสถาบันอย่างถูกต้อง
+- **System Version Bump to v3.0.9:** ซิงโครไนซ์เลขเวอร์ชัน `3.0.9` ทุกจุดของระบบตามมาตรฐาน SSOT
+
+
+---
+
 ## [3.0.8] - 2026-11-05
 ### Fixed
 - **JavaScript Syntax Error in Staff Portal (`scripts/generate_separated_portals.py`, `staff.html`):** แก้ไขข้อผิดพลาดไวยากรณ์ JavaScript จากการปิดบล็อก `join` ซ้ำซ้อน (`}).join('')}

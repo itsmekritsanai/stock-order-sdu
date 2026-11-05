@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.8"
+        assert SYSTEM_VERSION == "3.0.9"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -583,3 +583,11 @@ class TestSecurityAuditRun2Patches:
         dup2 = list(re.finditer(r"\)\.join\('[^']*'\);\s*`\)\.join\('[^']*'\);", staff_html))
         assert len(dup1) == 0, f"Duplicate join found: {dup1}"
         assert len(dup2) == 0, f"Duplicate pdf join found: {dup2}"
+
+    def test_university_brand_logo_favicon_configured(self):
+        """Verify that all portal HTML files configure the official SDU university logo as tab favicon."""
+        for portal_name in ["index.html", "staff.html", "portal.html"]:
+            p_path = os.path.join(PROJECT_ROOT, portal_name)
+            with open(p_path, "r", encoding="utf-8") as f:
+                html_text = f.read()
+            assert '<link rel="icon" type="image/png" href="assets/logo_sdu.png">' in html_text, f"{portal_name} missing SDU logo favicon link"

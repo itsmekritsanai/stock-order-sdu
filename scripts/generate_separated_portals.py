@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.8"
+SYSTEM_VERSION = "3.0.9"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -255,7 +255,9 @@ requester_template = r'''<!DOCTYPE html>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- University Brand Logo Tab Favicon -->
+  <link rel="icon" type="image/png" href="assets/logo_sdu.png">
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
@@ -2735,7 +2737,9 @@ staff_template = r'''<!DOCTYPE html>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- University Brand Logo Tab Favicon -->
+  <link rel="icon" type="image/png" href="assets/logo_sdu.png">
+  <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
