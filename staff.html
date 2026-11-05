@@ -725,7 +725,7 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.7) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.0.8) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
@@ -1198,7 +1198,6 @@
                   </tr>
                   `;
                 }).join('')}
-                `).join('')}
               </tbody>
             </table>
 
@@ -2070,7 +2069,6 @@
         </tr>
         `;
       }).join('');
-      `).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
       if (sigArea) sigArea.innerHTML = '';
@@ -2091,12 +2089,6 @@
       if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
       if (boxes > 0) return `${boxes} ${safeBox}`;
       return `${pieces} ${safePiece}`;
-      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
-      const boxes = Math.floor(totalPieces / ratio);
-      const pieces = totalPieces % ratio;
-      if (boxes > 0 && pieces > 0) return `${boxes} ${boxName} ${pieces} ${pieceName}`;
-      if (boxes > 0) return `${boxes} ${boxName}`;
-      return `${pieces} ${pieceName}`;
     }
 
     function renderInventoryTable() {

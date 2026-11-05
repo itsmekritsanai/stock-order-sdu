@@ -1046,7 +1046,7 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.0.7) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.0.8) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -1534,12 +1534,6 @@
       if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
       if (boxes > 0) return `${boxes} ${safeBox}`;
       return `${pieces} ${safePiece}`;
-      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
-      const boxes = Math.floor(totalPieces / ratio);
-      const pieces = totalPieces % ratio;
-      if (boxes > 0 && pieces > 0) return `${boxes} ${boxName} ${pieces} ${pieceName}`;
-      if (boxes > 0) return `${boxes} ${boxName}`;
-      return `${pieces} ${pieceName}`;
     }
 
     function renderCatalog() {

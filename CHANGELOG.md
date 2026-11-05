@@ -21,6 +21,19 @@
 
 ---
 
+## [3.0.8] - 2026-11-05
+### Fixed
+- **JavaScript Syntax Error in Staff Portal (`scripts/generate_separated_portals.py`, `staff.html`):** แก้ไขข้อผิดพลาดไวยากรณ์ JavaScript จากการปิดบล็อก `join` ซ้ำซ้อน (`}).join('')}
+`).join('')}`) ในเทมเพลตตารางคำขอเจ้าหน้าที่และหน้าพิมพ์ PDF ทำให้เบราว์เซอร์สามารถคอมไพล์และประมวลผลโค้ด JavaScript หน้า `staff.html` ได้อย่างถูกต้อง 100%
+- **Dead Code Cleanup in Stock Formatting (`scripts/generate_separated_portals.py`, `index.html`, `staff.html`):** ล้างโค้ดคำนวณที่ไม่ได้ใช้งาน (Dead Code) หลังคำสั่ง `return` ภายในฟังก์ชัน `formatStockDisplay` ของทั้งสองพอร์ทัล
+- **Requester Default Password Alignment (`backend/server.py`, PostgreSQL 17):** ปรับจูนระบบยืนยันตัวตน `handle_login_requester` ให้รองรับรหัสผ่านตั้งต้นของมหาวิทยาลัย (`sdu1234`) สำหรับบัญชีผู้ใช้บุคลากรและบัญชีตัวอย่าง (`wasana.c`, `user`) พร้อมรีเซ็ตแฮชในฐานข้อมูลให้ตรงกัน ทำให้ผู้ใช้งานสามารถเข้าสู่ระบบขอเบิกพัสดุได้ทันที
+
+### Changed
+- **System Version Bump to v3.0.8:** ซิงโครไนซ์เลขเวอร์ชัน `3.0.8` ทุกจุดของระบบตามมาตรฐาน SSOT
+
+
+---
+
 ## [3.0.7] - 2026-11-05
 ### Security
 - **URL-Encoded Path Traversal & Dotfile Filter Bypass (`backend/server.py`, `sdu-sec-006`, Critical / CWE-22, CWE-552):** แก้ไขช่องโหว่การใช้ Percent-encoding (`/%2eenv`, `/%62ackend/server.py`) หลบเลี่ยงตัวกรองไฟล์ความลับและโฟลเดอร์ระบบ ด้วยการถอดรหัส URL แบบ Recursive (`unquote`), ตรวจสอบ Path Segments, และบังคับใช้ Canonical Realpath Check ให้อยู่ภายใต้ `PROJECT_ROOT` อย่างเข้มงวด

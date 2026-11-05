@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.7"
+SYSTEM_VERSION = "3.0.8"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -1702,12 +1702,6 @@ requester_template = r'''<!DOCTYPE html>
       if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
       if (boxes > 0) return `${boxes} ${safeBox}`;
       return `${pieces} ${safePiece}`;
-      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
-      const boxes = Math.floor(totalPieces / ratio);
-      const pieces = totalPieces % ratio;
-      if (boxes > 0 && pieces > 0) return `${boxes} ${boxName} ${pieces} ${pieceName}`;
-      if (boxes > 0) return `${boxes} ${boxName}`;
-      return `${pieces} ${pieceName}`;
     }
 
     function renderCatalog() {
@@ -3852,7 +3846,6 @@ staff_template = r'''<!DOCTYPE html>
                   </tr>
                   `;
                 }).join('')}
-                `).join('')}
               </tbody>
             </table>
 
@@ -4724,7 +4717,6 @@ staff_template = r'''<!DOCTYPE html>
         </tr>
         `;
       }).join('');
-      `).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
       if (sigArea) sigArea.innerHTML = '';
@@ -4745,12 +4737,6 @@ staff_template = r'''<!DOCTYPE html>
       if (boxes > 0 && pieces > 0) return `${boxes} ${safeBox} ${pieces} ${safePiece}`;
       if (boxes > 0) return `${boxes} ${safeBox}`;
       return `${pieces} ${safePiece}`;
-      if (!isMulti || ratio <= 1) return `${totalPieces.toLocaleString()} ${pieceName}`;
-      const boxes = Math.floor(totalPieces / ratio);
-      const pieces = totalPieces % ratio;
-      if (boxes > 0 && pieces > 0) return `${boxes} ${boxName} ${pieces} ${pieceName}`;
-      if (boxes > 0) return `${boxes} ${boxName}`;
-      return `${pieces} ${pieceName}`;
     }
 
     function renderInventoryTable() {

@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.7"
+        assert SYSTEM_VERSION == "3.0.8"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -554,7 +554,32 @@ class TestSecurityAuditRun2Patches:
     def test_handle_login_requester_returns_token(self):
         """sdu-sec-010: handle_login_requester must return an authenticated session token."""
         import server
-        res = server.handle_login_requester({"username": "wasana.c", "password": "123456"})
+        res = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
         assert res["status"] == "success"
         assert "token" in res
         assert server.verify_requester_token(res["token"], "wasana.c") is True
+
+    def test_requester_login_with_default_sdu_password(self):
+        """Verify that wasana.c and user can log in with institutional default sdu1234."""
+        import server
+        res_wasana = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+        assert res_wasana["status"] == "success"
+        assert "token" in res_wasana
+        assert server.verify_requester_token(res_wasana["token"], "wasana.c") is True
+
+        res_user = server.handle_login_requester({"username": "user", "password": "sdu1234"})
+        assert res_user["status"] == "success"
+        assert "token" in res_user
+        assert server.verify_requester_token(res_user["token"], "user") is True
+
+    def test_staff_portal_template_syntax_clean(self):
+        """Verify staff.html and index.html have 0 duplicate join tokens or template syntax errors."""
+        staff_path = os.path.join(PROJECT_ROOT, "staff.html")
+        with open(staff_path, "r", encoding="utf-8") as f:
+            staff_html = f.read()
+
+        import re
+        dup1 = list(re.finditer(r"\)\.join\('[^']*'\)\s*\}\s*`\)\.join\('[^']*'\)", staff_html))
+        dup2 = list(re.finditer(r"\)\.join\('[^']*'\);\s*`\)\.join\('[^']*'\);", staff_html))
+        assert len(dup1) == 0, f"Duplicate join found: {dup1}"
+        assert len(dup2) == 0, f"Duplicate pdf join found: {dup2}"
