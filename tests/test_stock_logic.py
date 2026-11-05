@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.9"
+        assert SYSTEM_VERSION == "3.0.10"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -591,3 +591,14 @@ class TestSecurityAuditRun2Patches:
             with open(p_path, "r", encoding="utf-8") as f:
                 html_text = f.read()
             assert '<link rel="icon" type="image/png" href="assets/logo_sdu.png">' in html_text, f"{portal_name} missing SDU logo favicon link"
+
+    def test_pdf_signature_bottom_layout_configured(self):
+        """Verify that PDF signature block is placed at the bottom of the A4 page via flexbox margin-top: auto."""
+        for portal_name in ["index.html", "staff.html"]:
+            p_path = os.path.join(PROJECT_ROOT, portal_name)
+            with open(p_path, "r", encoding="utf-8") as f:
+                html_text = f.read()
+            assert "pdf-footer-section" in html_text, f"{portal_name} missing pdf-footer-section"
+            assert "min-height: calc(297mm - 2.5cm)" in html_text, f"{portal_name} missing print min-height A4 calculation"
+            assert "min-height: 1050px" in html_text, f"{portal_name} missing screen modal min-height"
+            assert "margin-top: auto" in html_text, f"{portal_name} missing margin-top: auto on signatures"

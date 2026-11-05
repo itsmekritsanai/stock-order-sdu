@@ -21,6 +21,13 @@
 
 ---
 
+## [3.0.10] - 2026-11-05
+### Fixed
+- **PDF Signature Layout Bottom Alignment (`scripts/generate_separated_portals.py`, `index.html`, `staff.html`):** ปรับปรุงระบบพิมพ์ใบขอเบิกพัสดุ (PDF Requisition Slip) และหน้าต่างพรีวิวเอกสาร ให้บล็อกลายเซ็น (`.pdf-footer-section`, `.pdf-signatures`, และข้อความรับมอบพัสดุ `.pdf-ack-note`) จัดวางอยู่ชิดขอบล่างสุดของหน้ากระดาษ A4 เสมอ (Bottom-aligned) แม้รายการพัสดุที่ขอเบิกจะมีจำนวนน้อย โดยใช้ CSS Flexbox Column Layout ร่วมกับ `min-height: calc(297mm - 2.5cm)` และ `margin-top: auto` ป้องกันการลอยอยู่ใต้ตารางรายการแบบเดิม พร้อมรับประกันความเสถียรในการพิมพ์ที่ไม่ทำให้เกิดหน้ากระดาษว่างเปล่าส่วนเกิน
+- **System Version Bump to v3.0.10:** ซิงโครไนซ์เลขเวอร์ชัน `3.0.10` ทุกจุดของระบบตามมาตรฐาน SSOT และ Stock Order Rules
+
+---
+
 ## [3.0.9] - 2026-11-05
 ### Changed
 - **University Brand Logo Tab Favicon (`portal.html`, `index.html`, `staff.html`, `assets/`, `favicon.ico`):** ปรับเปลี่ยนโลโก้บนแท็บเบราว์เซอร์ (Browser Tab Favicon) ในทุกพอร์ทัลเป็นตราสัญลักษณ์ทางการของมหาวิทยาลัยสวนดุสิต (`assets/logo_sdu.png`) พร้อมสร้างชุดไอคอนความละเอียดสูงครอบคลุมทุกขนาด (`favicon.ico` Multi-res, `favicon-16x16.png`, `favicon-32x32.png`, `favicon-48x48.png`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, และ `favicon.svg`) เพื่อความคมชัด สวยงาม และสะท้อนอัตลักษณ์ของสถาบันอย่างถูกต้อง

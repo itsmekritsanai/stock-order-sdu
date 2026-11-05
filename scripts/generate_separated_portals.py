@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.9"
+SYSTEM_VERSION = "3.0.10"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -529,7 +529,7 @@ requester_template = r'''<!DOCTYPE html>
 
     /* Official PDF Requisition Slip Styles */
     .pdf-preview-container { background: #525659; padding: 2rem; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
-    .pdf-page { background: white; width: 100%; max-width: 800px; padding: 2.8rem 3.2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }
+    .pdf-page { background: white; width: 100%; max-width: 800px; min-height: 1050px; display: flex; flex-direction: column; box-sizing: border-box; padding: 2.8rem 3.2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }
     .pdf-header { text-align: center; margin-bottom: 1.75rem; position: relative; display: flex; flex-direction: column; align-items: center; }
     .pdf-header h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.25rem; }
     .pdf-header p { font-size: 0.9rem; color: #444; }
@@ -538,7 +538,10 @@ requester_template = r'''<!DOCTYPE html>
     .pdf-items-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.95rem; }
     .pdf-items-table th, .pdf-items-table td { border: 1px solid #333; padding: 8px 10px; }
     .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
-    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 2.5rem; text-align: center; font-size: 0.875rem; }
+    .pdf-footer-section { margin-top: auto; width: 100%; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-ack-note { font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: auto; text-align: center; font-size: 0.875rem; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-footer-section .pdf-signatures { margin-top: 0.75rem; }
     .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
     .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
     .sig-line { width: 80%; border-bottom: 1px dotted #333; margin-bottom: 6px; }
@@ -596,15 +599,32 @@ requester_template = r'''<!DOCTYPE html>
         position: static !important;
         width: 100% !important;
         max-width: 100% !important;
+        min-height: calc(297mm - 2.5cm) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
         padding: 0 !important;
         margin: 0 !important;
         box-shadow: none !important;
         background: white !important;
         visibility: visible !important;
-        display: block !important;
       }
       #printablePdf * {
         visibility: visible !important;
+      }
+      .pdf-footer-section {
+        margin-top: auto !important;
+        width: 100% !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .pdf-signatures {
+        margin-top: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .pdf-footer-section .pdf-signatures {
+        margin-top: 0.5rem !important;
       }
     }
 
@@ -1255,28 +1275,30 @@ requester_template = r'''<!DOCTYPE html>
             </tbody>
           </table>
 
-          <div class="pdf-signatures">
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div>ลงชื่อ.......................................................</div>
-              <div style="margin-top: 4px;">(<span id="pdfSigRequester">-</span>)</div>
-              <div style="font-size: 0.8rem; color: #555;">ผู้ขอเบิก</div>
-            </div>
-
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div>ลงชื่อ.......................................................</div>
-              <div style="margin-top: 4px;">(.......................................................)</div>
-              <div style="font-size: 0.8rem; color: #555;">หัวหน้าหน่วยงาน / ผู้เห็นชอบ</div>
-            </div>
-
-            <div class="sig-box">
-              <div class="sig-line"></div>
-              <div id="pdfSigOfficerBox">
+          <div class="pdf-footer-section">
+            <div class="pdf-signatures">
+              <div class="sig-box">
+                <div class="sig-line"></div>
                 <div>ลงชื่อ.......................................................</div>
+                <div style="margin-top: 4px;">(<span id="pdfSigRequester">-</span>)</div>
+                <div style="font-size: 0.8rem; color: #555;">ผู้ขอเบิก</div>
               </div>
-              <div style="margin-top: 4px;">(<span id="pdfSigRecipient">-</span>)</div>
-              <div style="font-size: 0.8rem; color: #555;">ผู้รับพัสดุ / เจ้าหน้าที่จ่ายของ</div>
+
+              <div class="sig-box">
+                <div class="sig-line"></div>
+                <div>ลงชื่อ.......................................................</div>
+                <div style="margin-top: 4px;">(.......................................................)</div>
+                <div style="font-size: 0.8rem; color: #555;">หัวหน้าหน่วยงาน / ผู้เห็นชอบ</div>
+              </div>
+
+              <div class="sig-box">
+                <div class="sig-line"></div>
+                <div id="pdfSigOfficerBox">
+                  <div>ลงชื่อ.......................................................</div>
+                </div>
+                <div style="margin-top: 4px;">(<span id="pdfSigRecipient">-</span>)</div>
+                <div style="font-size: 0.8rem; color: #555;">ผู้รับพัสดุ / เจ้าหน้าที่จ่ายของ</div>
+              </div>
             </div>
           </div>
         </div>
@@ -2419,11 +2441,15 @@ requester_template = r'''<!DOCTYPE html>
               line-height: 1.5;
             }
             .pdf-page {
+              display: flex;
+              flex-direction: column;
+              min-height: calc(297mm - 2.5cm);
               width: 100%;
               max-width: 100%;
               margin: 0 auto;
               padding: 0;
               background: white;
+              box-sizing: border-box;
             }
             .pdf-header {
               text-align: center;
@@ -2473,14 +2499,28 @@ requester_template = r'''<!DOCTYPE html>
               font-weight: 600;
               text-align: center;
             }
+            .pdf-footer-section {
+              margin-top: auto;
+              width: 100%;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .pdf-ack-note {
+              font-size: 0.85rem;
+              margin-bottom: 0.75rem;
+            }
             .pdf-signatures {
               display: grid;
               grid-template-columns: 1fr 1fr 1fr;
               gap: 1rem;
-              margin-top: 2rem;
+              margin-top: auto;
               text-align: center;
               font-size: 0.85rem;
               page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .pdf-footer-section .pdf-signatures {
+              margin-top: 0.5rem;
             }
             .sig-box {
               display: flex;
@@ -3011,7 +3051,7 @@ staff_template = r'''<!DOCTYPE html>
 
     /* Official PDF Requisition Slip Styles */
     .pdf-preview-container { background: #525659; padding: 2rem; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
-    .pdf-page { background: white; width: 100%; max-width: 800px; padding: 2.8rem 3.2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }
+    .pdf-page { background: white; width: 100%; max-width: 800px; min-height: 1050px; display: flex; flex-direction: column; box-sizing: border-box; padding: 2.8rem 3.2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: 'Sarabun', sans-serif; color: #000; line-height: 1.6; }
     .pdf-header { text-align: center; margin-bottom: 1.75rem; position: relative; display: flex; flex-direction: column; align-items: center; }
     .pdf-header h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 0.25rem; }
     .pdf-header p { font-size: 0.9rem; color: #444; }
@@ -3020,7 +3060,10 @@ staff_template = r'''<!DOCTYPE html>
     .pdf-items-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.95rem; }
     .pdf-items-table th, .pdf-items-table td { border: 1px solid #333; padding: 8px 10px; }
     .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
-    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 2.5rem; text-align: center; font-size: 0.875rem; }
+    .pdf-footer-section { margin-top: auto; width: 100%; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-ack-note { font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: auto; text-align: center; font-size: 0.875rem; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-footer-section .pdf-signatures { margin-top: 0.75rem; }
     .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
     .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
     .sig-line { width: 80%; border-bottom: 1px dotted #333; margin-bottom: 6px; }
@@ -3053,15 +3096,32 @@ staff_template = r'''<!DOCTYPE html>
         position: static !important;
         width: 100% !important;
         max-width: 100% !important;
+        min-height: calc(297mm - 2.5cm) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
         padding: 0 !important;
         margin: 0 !important;
         box-shadow: none !important;
         background: white !important;
         visibility: visible !important;
-        display: block !important;
       }
       #printablePdf * {
         visibility: visible !important;
+      }
+      .pdf-footer-section {
+        margin-top: auto !important;
+        width: 100% !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .pdf-signatures {
+        margin-top: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      .pdf-footer-section .pdf-signatures {
+        margin-top: 0.5rem !important;
       }
     }
 
@@ -3414,33 +3474,35 @@ staff_template = r'''<!DOCTYPE html>
               </tbody>
             </table>
 
-            <div style="font-size: 0.85rem; margin-top: 1rem;">
-              * ข้าพเจ้าได้รับมอบพัสดุตามรายการและจำนวนที่ระบุข้างต้นไว้ในสภาพเรียบร้อยครบถ้วนแล้ว
-            </div>
-
-            <!-- Signatures Section -->
-            <div class="pdf-signatures">
-              <div class="sig-box">
-                <div class="sig-line"></div>
-                <div>( <span id="pdfSignRequester">นางสาววาสนา จันทร์จ่าย</span> )</div>
-                <div style="font-size: 0.75rem; color: #666;">ผู้ขอเบิกพัสดุ</div>
-                <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569</div>
+            <div class="pdf-footer-section">
+              <div class="pdf-ack-note">
+                * ข้าพเจ้าได้รับมอบพัสดุตามรายการและจำนวนที่ระบุข้างต้นไว้ในสภาพเรียบร้อยครบถ้วนแล้ว
               </div>
 
-              <div class="sig-box">
-                <div style="font-size: 0.8rem; color: #0284c7; font-weight: bold; margin-bottom: 8px;">[ ประทับตราอนุมัติ ]</div>
-                <div class="sig-line"></div>
-                <div>( นางสมศรี พัสดุดี )</div>
-                <div style="font-size: 0.75rem; color: #666;">เจ้าหน้าที่พัสดุผู้จ่ายของ</div>
-                <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569 11:15 น.</div>
-              </div>
+              <!-- Signatures Section -->
+              <div class="pdf-signatures">
+                <div class="sig-box">
+                  <div class="sig-line"></div>
+                  <div>( <span id="pdfSignRequester">นางสาววาสนา จันทร์จ่าย</span> )</div>
+                  <div style="font-size: 0.75rem; color: #666;">ผู้ขอเบิกพัสดุ</div>
+                  <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569</div>
+                </div>
 
-              <div class="sig-box">
-                <div style="height: 50px;"></div>
-                <div class="sig-line"></div>
-                <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
-                <div style="font-size: 0.75rem; color: #666;">ผู้รับพัสดุ</div>
-                <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
+                <div class="sig-box">
+                  <div style="font-size: 0.8rem; color: #0284c7; font-weight: bold; margin-bottom: 8px;">[ ประทับตราอนุมัติ ]</div>
+                  <div class="sig-line"></div>
+                  <div>( นางสมศรี พัสดุดี )</div>
+                  <div style="font-size: 0.75rem; color: #666;">เจ้าหน้าที่พัสดุผู้จ่ายของ</div>
+                  <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569 11:15 น.</div>
+                </div>
+
+                <div class="sig-box">
+                  <div style="height: 50px;"></div>
+                  <div class="sig-line"></div>
+                  <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
+                  <div style="font-size: 0.75rem; color: #666;">ผู้รับพัสดุ</div>
+                  <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
+                </div>
               </div>
             </div>
           </div>
@@ -4590,11 +4652,15 @@ staff_template = r'''<!DOCTYPE html>
               line-height: 1.5;
             }
             .pdf-page {
+              display: flex;
+              flex-direction: column;
+              min-height: calc(297mm - 2.5cm);
               width: 100%;
               max-width: 100%;
               margin: 0 auto;
               padding: 0;
               background: white;
+              box-sizing: border-box;
             }
             .pdf-header {
               text-align: center;
@@ -4644,14 +4710,28 @@ staff_template = r'''<!DOCTYPE html>
               font-weight: 600;
               text-align: center;
             }
+            .pdf-footer-section {
+              margin-top: auto;
+              width: 100%;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .pdf-ack-note {
+              font-size: 0.85rem;
+              margin-bottom: 0.75rem;
+            }
             .pdf-signatures {
               display: grid;
               grid-template-columns: 1fr 1fr 1fr;
               gap: 1rem;
-              margin-top: 2rem;
+              margin-top: auto;
               text-align: center;
               font-size: 0.85rem;
               page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .pdf-footer-section .pdf-signatures {
+              margin-top: 0.5rem;
             }
             .sig-box {
               display: flex;
