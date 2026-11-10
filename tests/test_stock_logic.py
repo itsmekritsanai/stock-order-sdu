@@ -142,7 +142,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.12"
+        assert SYSTEM_VERSION == "3.0.17"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -192,6 +192,11 @@ class TestPostgresSchemaAndConfiguration:
         assert "PORT" in cfg
         assert "DB_USER" in cfg
         assert "DB_NAME" in cfg
+        assert "STAFF_PASSWORD" in cfg
+        assert "STAFF_USERNAME" in cfg
+        assert "DEFAULT_USER_PASSWORD" in cfg
+        assert "STAFF_AUTH_SECRET" in cfg
+        assert "REQUESTER_AUTH_SECRET" in cfg
 
 
 from unittest.mock import MagicMock, patch
@@ -445,11 +450,15 @@ class TestSecurityEnhancements:
         assert server.verify_staff_token('admin_staff.1000000000.invalidsignature') is False
 
     def test_handle_login_staff(self):
-        # Valid staff login
-        res = server.handle_login_staff({'username': 'admin_staff', 'password': '••••••••'})
+        # Valid staff login with institutional password
+        res = server.handle_login_staff({'username': 'admin_staff', 'password': 'sdu1234'})
         assert res['status'] == 'success'
         assert 'token' in res
         assert server.verify_staff_token(res['token']) is True
+
+        # Pre-filled mock password '••••••••' must now be REJECTED
+        res_mock = server.handle_login_staff({'username': 'admin_staff', 'password': '••••••••'})
+        assert res_mock['status'] == 'error'
 
         # Invalid staff login
         res_fail = server.handle_login_staff({'username': 'admin_staff', 'password': 'completely_wrong_pass'})

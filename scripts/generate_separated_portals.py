@@ -1,19 +1,34 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.12"
+SYSTEM_VERSION = "3.0.17"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
-# Read API_BASE_URL (MySQL REST API endpoint) from .env if available
+# Read configuration and credentials from .env if available
 MYSQL_API_URL = "/api"
+DEFAULT_USER_PASSWORD = "password123"
+STAFF_PASSWORD = "sdu1234"
+STAFF_USERNAME = "admin_staff"
+
 env_path = os.path.join(PROJECT_ROOT, '.env')
 if os.path.exists(env_path):
     with open(env_path, 'r', encoding='utf-8') as ef:
         for line in ef:
             line = line.strip()
-            if line.startswith('API_BASE_URL='):
-                MYSQL_API_URL = line.split('=', 1)[1].strip().strip('"').strip("'")
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            k, v = line.split('=', 1)
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            if k == 'API_BASE_URL':
+                MYSQL_API_URL = v
+            elif k == 'DEFAULT_USER_PASSWORD':
+                DEFAULT_USER_PASSWORD = v
+            elif k == 'STAFF_PASSWORD':
+                STAFF_PASSWORD = v
+            elif k == 'STAFF_USERNAME':
+                STAFF_USERNAME = v
 
 def parse_docx_depts_and_users(docx_path):
     import zipfile
@@ -63,7 +78,7 @@ def parse_docx_depts_and_users(docx_path):
                 "id": idx,
                 "name": full_name,
                 "username": uname,
-                "password": "password123",
+                "password": DEFAULT_USER_PASSWORD,
                 "position": pos,
                 "dept": unit,
                 "phone": ""
@@ -74,7 +89,7 @@ def parse_docx_depts_and_users(docx_path):
         "id": len(users) + 1,
         "name": "ผู้ขอเบิกทดสอบ (Demo User)",
         "username": "user",
-        "password": "password123",
+        "password": DEFAULT_USER_PASSWORD,
         "position": "เจ้าหน้าที่บริการการศึกษา",
         "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
         "phone": "089-123-4567"
@@ -3258,11 +3273,11 @@ staff_template = r'''<!DOCTYPE html>
     <form onsubmit="handleStaffLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
       <div class="form-group">
         <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ชื่อผู้ใช้งาน (Username)</label>
-        <input type="text" id="loginUsername" class="form-control" value="admin_staff" required>
+        <input type="text" id="loginUsername" class="form-control" placeholder="กรอกชื่อผู้ใช้งานเจ้าหน้าที่" required autocomplete="username">
       </div>
       <div class="form-group">
         <label><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> รหัสผ่าน (Password)</label>
-        <input type="password" id="loginPassword" class="form-control" value="••••••••" required>
+        <input type="password" id="loginPassword" class="form-control" placeholder="กรอกรหัสผ่านเจ้าหน้าที่" required autocomplete="current-password">
       </div>
       <button type="submit" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; margin-top: 0.5rem;">
         เข้าสู่ระบบจัดการคลังพัสดุ
@@ -3793,7 +3808,7 @@ staff_template = r'''<!DOCTYPE html>
       e.preventDefault();
       const usernameInput = document.getElementById('loginUsername');
       const passwordInput = document.getElementById('loginPassword');
-      const username = usernameInput ? usernameInput.value.trim() : 'admin_staff';
+      const username = usernameInput ? usernameInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value.trim() : '';
 
       try {

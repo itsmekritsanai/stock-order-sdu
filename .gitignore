@@ -41,3 +41,6 @@ docs/internship/
 *.docx
 !data/*.docx
 
+# Detailed Internal Changelog (Never push to git)
+CHANGELOG_DETAILED.md
+

@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.0.12"
+SYSTEM_VERSION = "3.0.17"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -31,7 +31,7 @@ THAI_MONTHS = [
 
 
 def load_env_config():
-    """Load database and server settings from .env file and environment variables."""
+    """Load database, server settings, passwords, and secrets from .env file and environment variables."""
     config = {
         "DB_TYPE": os.environ.get("DB_TYPE", "postgres"),
         "DB_HOST": os.environ.get("DB_HOST", "127.0.0.1"),
@@ -39,11 +39,20 @@ def load_env_config():
         "DB_USER": os.environ.get("DB_USER", "postgres"),
         "DB_PASSWORD": os.environ.get("DB_PASSWORD", "postgrespassword"),
         "DB_NAME": os.environ.get("DB_NAME", "sdu_inventory"),
+        "PGADMIN_PORT": int(os.environ.get("PGADMIN_PORT", "5051")),
+        "PGADMIN_DEFAULT_EMAIL": os.environ.get("PGADMIN_DEFAULT_EMAIL", "admin@admin.com"),
+        "PGADMIN_DEFAULT_PASSWORD": os.environ.get("PGADMIN_DEFAULT_PASSWORD", "root"),
         "PORT": int(os.environ.get("PORT", "8080")),
         "HOST": os.environ.get("HOST", "127.0.0.1"),
-        "STAFF_AUTH_SECRET": os.environ.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production"),
-        "STAFF_PASSWORD": os.environ.get("STAFF_PASSWORD", "sdu1234"),
+        "BASE_URL": os.environ.get("BASE_URL", "http://localhost:8080"),
+        "API_BASE_URL": os.environ.get("API_BASE_URL", "/api"),
         "ALLOWED_ORIGINS": os.environ.get("ALLOWED_ORIGINS", "http://localhost:8080,http://127.0.0.1:8080"),
+        "STAFF_USERNAME": os.environ.get("STAFF_USERNAME", "admin_staff"),
+        "STAFF_PASSWORD": os.environ.get("STAFF_PASSWORD", "sdu1234"),
+        "STAFF_AUTH_SECRET": os.environ.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production"),
+        "ADMIN_PASSWORD_HASH": os.environ.get("ADMIN_PASSWORD_HASH", "sha256_or_bcrypt_hash_placeholder"),
+        "DEFAULT_USER_PASSWORD": os.environ.get("DEFAULT_USER_PASSWORD", "sdu1234"),
+        "REQUESTER_AUTH_SECRET": os.environ.get("REQUESTER_AUTH_SECRET", "sdu_inventory_requester_secret_token_change_in_production"),
     }
     env_file = os.path.join(PROJECT_ROOT, ".env")
     if os.path.exists(env_file):
@@ -55,7 +64,7 @@ def load_env_config():
                 k, v = line.split("=", 1)
                 k = k.strip()
                 v = v.strip().strip('"').strip("'")
-                if k in ("DB_PORT", "PORT"):
+                if k in ("DB_PORT", "PORT", "PGADMIN_PORT"):
                     try:
                         config[k] = int(v)
                     except ValueError:
@@ -71,6 +80,99 @@ SCHEMA_SQL_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "schema_postgres.sql" if IS_POSTGRES else "schema.sql"
 )
+
+
+_SCHEMA_CHECKED = False
+
+
+def ensure_database_schema(conn=None):
+    """Idempotently ensure required columns and default data exist in PostgreSQL or MySQL."""
+    global _SCHEMA_CHECKED
+    if _SCHEMA_CHECKED:
+        return
+    close_after = False
+    if conn is None:
+        try:
+            conn = get_db_connection(include_db=True)
+            close_after = True
+        except Exception as e:
+            print(f"[WARN] Database connection failed during schema check: {e}")
+            return
+
+    try:
+        with conn.cursor() as cur:
+            if IS_POSTGRES:
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE;")
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '';")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS completed_date VARCHAR(100) DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_date VARCHAR(100) DEFAULT NULL;")
+                default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
+                cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (default_user_pass,))
+                cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (default_user_pass,))
+                cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (default_user_pass,))
+                cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (default_user_pass,))
+                cur.execute("""
+                    INSERT INTO users (id, name, username, password, position, dept, phone, is_active)
+                    VALUES (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', %s, 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1)
+                    ON CONFLICT (id) DO UPDATE SET username = 'user', password = %s, is_active = 1;
+                """, (default_user_pass, default_user_pass))
+                cur.execute("""
+                    INSERT INTO requisitions (id, date, requester, dept, phone, purpose, status, signature, reject_reason, completed_at, completed_date, rejected_at, rejected_date, created_at, updated_at)
+                    VALUES ('REQ-256910-0001', '1 ต.ค. 2569 09:30 น.', 'อาจารย์ผู้แทน โรงเรียนการเรือน', 'โรงเรียนการเรือน', '', 'ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569', 'COMPLETED', 'ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน', '', '2026-10-01 03:00:00', '1 ต.ค. 2569 10:00 น.', NULL, '', '2026-10-01 02:30:00', '2026-10-01 03:00:00')
+                    ON CONFLICT (id) DO NOTHING;
+                """)
+                cur.execute("SELECT 1 FROM requisition_items WHERE requisition_id = 'REQ-256910-0001' LIMIT 1;")
+                if not cur.fetchone():
+                    cur.execute("""
+                        INSERT INTO requisition_items (requisition_id, item_id, name, qty_boxes, qty_pieces, total_pieces, unit_box, unit_piece, approved_pieces, pieces_per_box_snapshot)
+                        VALUES 
+                          ('REQ-256910-0001', 3, 'กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)', 0, 500, 500, 'กล่อง', 'ใบ', 500, 2000),
+                          ('REQ-256910-0001', 7, 'กระดาษลายเส้น (ห่อละ 500 แผ่น)', 1, 0, 500, 'ห่อ', 'แผ่น', 500, 500);
+                    """)
+                else:
+                    cur.execute("""
+                        DELETE FROM requisition_items
+                        WHERE requisition_id = 'REQ-256910-0001'
+                          AND id NOT IN (
+                            SELECT MIN(id) FROM requisition_items WHERE requisition_id = 'REQ-256910-0001' GROUP BY item_id
+                          );
+                    """)
+                cur.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 1)) FROM users;")
+            else:
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'username';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `users` ADD COLUMN `username` VARCHAR(100) UNIQUE AFTER `name`;")
+                    cur.execute("ALTER TABLE `users` ADD COLUMN `password` VARCHAR(255) DEFAULT '' AFTER `username`;")
+                    cur.execute("UPDATE users SET username = 'wasana.c', password = 'password' WHERE id = 1 AND (username IS NULL OR username = '');")
+                    cur.execute("UPDATE users SET username = 'jeerawan.b', password = 'password' WHERE id = 2 AND (username IS NULL OR username = '');")
+                    cur.execute("UPDATE users SET username = 'patcharaporn.k', password = 'password' WHERE id = 3 AND (username IS NULL OR username = '');")
+                    cur.execute("UPDATE users SET username = 'sineenart.l', password = 'password' WHERE id = 4 AND (username IS NULL OR username = '');")
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'requisitions' AND COLUMN_NAME = 'completed_at';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `completed_at` DATETIME DEFAULT NULL AFTER `reject_reason`;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `completed_date` VARCHAR(100) DEFAULT NULL AFTER `completed_at`;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `rejected_at` DATETIME DEFAULT NULL AFTER `completed_date`;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `rejected_date` VARCHAR(100) DEFAULT NULL AFTER `rejected_at`;")
+        conn.commit()
+        _SCHEMA_CHECKED = True
+    except Exception as err:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"[WARN] Schema auto-migration skipped or non-fatal error: {err}")
+    finally:
+        if close_after:
+            conn.close()
 
 
 def get_db_connection(include_db=True):
@@ -90,6 +192,8 @@ def get_db_connection(include_db=True):
             cursor_factory=RealDictCursor,
         )
         conn.autocommit = False
+        if not _SCHEMA_CHECKED and include_db:
+            ensure_database_schema(conn)
         return conn
 
     db_name = CONFIG["DB_NAME"] if include_db else None
@@ -97,7 +201,7 @@ def get_db_connection(include_db=True):
         import pymysql
         import pymysql.cursors
 
-        return pymysql.connect(
+        conn = pymysql.connect(
             host=CONFIG["DB_HOST"],
             port=CONFIG["DB_PORT"],
             user=CONFIG["DB_USER"],
@@ -107,6 +211,9 @@ def get_db_connection(include_db=True):
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=False,
         )
+        if not _SCHEMA_CHECKED and include_db:
+            ensure_database_schema(conn)
+        return conn
     except ImportError:
         import mysql.connector
 
@@ -119,6 +226,8 @@ def get_db_connection(include_db=True):
             charset="utf8mb4",
             autocommit=False,
         )
+        if not _SCHEMA_CHECKED and include_db:
+            ensure_database_schema(conn)
         return conn
 
 
@@ -839,23 +948,24 @@ def handle_save_user(payload):
                     (cat, dept, cat, dept),
                 )
             raw_pass = str(password or "").strip()
+            default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
             if user_id:
                 cur.execute("SELECT id, password FROM users WHERE id = %s", (int(user_id),))
                 existing_row = cur.fetchone()
                 if existing_row:
-                    final_pass = hash_password(raw_pass) if raw_pass else (existing_row.get("password") or hash_password("sdu1234"))
+                    final_pass = hash_password(raw_pass) if raw_pass else (existing_row.get("password") or hash_password(default_user_pass))
                     cur.execute(
                         "UPDATE users SET name = %s, username = %s, password = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
                         (name, username, final_pass, position, dept, phone, int(user_id)),
                     )
                 else:
-                    final_pass = hash_password(raw_pass) if raw_pass else hash_password("sdu1234")
+                    final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                     cur.execute(
                         "INSERT INTO users (id, name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)",
                         (int(user_id), name, username, final_pass, position, dept, phone),
                     )
             else:
-                final_pass = hash_password(raw_pass) if raw_pass else hash_password("sdu1234")
+                final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                 if IS_POSTGRES:
                     cur.execute(
                         "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1) RETURNING id",
@@ -913,7 +1023,8 @@ def handle_login_requester(payload):
                 }
             stored_pass = str(row.get("password") or "").strip()
             is_valid = verify_password(stored_pass, password)
-            if not is_valid and password in ("sdu1234", "password123"):
+            default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
+            if not is_valid and password in (default_user_pass, "sdu1234", "password123"):
                 is_valid = True
             if not is_valid:
                 return {
@@ -1238,7 +1349,7 @@ def handle_delete_item(payload):
 def hash_password(password: str) -> str:
     """Hash password using PBKDF2-HMAC-SHA256 with a 16-byte random salt."""
     if not password:
-        password = "sdu1234"
+        password = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
     salt = os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600000)
     return f"pbkdf2_sha256${salt.hex()}${dk.hex()}"
@@ -1264,7 +1375,7 @@ def verify_password(stored: str, password: str) -> bool:
 def generate_requester_token(username: str, name: str = "") -> str:
     """Generate HMAC-SHA256 signed session token for authenticated requesters."""
     ts = str(int(time.time()))
-    secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+    secret = CONFIG.get("REQUESTER_AUTH_SECRET") or CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
     payload = f"requester:{username}:{ts}".encode("utf-8")
     sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
     return f"{username}.{ts}.{sig}"
@@ -1284,15 +1395,17 @@ def verify_requester_token(token: str, username: str = "") -> bool:
         ts = int(ts_str)
         if abs(time.time() - ts) > 30 * 86400:
             return False
-        secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
+        secret = CONFIG.get("REQUESTER_AUTH_SECRET") or CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
         payload = f"requester:{u}:{ts_str}".encode("utf-8")
         expected_sig = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
         return hmac.compare_digest(sig, expected_sig)
     except Exception:
         return False
 
-def generate_staff_token(username: str = "admin_staff") -> str:
+
+def generate_staff_token(username: str = None) -> str:
     """Generate HMAC-SHA256 signed session token for staff."""
+    username = username or CONFIG.get("STAFF_USERNAME", "admin_staff")
     ts = str(int(time.time()))
     secret = CONFIG.get("STAFF_AUTH_SECRET", "sdu_inventory_staff_secret_token_change_in_production")
     payload = f"staff:{username}:{ts}".encode("utf-8")
@@ -1327,9 +1440,10 @@ def handle_login_staff(payload):
     if not username or not password:
         return {"status": "error", "message": "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน"}
 
+    staff_user = CONFIG.get("STAFF_USERNAME", "admin_staff")
     staff_pass = CONFIG.get("STAFF_PASSWORD", "sdu1234")
     is_valid = False
-    if username in ("admin_staff", "admin", "staff") and (password in (staff_pass, "sdu1234", "password123", "••••••••")):
+    if username in (staff_user, "admin_staff", "admin", "staff") and (password in (staff_pass, "sdu1234")):
         is_valid = True
     else:
         try:
@@ -1590,15 +1704,17 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     "message": f'ไม่พบคำสั่ง action: "{action}" ในระบบ',
                 }, status_code=400)
         except Exception as err:
+            db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
             return self.send_json({
                 "status": "error",
-                "code": "MYSQL_ERROR",
-                "message": f"ข้อผิดพลาดฐานข้อมูล MySQL: {err}",
+                "code": "DB_ERROR",
+                "message": f"ข้อผิดพลาดฐานข้อมูล {db_label}: {err}",
             }, status_code=503)
 
 
 def run_server(port=None):
     port = port or CONFIG["PORT"]
+    ensure_database_schema()
     server = ThreadingHTTPServer(("0.0.0.0", port), SDUInventoryRequestHandler)
     print("=" * 70)
     print(f"  SDU Stock Order & e-Inventory Server (v{SYSTEM_VERSION}) - PostgreSQL 17 Edition")
