@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.1"
+        assert SYSTEM_VERSION == "3.2.2"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -995,5 +995,57 @@ class TestPhase8ExtendedRequirements:
                 "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500}],
             })
             assert res_b["status"] == "success"
+
+    def test_multi_role_login_tabs_and_role_mismatch(self):
+        """Verify role-specific login validation and 4-role login UI across portals."""
+        import server
+
+        # Staff logging into STAFF tab succeeds
+        res_s_ok = server.handle_login_staff({"username": "staff", "password": "sdu1234", "requested_role": "STAFF"})
+        assert res_s_ok["status"] == "success"
+        assert res_s_ok["role"] == "STAFF"
+        assert res_s_ok["active_role"] == "STAFF"
+
+        # Staff trying to log into HEAD or ADMIN tab is rejected with ROLE_MISMATCH
+        res_s_head = server.handle_login_staff({"username": "staff", "password": "sdu1234", "requested_role": "HEAD"})
+        assert res_s_head["status"] == "error"
+        assert res_s_head.get("code") == "ROLE_MISMATCH"
+
+        res_s_admin = server.handle_login_staff({"username": "staff", "password": "sdu1234", "requested_role": "ADMIN"})
+        assert res_s_admin["status"] == "error"
+        assert res_s_admin.get("code") == "ROLE_MISMATCH"
+
+        # Head logging into HEAD tab succeeds, but into STAFF or ADMIN tab is rejected
+        res_h_ok = server.handle_login_staff({"username": "head", "password": "sdu1234", "requested_role": "HEAD"})
+        assert res_h_ok["status"] == "success"
+        assert res_h_ok["role"] == "HEAD"
+
+        res_h_staff = server.handle_login_staff({"username": "head", "password": "sdu1234", "requested_role": "STAFF"})
+        assert res_h_staff["status"] == "error"
+        assert res_h_staff.get("code") == "ROLE_MISMATCH"
+
+        # Admin can log into any role view
+        res_a_head = server.handle_login_staff({"username": "admin_staff", "password": "sdu1234", "requested_role": "HEAD"})
+        assert res_a_head["status"] == "success"
+        assert res_a_head["role"] == "ADMIN"
+        assert res_a_head["active_role"] == "HEAD"
+
+        # Check UI presence of 4-role login selector across portals
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "selectPortalLoginRole" in idx_html
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "selectStaffLoginRole" in stf_html
+        assert "swal-user-role" in stf_html
+
+        with open(os.path.join(PROJECT_ROOT, "portal.html"), "r", encoding="utf-8") as f:
+            ptl_html = f.read()
+        assert "index.html?role=REQUESTER" in ptl_html
+        assert "staff.html?role=STAFF" in ptl_html
+        assert "staff.html?role=HEAD" in ptl_html
+        assert "staff.html?role=ADMIN" in ptl_html
+
 
 

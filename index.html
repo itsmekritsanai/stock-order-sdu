@@ -745,21 +745,60 @@
 </head>
 <body>
 
-  <!-- 1. REQUESTER LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
+  <!-- 1. UNIFIED ROLE LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
   <div id="requesterLoginScreen" class="login-wrapper">
-    <div class="login-card">
-      <div class="login-header">
-        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; margin-bottom: 0.75rem; object-fit: contain;">
-        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">ระบบขอเบิกพัสดุออนไลน์</h2>
-        <p style="font-size: 0.85rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+    <div class="login-card" style="max-width: 480px;">
+      <div class="login-header" style="padding: 1.75rem 1.75rem 1.25rem 1.75rem;">
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 60px; margin-bottom: 0.6rem; object-fit: contain;">
+        <h2 id="loginRoleTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)</h2>
+        <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+        <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)</span>
+        </div>
       </div>
-      <div class="login-body">
+      <div class="login-body" style="padding: 1.25rem 1.75rem 1.75rem 1.75rem;">
+        <div style="margin-bottom: 1.1rem;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน (Select Role):</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="portalRoleTabs">
+            <button type="button" class="role-tab-btn active" data-role="REQUESTER" onclick="selectPortalLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #1e40af; background: #eff6ff; color: #1e40af; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Requester</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="STAFF" onclick="selectPortalLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Staff (ผู้คัดกรอง)</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="HEAD" onclick="selectPortalLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+              <div>
+                <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Head (ผู้อนุมัติ)</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="ADMIN" onclick="selectPortalLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">System Admin</div>
+              </div>
+            </button>
+          </div>
+          <input type="hidden" id="selectedLoginRole" value="REQUESTER">
+        </div>
+
         <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
           <div class="login-input-group">
-            <label for="loginUsername">ชื่อผู้ใช้งาน (Username)</label>
+            <label for="loginUsername" id="loginUsernameLabel">ชื่อผู้ใช้งาน (Username)</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="loginUsername" class="login-input" placeholder="เช่น wasana.c หรือ user" required autocomplete="username">
+              <input type="text" id="loginUsername" class="login-input" placeholder="กรอกชื่อผู้ใช้งานผู้ขอเบิก" required autocomplete="username">
             </div>
           </div>
           <div class="login-input-group">
@@ -770,16 +809,17 @@
             </div>
           </div>
           <button type="submit" class="btn-login" id="btnLoginSubmit">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> เข้าสู่ระบบขอเบิกพัสดุ
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span id="btnLoginSubmitText">เข้าสู่ระบบผู้ขอเบิกพัสดุ</span>
           </button>
         </form>
 
-        <div class="login-notice-box">
+        <div class="login-notice-box" style="margin-top: 1rem;">
           <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าใช้งาน
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าสู่ระบบตามบทบาท (RBAC)
           </div>
-          <div>
-            สำหรับบุคลากร สวท. หากยังไม่มีบัญชีเข้าสู่ระบบ กรุณาติดต่อ <strong>เจ้าหน้าที่แผนกพัสดุ (Staff)</strong> เพื่อสร้างบัญชีและกำหนดสิทธิ์เข้าใช้งาน
+          <div id="loginNoticeRoleHint" style="font-size: 0.775rem; line-height: 1.5;">
+            เลือกบทบาทด้านบนเพื่อเข้าสู่ระบบตามสิทธิ์ของท่าน หรือกลับไปที่ <a href="portal.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">ศูนย์กลางพอร์ทัล</a>
           </div>
         </div>
       </div>
@@ -1103,7 +1143,7 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.1) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.2) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -2649,10 +2689,93 @@
       updateMyReqsBadge();
     }
 
+    function selectPortalLoginRole(role) {
+      const r = String(role || 'REQUESTER').toUpperCase();
+      const hiddenEl = document.getElementById('selectedLoginRole');
+      if (hiddenEl) hiddenEl.value = r;
+
+      const titleEl = document.getElementById('loginRoleTitle');
+      const badgeEl = document.getElementById('loginRoleBadge');
+      const unameEl = document.getElementById('loginUsername');
+      const btnEl = document.getElementById('btnLoginSubmit');
+      const btnTextEl = document.getElementById('btnLoginSubmitText');
+
+      const roleConfigs = {
+        REQUESTER: {
+          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
+          badgeBg: '#eff6ff',
+          badgeColor: '#1e40af',
+          badgeBorder: '#bfdbfe',
+          placeholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
+          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
+          btnBg: '#1e40af'
+        },
+        STAFF: {
+          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)',
+          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)',
+          badgeBg: '#ecfdf5',
+          badgeColor: '#047857',
+          badgeBorder: '#a7f3d0',
+          placeholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่พัสดุ',
+          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)',
+          btnBg: '#059669'
+        },
+        HEAD: {
+          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน (Head Approver)',
+          badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูรายงาน)',
+          badgeBg: '#f5f3ff',
+          badgeColor: '#6d28d9',
+          badgeBorder: '#ddd6fe',
+          placeholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
+          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ (Head)',
+          btnBg: '#4f46e5'
+        },
+        ADMIN: {
+          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (System Admin)',
+          badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
+          badgeBg: '#f1f5f9',
+          badgeColor: '#0f172a',
+          badgeBorder: '#cbd5e1',
+          placeholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
+          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (Admin)',
+          btnBg: '#0f172a'
+        }
+      };
+
+      const cfg = roleConfigs[r] || roleConfigs.REQUESTER;
+      if (titleEl) titleEl.innerText = cfg.title;
+      if (badgeEl) {
+        badgeEl.style.background = cfg.badgeBg;
+        badgeEl.style.color = cfg.badgeColor;
+        badgeEl.style.borderColor = cfg.badgeBorder;
+        badgeEl.innerHTML = `<svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span>${cfg.badgeText}</span>`;
+      }
+      if (unameEl) unameEl.placeholder = cfg.placeholder;
+      if (btnEl) btnEl.style.background = cfg.btnBg;
+      if (btnTextEl) btnTextEl.innerText = cfg.btnText;
+
+      document.querySelectorAll('#portalRoleTabs .role-tab-btn').forEach(btn => {
+        const bRole = btn.getAttribute('data-role');
+        if (bRole === r) {
+          btn.classList.add('active');
+          btn.style.border = `2px solid ${cfg.btnBg}`;
+          btn.style.background = cfg.badgeBg;
+          btn.style.color = cfg.badgeColor;
+        } else {
+          btn.classList.remove('active');
+          btn.style.border = '1px solid #cbd5e1';
+          btn.style.background = 'white';
+          btn.style.color = '#334155';
+        }
+      });
+    }
+
     async function handleRequesterLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const unameEl = document.getElementById('loginUsername');
       const passEl = document.getElementById('loginPassword');
+      const selectedRole = (document.getElementById('selectedLoginRole')?.value || 'REQUESTER').toUpperCase();
       const username = (unameEl ? unameEl.value : '').trim();
       const password = (passEl ? passEl.value : '').trim();
 
@@ -2667,7 +2790,57 @@
         return;
       }
 
-      // 1. Try MySQL/Postgres REST API
+      // If user selected STAFF, HEAD, or ADMIN on the login screen -> authenticate via loginStaff and redirect to staff.html
+      if (['STAFF', 'HEAD', 'ADMIN'].includes(selectedRole)) {
+        let staffRes = await postToMySQLAPI('loginStaff', { username, password, requested_role: selectedRole });
+        if (!staffRes) {
+          const uLow = username.toLowerCase();
+          let resolved = null;
+          let dispName = username;
+          if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'ADMIN';
+            dispName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+          } else if (['staff', 'warehouse_staff', 'screener'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'STAFF';
+            dispName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+          } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'HEAD';
+            dispName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+          }
+          if (resolved) {
+            if (resolved !== 'ADMIN' && resolved !== selectedRole) {
+              staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น ${resolved} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน` };
+            } else {
+              staffRes = { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: selectedRole };
+            }
+          } else {
+            staffRes = { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก' };
+          }
+        }
+        if (staffRes && staffRes.status === 'success') {
+          const finalRole = (staffRes.role || selectedRole).toUpperCase();
+          const activeRole = (staffRes.active_role || selectedRole).toUpperCase();
+          sessionStorage.setItem('staff_auth', 'true');
+          sessionStorage.setItem('staff_token', staffRes.token || '');
+          sessionStorage.setItem('staff_username', staffRes.username || username);
+          sessionStorage.setItem('staff_name', staffRes.name || username);
+          sessionStorage.setItem('staff_role', finalRole);
+          sessionStorage.setItem('staff_active_role', activeRole);
+          window.location.href = 'staff.html';
+          return;
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            text: (staffRes && staffRes.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก',
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ลองใหม่อีกครั้ง'
+          });
+          return;
+        }
+      }
+
+      // 1. Try MySQL/Postgres REST API for REQUESTER
       let loginResult = await postToMySQLAPI('loginRequester', { username, password });
 
       // 2. Fallback to localStorage users DB
@@ -2742,6 +2915,16 @@
       getUsersDB();
       getItemsDB();
       getReqsDB();
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roleParam = (params.get('role') || '').toUpperCase();
+        if (['REQUESTER', 'STAFF', 'HEAD', 'ADMIN'].includes(roleParam)) {
+          if (roleParam !== 'REQUESTER') {
+            localStorage.removeItem(AUTH_SESSION_KEY);
+          }
+          selectPortalLoginRole(roleParam);
+        }
+      } catch (e) {}
       const isAuth = checkRequesterAuth();
       if (isAuth) {
         renderCatalog();

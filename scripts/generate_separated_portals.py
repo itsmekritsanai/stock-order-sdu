@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.1"
+SYSTEM_VERSION = "3.2.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -1041,21 +1041,60 @@ requester_template = r'''<!DOCTYPE html>
 </head>
 <body>
 
-  <!-- 1. REQUESTER LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
+  <!-- 1. UNIFIED ROLE LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
   <div id="requesterLoginScreen" class="login-wrapper">
-    <div class="login-card">
-      <div class="login-header">
-        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; margin-bottom: 0.75rem; object-fit: contain;">
-        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">ระบบขอเบิกพัสดุออนไลน์</h2>
-        <p style="font-size: 0.85rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+    <div class="login-card" style="max-width: 480px;">
+      <div class="login-header" style="padding: 1.75rem 1.75rem 1.25rem 1.75rem;">
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 60px; margin-bottom: 0.6rem; object-fit: contain;">
+        <h2 id="loginRoleTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)</h2>
+        <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
+        <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)</span>
+        </div>
       </div>
-      <div class="login-body">
+      <div class="login-body" style="padding: 1.25rem 1.75rem 1.75rem 1.75rem;">
+        <div style="margin-bottom: 1.1rem;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน (Select Role):</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="portalRoleTabs">
+            <button type="button" class="role-tab-btn active" data-role="REQUESTER" onclick="selectPortalLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #1e40af; background: #eff6ff; color: #1e40af; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Requester</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="STAFF" onclick="selectPortalLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Staff (ผู้คัดกรอง)</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="HEAD" onclick="selectPortalLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+              <div>
+                <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Head (ผู้อนุมัติ)</div>
+              </div>
+            </button>
+            <button type="button" class="role-tab-btn" data-role="ADMIN" onclick="selectPortalLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <div>
+                <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">System Admin</div>
+              </div>
+            </button>
+          </div>
+          <input type="hidden" id="selectedLoginRole" value="REQUESTER">
+        </div>
+
         <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
           <div class="login-input-group">
-            <label for="loginUsername">ชื่อผู้ใช้งาน (Username)</label>
+            <label for="loginUsername" id="loginUsernameLabel">ชื่อผู้ใช้งาน (Username)</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="loginUsername" class="login-input" placeholder="เช่น wasana.c หรือ user" required autocomplete="username">
+              <input type="text" id="loginUsername" class="login-input" placeholder="กรอกชื่อผู้ใช้งานผู้ขอเบิก" required autocomplete="username">
             </div>
           </div>
           <div class="login-input-group">
@@ -1066,16 +1105,17 @@ requester_template = r'''<!DOCTYPE html>
             </div>
           </div>
           <button type="submit" class="btn-login" id="btnLoginSubmit">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> เข้าสู่ระบบขอเบิกพัสดุ
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <span id="btnLoginSubmitText">เข้าสู่ระบบผู้ขอเบิกพัสดุ</span>
           </button>
         </form>
 
-        <div class="login-notice-box">
+        <div class="login-notice-box" style="margin-top: 1rem;">
           <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าใช้งาน
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าสู่ระบบตามบทบาท (RBAC)
           </div>
-          <div>
-            สำหรับบุคลากร สวท. หากยังไม่มีบัญชีเข้าสู่ระบบ กรุณาติดต่อ <strong>เจ้าหน้าที่แผนกพัสดุ (Staff)</strong> เพื่อสร้างบัญชีและกำหนดสิทธิ์เข้าใช้งาน
+          <div id="loginNoticeRoleHint" style="font-size: 0.775rem; line-height: 1.5;">
+            เลือกบทบาทด้านบนเพื่อเข้าสู่ระบบตามสิทธิ์ของท่าน หรือกลับไปที่ <a href="portal.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">ศูนย์กลางพอร์ทัล</a>
           </div>
         </div>
       </div>
@@ -2868,10 +2908,93 @@ requester_template = r'''<!DOCTYPE html>
       updateMyReqsBadge();
     }
 
+    function selectPortalLoginRole(role) {
+      const r = String(role || 'REQUESTER').toUpperCase();
+      const hiddenEl = document.getElementById('selectedLoginRole');
+      if (hiddenEl) hiddenEl.value = r;
+
+      const titleEl = document.getElementById('loginRoleTitle');
+      const badgeEl = document.getElementById('loginRoleBadge');
+      const unameEl = document.getElementById('loginUsername');
+      const btnEl = document.getElementById('btnLoginSubmit');
+      const btnTextEl = document.getElementById('btnLoginSubmitText');
+
+      const roleConfigs = {
+        REQUESTER: {
+          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
+          badgeBg: '#eff6ff',
+          badgeColor: '#1e40af',
+          badgeBorder: '#bfdbfe',
+          placeholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
+          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
+          btnBg: '#1e40af'
+        },
+        STAFF: {
+          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)',
+          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)',
+          badgeBg: '#ecfdf5',
+          badgeColor: '#047857',
+          badgeBorder: '#a7f3d0',
+          placeholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่พัสดุ',
+          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)',
+          btnBg: '#059669'
+        },
+        HEAD: {
+          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน (Head Approver)',
+          badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูรายงาน)',
+          badgeBg: '#f5f3ff',
+          badgeColor: '#6d28d9',
+          badgeBorder: '#ddd6fe',
+          placeholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
+          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ (Head)',
+          btnBg: '#4f46e5'
+        },
+        ADMIN: {
+          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (System Admin)',
+          badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
+          badgeBg: '#f1f5f9',
+          badgeColor: '#0f172a',
+          badgeBorder: '#cbd5e1',
+          placeholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
+          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (Admin)',
+          btnBg: '#0f172a'
+        }
+      };
+
+      const cfg = roleConfigs[r] || roleConfigs.REQUESTER;
+      if (titleEl) titleEl.innerText = cfg.title;
+      if (badgeEl) {
+        badgeEl.style.background = cfg.badgeBg;
+        badgeEl.style.color = cfg.badgeColor;
+        badgeEl.style.borderColor = cfg.badgeBorder;
+        badgeEl.innerHTML = `<svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span>${cfg.badgeText}</span>`;
+      }
+      if (unameEl) unameEl.placeholder = cfg.placeholder;
+      if (btnEl) btnEl.style.background = cfg.btnBg;
+      if (btnTextEl) btnTextEl.innerText = cfg.btnText;
+
+      document.querySelectorAll('#portalRoleTabs .role-tab-btn').forEach(btn => {
+        const bRole = btn.getAttribute('data-role');
+        if (bRole === r) {
+          btn.classList.add('active');
+          btn.style.border = `2px solid ${cfg.btnBg}`;
+          btn.style.background = cfg.badgeBg;
+          btn.style.color = cfg.badgeColor;
+        } else {
+          btn.classList.remove('active');
+          btn.style.border = '1px solid #cbd5e1';
+          btn.style.background = 'white';
+          btn.style.color = '#334155';
+        }
+      });
+    }
+
     async function handleRequesterLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const unameEl = document.getElementById('loginUsername');
       const passEl = document.getElementById('loginPassword');
+      const selectedRole = (document.getElementById('selectedLoginRole')?.value || 'REQUESTER').toUpperCase();
       const username = (unameEl ? unameEl.value : '').trim();
       const password = (passEl ? passEl.value : '').trim();
 
@@ -2886,7 +3009,57 @@ requester_template = r'''<!DOCTYPE html>
         return;
       }
 
-      // 1. Try MySQL/Postgres REST API
+      // If user selected STAFF, HEAD, or ADMIN on the login screen -> authenticate via loginStaff and redirect to staff.html
+      if (['STAFF', 'HEAD', 'ADMIN'].includes(selectedRole)) {
+        let staffRes = await postToMySQLAPI('loginStaff', { username, password, requested_role: selectedRole });
+        if (!staffRes) {
+          const uLow = username.toLowerCase();
+          let resolved = null;
+          let dispName = username;
+          if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'ADMIN';
+            dispName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+          } else if (['staff', 'warehouse_staff', 'screener'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'STAFF';
+            dispName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+          } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+            resolved = 'HEAD';
+            dispName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+          }
+          if (resolved) {
+            if (resolved !== 'ADMIN' && resolved !== selectedRole) {
+              staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น ${resolved} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน` };
+            } else {
+              staffRes = { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: selectedRole };
+            }
+          } else {
+            staffRes = { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก' };
+          }
+        }
+        if (staffRes && staffRes.status === 'success') {
+          const finalRole = (staffRes.role || selectedRole).toUpperCase();
+          const activeRole = (staffRes.active_role || selectedRole).toUpperCase();
+          sessionStorage.setItem('staff_auth', 'true');
+          sessionStorage.setItem('staff_token', staffRes.token || '');
+          sessionStorage.setItem('staff_username', staffRes.username || username);
+          sessionStorage.setItem('staff_name', staffRes.name || username);
+          sessionStorage.setItem('staff_role', finalRole);
+          sessionStorage.setItem('staff_active_role', activeRole);
+          window.location.href = 'staff.html';
+          return;
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            text: (staffRes && staffRes.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก',
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ลองใหม่อีกครั้ง'
+          });
+          return;
+        }
+      }
+
+      // 1. Try MySQL/Postgres REST API for REQUESTER
       let loginResult = await postToMySQLAPI('loginRequester', { username, password });
 
       // 2. Fallback to localStorage users DB
@@ -2961,6 +3134,16 @@ requester_template = r'''<!DOCTYPE html>
       getUsersDB();
       getItemsDB();
       getReqsDB();
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roleParam = (params.get('role') || '').toUpperCase();
+        if (['REQUESTER', 'STAFF', 'HEAD', 'ADMIN'].includes(roleParam)) {
+          if (roleParam !== 'REQUESTER') {
+            localStorage.removeItem(AUTH_SESSION_KEY);
+          }
+          selectPortalLoginRole(roleParam);
+        }
+      } catch (e) {}
       const isAuth = checkRequesterAuth();
       if (isAuth) {
         renderCatalog();
@@ -3456,7 +3639,7 @@ staff_template = r'''<!DOCTYPE html>
 
     /* Login Screen Gate */
     .login-container {
-      max-width: 420px; margin: 4rem auto; background: white; border-radius: 12px;
+      max-width: 480px; margin: 3rem auto; background: white; border-radius: 16px;
       padding: 2rem; border: 1px solid var(--neutral-200); box-shadow: var(--shadow-lg);
     }
   </style>
@@ -3465,10 +3648,49 @@ staff_template = r'''<!DOCTYPE html>
 
   <!-- LOGIN SCREEN (If not authenticated) -->
   <div id="loginScreen" class="login-container" style="display: none;">
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-      <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 72px; width: auto; object-fit: contain; margin-bottom: 0.75rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
-      <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</h2>
-      <p style="font-size: 0.85rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
+    <div style="text-align: center; margin-bottom: 1.25rem;">
+      <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.6rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
+      <h2 id="staffLoginTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)</h2>
+      <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
+      <div id="staffLoginBadge" style="margin-top: 0.6rem; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+        <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+        <span>สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.1rem;">
+      <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน (Select Role):</label>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="staffRoleLoginTabs">
+        <button type="button" class="staff-role-tab-btn active" data-role="STAFF" onclick="selectStaffLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #059669; background: #ecfdf5; color: #047857; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+          <div>
+            <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Staff (ผู้คัดกรอง)</div>
+          </div>
+        </button>
+        <button type="button" class="staff-role-tab-btn" data-role="HEAD" onclick="selectStaffLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+          <div>
+            <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Head (ผู้อนุมัติ)</div>
+          </div>
+        </button>
+        <button type="button" class="staff-role-tab-btn" data-role="ADMIN" onclick="selectStaffLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div>
+            <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">System Admin</div>
+          </div>
+        </button>
+        <button type="button" class="staff-role-tab-btn" data-role="REQUESTER" onclick="selectStaffLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
+          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <div>
+            <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Requester</div>
+          </div>
+        </button>
+      </div>
+      <input type="hidden" id="selectedStaffLoginRole" value="STAFF">
     </div>
 
     <form onsubmit="handleStaffLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -3480,8 +3702,8 @@ staff_template = r'''<!DOCTYPE html>
         <label><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> รหัสผ่าน (Password)</label>
         <input type="password" id="loginPassword" class="form-control" placeholder="กรอกรหัสผ่านเจ้าหน้าที่" required autocomplete="current-password">
       </div>
-      <button type="submit" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; margin-top: 0.5rem;">
-        เข้าสู่ระบบจัดการคลังพัสดุ
+      <button type="submit" id="btnStaffLoginSubmit" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; margin-top: 0.5rem; background: #059669;">
+        <span id="btnStaffLoginSubmitText">เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)</span>
       </button>
     </form>
 
@@ -3731,12 +3953,13 @@ staff_template = r'''<!DOCTYPE html>
               <thead>
                 <tr>
                   <th style="width: 50px; text-align: center;">ลำดับ</th>
-                  <th style="width: 150px;">ชื่อผู้ใช้งาน (Username)</th>
+                  <th style="width: 140px;">ชื่อผู้ใช้งาน (Username)</th>
+                  <th style="width: 150px;">บทบาทสิทธิ์ (Role)</th>
                   <th>ชื่อ-นามสกุล</th>
                   <th>ตำแหน่ง</th>
                   <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
-                  <th style="width: 130px;">เบอร์โทรศัพท์</th>
-                  <th style="width: 150px; text-align: right;">จัดการ</th>
+                  <th style="width: 120px;">เบอร์โทรศัพท์</th>
+                  <th style="width: 140px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="staffUsersTableBody">
@@ -4306,6 +4529,94 @@ staff_template = r'''<!DOCTYPE html>
       }
     }
 
+    function selectStaffLoginRole(role) {
+      const r = String(role || 'STAFF').toUpperCase();
+      const hiddenEl = document.getElementById('selectedStaffLoginRole');
+      if (hiddenEl) hiddenEl.value = r;
+
+      const titleEl = document.getElementById('staffLoginTitle');
+      const badgeEl = document.getElementById('staffLoginBadge');
+      const unameEl = document.getElementById('loginUsername');
+      const passEl = document.getElementById('loginPassword');
+      const btnEl = document.getElementById('btnStaffLoginSubmit');
+      const btnTextEl = document.getElementById('btnStaffLoginSubmitText');
+
+      const roleConfigs = {
+        STAFF: {
+          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)',
+          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)',
+          badgeBg: '#ecfdf5',
+          badgeColor: '#047857',
+          badgeBorder: '#a7f3d0',
+          userPlaceholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่',
+          passPlaceholder: 'กรอกรหัสผ่านเจ้าหน้าที่',
+          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)',
+          btnBg: '#059669'
+        },
+        HEAD: {
+          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน (Head Approver)',
+          badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูสถิติ)',
+          badgeBg: '#f5f3ff',
+          badgeColor: '#6d28d9',
+          badgeBorder: '#ddd6fe',
+          userPlaceholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
+          passPlaceholder: 'กรอกรหัสผ่านหัวหน้าหน่วยงาน',
+          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ (Head)',
+          btnBg: '#4f46e5'
+        },
+        ADMIN: {
+          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (System Admin)',
+          badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
+          badgeBg: '#f1f5f9',
+          badgeColor: '#0f172a',
+          badgeBorder: '#cbd5e1',
+          userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
+          passPlaceholder: 'กรอกรหัสผ่านผู้ดูแลระบบ',
+          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (Admin)',
+          btnBg: '#0f172a'
+        },
+        REQUESTER: {
+          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
+          badgeBg: '#eff6ff',
+          badgeColor: '#1e40af',
+          badgeBorder: '#bfdbfe',
+          userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
+          passPlaceholder: 'กรอกรหัสผ่านผู้ขอเบิก',
+          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          btnBg: '#1e40af'
+        }
+      };
+
+      const cfg = roleConfigs[r] || roleConfigs.STAFF;
+      if (titleEl) titleEl.innerText = cfg.title;
+      if (badgeEl) {
+        badgeEl.style.background = cfg.badgeBg;
+        badgeEl.style.color = cfg.badgeColor;
+        badgeEl.style.borderColor = cfg.badgeBorder;
+        badgeEl.innerHTML = `<svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span>${cfg.badgeText}</span>`;
+      }
+      if (unameEl) unameEl.placeholder = cfg.userPlaceholder;
+      if (passEl) passEl.placeholder = cfg.passPlaceholder;
+      if (btnEl) btnEl.style.background = cfg.btnBg;
+      if (btnTextEl) btnTextEl.innerText = cfg.btnText;
+
+      document.querySelectorAll('#staffRoleLoginTabs .staff-role-tab-btn').forEach(btn => {
+        const bRole = btn.getAttribute('data-role');
+        if (bRole === r) {
+          btn.classList.add('active');
+          btn.style.border = `2px solid ${cfg.btnBg}`;
+          btn.style.background = cfg.badgeBg;
+          btn.style.color = cfg.badgeColor;
+        } else {
+          btn.classList.remove('active');
+          btn.style.border = '1px solid #cbd5e1';
+          btn.style.background = 'white';
+          btn.style.color = '#334155';
+        }
+      });
+    }
+
     // Auth Simulation
     function checkStaffAuth() {
       const isAuth = sessionStorage.getItem('staff_auth') === 'true';
@@ -4324,28 +4635,64 @@ staff_template = r'''<!DOCTYPE html>
       e.preventDefault();
       const usernameInput = document.getElementById('loginUsername');
       const passwordInput = document.getElementById('loginPassword');
+      const selectedRole = (document.getElementById('selectedStaffLoginRole')?.value || 'STAFF').toUpperCase();
       const username = usernameInput ? usernameInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value.trim() : '';
+
+      if (selectedRole === 'REQUESTER') {
+        try {
+          const res = await fetch(MYSQL_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'loginRequester', username, password })
+          });
+          const data = await res.json();
+          if (data && data.status === 'success' && data.user) {
+            localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(data.user));
+            window.location.href = 'index.html';
+            return;
+          }
+        } catch (err) {}
+        const users = getUsersDB();
+        const found = users.find(u => (u.username && u.username.toLowerCase() === username.toLowerCase()) || (u.name && u.name.toLowerCase() === username.toLowerCase()));
+        if (found && (password === (found.password || 'sdu1234') || password === 'sdu1234')) {
+          localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(found));
+          window.location.href = 'index.html';
+          return;
+        }
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: 'ชื่อผู้ใช้งานหรือรหัสผ่านผู้ขอเบิกไม่ถูกต้อง',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ลองใหม่อีกครั้ง'
+        });
+        return;
+      }
 
       try {
         const res = await fetch(MYSQL_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'loginStaff', username, password })
+          body: JSON.stringify({ action: 'loginStaff', username, password, requested_role: selectedRole })
         });
         const data = await res.json();
         if (data && data.status === 'success') {
-          const role = (data.role || resolveRoleFromUsername(username)).toUpperCase();
+          const baseRole = (data.role || resolveRoleFromUsername(username)).toUpperCase();
+          const activeRole = (data.active_role || (baseRole === 'ADMIN' ? selectedRole : baseRole)).toUpperCase();
           sessionStorage.setItem('staff_auth', 'true');
           sessionStorage.setItem('staff_token', data.token || '');
           sessionStorage.setItem('staff_username', data.username || username);
           sessionStorage.setItem('staff_name', data.name || username);
-          sessionStorage.setItem('staff_role', role);
-          sessionStorage.setItem('staff_active_role', role);
+          sessionStorage.setItem('staff_role', baseRole);
+          sessionStorage.setItem('staff_active_role', activeRole);
           checkStaffAuth();
-          if (role === 'HEAD') {
+          if (activeRole === 'HEAD') {
             const tabs = document.querySelectorAll('.status-tab');
             if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+          } else if (activeRole === 'STAFF') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
           }
         } else {
           Swal.fire({
@@ -4356,11 +4703,20 @@ staff_template = r'''<!DOCTYPE html>
         }
       } catch (err) {
         console.warn('Login request failed or offline fallback:', err);
-        const role = resolveRoleFromUsername(username);
+        const baseRole = resolveRoleFromUsername(username);
+        if (baseRole !== 'ADMIN' && baseRole !== selectedRole) {
+          Swal.fire({
+            icon: 'error',
+            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
+            text: `บัญชี '${username}' มีสิทธิ์เป็น ${baseRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
+          });
+          return;
+        }
+        const activeRole = baseRole === 'ADMIN' ? selectedRole : baseRole;
         sessionStorage.setItem('staff_auth', 'true');
         sessionStorage.setItem('staff_username', username || 'admin_staff');
-        sessionStorage.setItem('staff_role', role);
-        sessionStorage.setItem('staff_active_role', role);
+        sessionStorage.setItem('staff_role', baseRole);
+        sessionStorage.setItem('staff_active_role', activeRole);
         checkStaffAuth();
       }
     }
@@ -6601,7 +6957,7 @@ staff_template = r'''<!DOCTYPE html>
       if (filtered.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
+            <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
               ไม่พบรายชื่อบุคลากรที่ตรงกับเงื่อนไขการค้นหา
             </td>
           </tr>
@@ -6609,12 +6965,23 @@ staff_template = r'''<!DOCTYPE html>
         return;
       }
 
-      tbody.innerHTML = filtered.map((u, idx) => `
+      tbody.innerHTML = filtered.map((u, idx) => {
+        const uRole = String(u.role || (['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes((u.username || '').toLowerCase()) ? 'HEAD' : 'REQUESTER')).toUpperCase();
+        let roleBadge = `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ขอเบิก (REQUESTER)</span>`;
+        if (uRole === 'STAFF') {
+          roleBadge = `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">เจ้าหน้าที่พัสดุ (STAFF)</span>`;
+        } else if (uRole === 'HEAD') {
+          roleBadge = `<span style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">หัวหน้าผู้อนุมัติ (HEAD)</span>`;
+        } else if (uRole === 'ADMIN') {
+          roleBadge = `<span style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ดูแลระบบ (ADMIN)</span>`;
+        }
+        return `
         <tr>
           <td style="text-align: center; color: var(--neutral-600);">${idx + 1}</td>
           <td>
             <code style="background: var(--neutral-100); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.825rem; font-weight: 600; border: 1px solid var(--neutral-200);">${u.username || '-'}</code>
           </td>
+          <td>${roleBadge}</td>
           <td><strong>${u.name}</strong></td>
           <td style="color: var(--neutral-700);">${u.position || '-'}</td>
           <td>
@@ -6632,51 +6999,63 @@ staff_template = r'''<!DOCTYPE html>
             </button>
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
     }
 
     function openUserModal(userId = null) {
       const currentUsers = getUsersDB();
       const existing = userId !== null ? currentUsers.find(u => Number(u.id) === Number(userId)) : null;
       const deptNames = getAllDeptNames();
+      const curRole = existing ? String(existing.role || (['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes((existing.username || '').toLowerCase()) ? 'HEAD' : 'REQUESTER')).toUpperCase() : 'REQUESTER';
 
       const deptOptionsHtml = deptNames.map(d =>
         `<option value="${d}" ${existing && existing.dept === d ? 'selected' : ''}>${d}</option>`
       ).join('') + `<option value="__NEW__">+ เพิ่มกลุ่มงาน / หน่วยงานใหม่...</option>`;
 
       Swal.fire({
-        title: existing ? 'แก้ไขข้อมูลบุคลากร (User)' : 'เพิ่มรายชื่อบุคลากรใหม่ (User)',
+        title: existing ? 'แก้ไขข้อมูลบุคลากรและสิทธิ์ (User & Role)' : 'เพิ่มรายชื่อบุคลากรและกำหนดสิทธิ์ (User & Role)',
         html: `
-          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
-            <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อผู้ใช้งานสำหรับเข้าสู่ระบบ (Username) *</label>
-              <input id="swal-user-uname" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น wasana.c หรือ user01" value="${existing ? (existing.username || '') : ''}">
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อผู้ใช้งาน (Username) *</label>
+                <input id="swal-user-uname" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.92rem; height: 40px;" placeholder="กรอกชื่อผู้ใช้งาน" value="${existing ? (existing.username || '') : ''}">
+              </div>
+              <div>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">บทบาทสิทธิ์ในระบบ (Role) *</label>
+                <select id="swal-user-role" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.88rem; height: 40px;">
+                  <option value="REQUESTER" ${curRole === 'REQUESTER' ? 'selected' : ''}>REQUESTER — ผู้ขอเบิกพัสดุ</option>
+                  <option value="STAFF" ${curRole === 'STAFF' ? 'selected' : ''}>STAFF — เจ้าหน้าที่พัสดุ (ผู้คัดกรอง)</option>
+                  <option value="HEAD" ${curRole === 'HEAD' ? 'selected' : ''}>HEAD — หัวหน้าหน่วยงาน (ผู้อนุมัติ)</option>
+                  <option value="ADMIN" ${curRole === 'ADMIN' ? 'selected' : ''}>ADMIN — ผู้ดูแลระบบสูงสุด</option>
+                </select>
+              </div>
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รหัสผ่านเข้าใช้งาน (Password) ${existing ? '<span style="font-weight: normal; color: #64748b;">(เว้นว่างหากไม่เปลี่ยน)</span>' : '*'}</label>
-              <input type="password" id="swal-user-pass" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="${existing ? 'กรอกรหัสผ่านใหม่เพื่อเปลี่ยน' : 'กำหนดรหัสผ่าน เช่น sdu1234'}">
+              <input type="password" id="swal-user-pass" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="${existing ? 'กรอกรหัสผ่านใหม่เพื่อเปลี่ยน' : 'กำหนดรหัสผ่านเข้าสู่ระบบ'}">
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อ-นามสกุล บุคลากร *</label>
-              <input id="swal-user-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น นางสาวสมศรี ใจดี" value="${existing ? existing.name : ''}">
+              <input id="swal-user-name" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="กรอกชื่อ-นามสกุลจริง" value="${existing ? existing.name : ''}">
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ตำแหน่ง</label>
-              <input id="swal-user-pos" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น เจ้าหน้าบริการการศึกษา, เจ้าหน้าที่สำนักงาน (บริหารงานทั่วไป)" value="${existing ? (existing.position || '') : ''}">
+              <input id="swal-user-pos" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="ระบุตำแหน่งงาน" value="${existing ? (existing.position || '') : ''}">
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">กลุ่มงาน / หน่วยงานที่สังกัด (สวท.) *</label>
-              <select id="swal-user-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.9rem;" onchange="document.getElementById('swal-new-dept-wrap').style.display = this.value === '__NEW__' ? 'block' : 'none';">
+              <select id="swal-user-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.9rem; height: 40px;" onchange="document.getElementById('swal-new-dept-wrap').style.display = this.value === '__NEW__' ? 'block' : 'none';">
                 ${deptOptionsHtml}
               </select>
             </div>
             <div id="swal-new-dept-wrap" style="display: none;">
               <label style="font-size: 0.85rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">ระบุชื่อกลุ่มงาน / หน่วยงานใหม่ *</label>
-              <input id="swal-user-new-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น กลุ่มงานพัฒนาวิชาการ">
+              <input id="swal-user-new-dept" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="ระบุชื่อกลุ่มงานใหม่">
             </div>
             <div>
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เบอร์โทรศัพท์ติดต่อ</label>
-              <input id="swal-user-phone" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem;" placeholder="เช่น 081-234-5678" value="${existing ? (existing.phone || '') : ''}">
+              <input id="swal-user-phone" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="กรอกเบอร์โทรศัพท์ติดต่อ" value="${existing ? (existing.phone || '') : ''}">
             </div>
           </div>
         `,
@@ -6687,6 +7066,7 @@ staff_template = r'''<!DOCTYPE html>
         cancelButtonText: 'ยกเลิก',
         preConfirm: () => {
           const username = document.getElementById('swal-user-uname').value.trim();
+          const role = document.getElementById('swal-user-role').value;
           const password = document.getElementById('swal-user-pass').value.trim();
           const name = document.getElementById('swal-user-name').value.trim();
           const position = document.getElementById('swal-user-pos').value.trim();
@@ -6719,7 +7099,7 @@ staff_template = r'''<!DOCTYPE html>
             Swal.showValidationMessage('กรุณาระบุกลุ่มงาน / หน่วยงานที่สังกัด');
             return false;
           }
-          return { username, password, name, position, dept: finalDept, phone };
+          return { username, role, password, name, position, dept: finalDept, phone };
         }
       }).then((result) => {
         if (!result.isConfirmed || !result.value) return;
@@ -6735,6 +7115,7 @@ staff_template = r'''<!DOCTYPE html>
               ...currentUsers[idx],
               name: val.name,
               username: val.username,
+              role: val.role,
               position: val.position,
               dept: val.dept,
               phone: val.phone
@@ -6749,6 +7130,7 @@ staff_template = r'''<!DOCTYPE html>
             id: maxId + 1,
             name: val.name,
             username: val.username,
+            role: val.role,
             password: val.password || 'sdu1234',
             position: val.position,
             dept: val.dept,
@@ -7095,6 +7477,15 @@ staff_template = r'''<!DOCTYPE html>
     document.addEventListener('DOMContentLoaded', () => {
       getDeptsDB();
       getUsersDB();
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const roleParam = (params.get('role') || '').toUpperCase();
+        if (['STAFF', 'HEAD', 'ADMIN', 'REQUESTER'].includes(roleParam)) {
+          sessionStorage.removeItem('staff_auth');
+          sessionStorage.removeItem('staff_token');
+          selectStaffLoginRole(roleParam);
+        }
+      } catch (e) {}
       checkStaffAuth();
       syncFromMySQLAPI();
     });

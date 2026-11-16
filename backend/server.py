@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.2.1"
+SYSTEM_VERSION = "3.2.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -1353,6 +1353,9 @@ def handle_save_user(payload):
     phone = str(payload.get("phone", "")).strip()
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", "")).strip()
+    role = str(payload.get("role", "REQUESTER")).strip().upper()
+    if role not in ("REQUESTER", "STAFF", "HEAD", "ADMIN"):
+        role = "REQUESTER"
 
     if not name or not dept:
         return {"status": "error", "message": "กรุณาระบุชื่อ-นามสกุล และกลุ่มงาน/หน่วยงาน"}
@@ -1382,26 +1385,27 @@ def handle_save_user(payload):
             raw_pass = str(password or "").strip()
             default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
             if user_id:
-                cur.execute("SELECT id, password FROM users WHERE id = %s", (int(user_id),))
+                cur.execute("SELECT id, password, role FROM users WHERE id = %s", (int(user_id),))
                 existing_row = cur.fetchone()
                 if existing_row:
                     final_pass = hash_password(raw_pass) if raw_pass else (existing_row.get("password") or hash_password(default_user_pass))
+                    final_role = role if "role" in payload else (existing_row.get("role") or "REQUESTER")
                     cur.execute(
-                        "UPDATE users SET name = %s, username = %s, password = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
-                        (name, username, final_pass, position, dept, phone, int(user_id)),
+                        "UPDATE users SET name = %s, username = %s, password = %s, role = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
+                        (name, username, final_pass, final_role, position, dept, phone, int(user_id)),
                     )
                 else:
                     final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                     cur.execute(
-                        "INSERT INTO users (id, name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)",
-                        (int(user_id), name, username, final_pass, position, dept, phone),
+                        "INSERT INTO users (id, name, username, password, role, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                        (int(user_id), name, username, final_pass, role, position, dept, phone),
                     )
             else:
                 final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                 if IS_POSTGRES:
                     cur.execute(
-                        "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1) RETURNING id",
-                        (name, username, final_pass, position, dept, phone),
+                        "INSERT INTO users (name, username, password, role, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1) RETURNING id",
+                        (name, username, final_pass, role, position, dept, phone),
                     )
                     row = cur.fetchone()
                     user_id = row["id"] if row else None
@@ -1409,8 +1413,8 @@ def handle_save_user(payload):
                     if not name:
                         return {"status": "error", "message": "กรุณาระบุชื่อรายการพัสดุ"}
                     cur.execute(
-                        "INSERT INTO users (name, username, password, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1)",
-                        (name, username, final_pass, position, dept, phone),
+                        "INSERT INTO users (name, username, password, role, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, 1)",
+                        (name, username, final_pass, role, position, dept, phone),
                     )
                     user_id = cur.lastrowid
         conn.commit()
@@ -1422,6 +1426,7 @@ def handle_save_user(payload):
                 "id": int(user_id) if user_id else 0,
                 "name": name,
                 "username": username,
+                "role": role,
                 "position": position,
                 "dept": dept,
                 "phone": phone
@@ -1926,6 +1931,7 @@ def handle_login_staff(payload):
     """Authenticate staff/head/admin and return HMAC signed token with RBAC role."""
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", "")).strip()
+    requested_role = str(payload.get("requested_role") or payload.get("role") or "").strip().upper()
     if not username or not password:
         return {"status": "error", "message": "กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน"}
 
@@ -1959,30 +1965,50 @@ def handle_login_staff(payload):
                 )
                 row = cur.fetchone()
                 if row and verify_password(str(row.get("password") or ""), password):
-                    is_valid = True
-                    display_name = row.get("name") or username
                     db_role = str(row.get("role") or "").strip().upper()
+                    uname_db = str(row.get("username") or username).strip().lower()
                     if db_role in ("ADMIN", "HEAD", "STAFF"):
+                        is_valid = True
                         resolved_role = db_role
+                        display_name = row.get("name") or username
+                    elif uname_db in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+                        is_valid = True
+                        resolved_role = "HEAD"
+                        display_name = row.get("name") or username
                     else:
-                        resolved_role = get_staff_role(row.get("username") or username)
+                        conn.close()
+                        return {
+                            "status": "error",
+                            "code": "ROLE_MISMATCH",
+                            "message": f"บัญชี '{username}' เป็นสิทธิ์ผู้ขอเบิกพัสดุ (REQUESTER) กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ' เพื่อเข้าสู่ระบบ",
+                        }
             conn.close()
         except Exception:
             pass
 
     if not is_valid:
-        return {"status": "error", "message": "ชื่อผู้ใช้หรือรหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง"}
+        return {"status": "error", "message": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}
 
     final_role = resolved_role or get_staff_role(username)
+    if requested_role in ("STAFF", "HEAD", "ADMIN"):
+        if final_role != "ADMIN" and final_role != requested_role:
+            return {
+                "status": "error",
+                "code": "ROLE_MISMATCH",
+                "message": f"บัญชี '{username}' มีสิทธิ์เป็น '{get_role_label(final_role)}' ไม่สามารถเข้าใช้งานในแท็บ '{get_role_label(requested_role)}' ได้ กรุณาเลือกแท็บให้ตรงกับบทบาทของท่าน",
+            }
+
+    active_role = requested_role if (final_role == "ADMIN" and requested_role in ("STAFF", "HEAD", "ADMIN")) else final_role
     token = generate_staff_token(username)
     return {
         "status": "success",
-        "message": "เข้าสู่ระบบเจ้าหน้าที่สำเร็จ",
+        "message": f"เข้าสู่ระบบสำเร็จ ({get_role_label(active_role)})",
         "token": token,
         "username": username,
         "name": display_name,
         "role": final_role,
-        "role_label": get_role_label(final_role),
+        "active_role": active_role,
+        "role_label": get_role_label(active_role),
     }
 
 
