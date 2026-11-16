@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.0"
+        assert SYSTEM_VERSION == "3.2.1"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -932,4 +932,68 @@ class TestPhase8ExtendedRequirements:
         with open(os.path.join(PROJECT_ROOT, "portal.html"), "r", encoding="utf-8") as f:
             portal_html = f.read()
         assert f"v{SYSTEM_VERSION}" in portal_html
+
+    def test_per_person_monthly_quota_isolation(self):
+        """Verify monthly quota limit is enforced per individual personnel (requester), not globally."""
+        import server
+        from unittest.mock import MagicMock, patch
+
+        # Person A ("นางสาววาสนา จันทร์จ่าย") has already requested 900 out of 1000 monthly_limit -> requesting 200 more fails
+        mock_conn_a = MagicMock()
+        mock_cur_a = MagicMock()
+        mock_cur_a.fetchone.side_effect = [
+            {
+                "id": 3,
+                "name": "กระดาษคำตอบ",
+                "is_multi_unit": 1,
+                "on_hand_pieces": 32000,
+                "reserved_pieces": 0,
+                "pieces_per_box": 2000,
+                "monthly_limit": 1000,
+                "unit_piece_name": "ใบ",
+            },
+            {"month_total": 900},
+        ]
+        mock_conn_a.cursor.return_value.__enter__.return_value = mock_cur_a
+
+        with patch("server.get_db_connection", return_value=mock_conn_a):
+            res_a = server.handle_create_requisition({
+                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "dept": "สำนักงานผู้อำนวยการ สวท.",
+                "purpose": "ทดสอบโควตารายบุคคล",
+                "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200}],
+            })
+            assert res_a["status"] == "error"
+            assert res_a["code"] == "QUOTA_EXCEEDED"
+            assert res_a["details"]["requester"] == "นางสาววาสนา จันทร์จ่าย"
+            assert res_a["details"]["remainingQuota"] == 100
+
+        # Person B ("นางสาวจีรวรรณ บุญพิทักษ์") has requested 0 in the same month -> requesting 500 succeeds!
+        mock_conn_b = MagicMock()
+        mock_cur_b = MagicMock()
+        mock_cur_b.fetchone.side_effect = [
+            {
+                "id": 3,
+                "name": "กระดาษคำตอบ",
+                "is_multi_unit": 1,
+                "on_hand_pieces": 32000,
+                "reserved_pieces": 0,
+                "pieces_per_box": 2000,
+                "monthly_limit": 1000,
+                "unit_piece_name": "ใบ",
+            },
+            {"month_total": 0},
+            {"pieces_per_box": 2000},
+        ]
+        mock_conn_b.cursor.return_value.__enter__.return_value = mock_cur_b
+
+        with patch("server.get_db_connection", return_value=mock_conn_b):
+            res_b = server.handle_create_requisition({
+                "requester": "นางสาวจีรวรรณ บุญพิทักษ์",
+                "dept": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
+                "purpose": "ทดสอบโควตาของบุคลากรอีกท่าน",
+                "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500}],
+            })
+            assert res_b["status"] == "success"
+
 

@@ -653,7 +653,7 @@
                   <th>คงคลังจริง (On-Hand)</th>
                   <th>ยอดจอง (Reserved)</th>
                   <th>พร้อมเบิก (Available)</th>
-                  <th>โควตา/เดือน</th>
+                  <th>โควตา/ท่าน/เดือน</th>
                   <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
                   <th>รับเข้าล่าสุด</th>
                   <th style="width: 210px; text-align: right;">จัดการ / ประวัติ</th>
@@ -930,13 +930,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.0) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.1) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.2.0';
+    const APP_VERSION = '3.2.1';
     const MYSQL_API_URL = '/api';
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
@@ -2822,7 +2822,7 @@
               ${formatStockDisplay(available, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit)}
             </td>
             <td>
-              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `<span style="font-weight: 600; color: #b45309;">${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}</span>` : '<span style="color: var(--neutral-400); font-size: 0.85rem;">ไม่จำกัด</span>'}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `<span style="font-weight: 600; color: #b45309;">${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/ท่าน</span>` : '<span style="color: var(--neutral-400); font-size: 0.85rem;">ไม่จำกัด</span>'}
             </td>
             <td>
               <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
@@ -3459,7 +3459,7 @@
                 <input type="number" id="swal-item-min" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${existing ? existing.min_alert : 20}">
               </div>
               <div>
-                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำกัดยอดเบิกต่อเดือน (0 = ไม่จำกัด)</label>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำกัดโควตาต่อบุคลากร/เดือน (0 = ไม่จำกัด)</label>
                 <input type="number" id="swal-item-monthly-limit" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="0" value="${existing ? (existing.monthly_limit || 0) : 0}">
               </div>
             </div>

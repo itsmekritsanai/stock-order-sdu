@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.0"
+SYSTEM_VERSION = "3.2.1"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -1777,6 +1777,7 @@ requester_template = r'''<!DOCTYPE html>
     function handleUserSearch(text) {
       openUserDropdown();
       renderUserDropdown(text);
+      renderCatalog();
     }
 
     function selectRequesterUser(userId) {
@@ -1793,6 +1794,7 @@ requester_template = r'''<!DOCTYPE html>
         }
       }
       closeUserDropdown();
+      renderCatalog();
     }
 
     document.addEventListener('click', (e) => {
@@ -1814,9 +1816,22 @@ requester_template = r'''<!DOCTYPE html>
       return `${pieces} ${safePiece}`;
     }
 
+    function getCurrentRequesterName() {
+      const inputEl = document.getElementById('requesterName');
+      if (inputEl && inputEl.value && inputEl.value.trim()) {
+        return inputEl.value.trim();
+      }
+      if (typeof getLoggedInRequester === 'function') {
+        const u = getLoggedInRequester();
+        if (u && (u.name || u.username)) return String(u.name || u.username).trim();
+      }
+      return '';
+    }
+
     function getPersonalMonthlyQuotaInfo(item) {
       const limit = Number(item.monthly_limit || 0);
-      if (limit <= 0) return { limit: 0, used: 0, remaining: Infinity };
+      const currentPerson = getCurrentRequesterName();
+      if (limit <= 0) return { limit: 0, used: 0, remaining: Infinity, requester: currentPerson };
       const curDate = new Date();
       const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
       const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
@@ -1824,8 +1839,9 @@ requester_template = r'''<!DOCTYPE html>
       let used = 0;
       reqs.forEach(r => {
         if (r.status !== 'REJECTED') {
+          const isSamePerson = !currentPerson || (r.requester || '').trim() === currentPerson;
           const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
-          if (isThisMonth && Array.isArray(r.items)) {
+          if (isSamePerson && isThisMonth && Array.isArray(r.items)) {
             r.items.forEach(ri => {
               if (Number(ri.itemId) === Number(item.id)) {
                 used += Number(ri.totalPieces || 0);
@@ -1841,7 +1857,8 @@ requester_template = r'''<!DOCTYPE html>
       return {
         limit,
         used,
-        remaining: Math.max(0, limit - used)
+        remaining: Math.max(0, limit - used),
+        requester: currentPerson
       };
     }
 
@@ -1910,7 +1927,7 @@ requester_template = r'''<!DOCTYPE html>
                 return `
                   <div style="font-size: 0.75rem; color: ${isQuotaEmpty ? '#991b1b' : '#b45309'}; background: ${isQuotaEmpty ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isQuotaEmpty ? '#fecaca' : '#fde68a'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
                     <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
-                      ${vIcons.shield} จำกัดการเบิก: ${qInfo.limit.toLocaleString()} ${safePieceName}/เดือน
+                      ${vIcons.shield} จำกัดโควตาบุคลากร: ${qInfo.limit.toLocaleString()} ${safePieceName}/ท่าน/เดือน
                     </span>
                     <span style="font-size: 0.72rem; color: ${isQuotaEmpty ? '#dc2626' : '#92400e'};">
                       โควตาคงเหลือของท่านในเดือนนี้: <strong>${qInfo.remaining.toLocaleString()} ${safePieceName}</strong> (เบิกแล้ว ${qInfo.used.toLocaleString()})
@@ -2003,12 +2020,14 @@ requester_template = r'''<!DOCTYPE html>
         const curDate = new Date();
         const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
         const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+        const currentPerson = getCurrentRequesterName();
         const reqs = getReqsDB();
         let monthUsed = 0;
         reqs.forEach(r => {
           if (r.status !== 'REJECTED') {
+            const isSamePerson = !currentPerson || (r.requester || '').trim() === currentPerson;
             const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
-            if (isThisMonth && r.items) {
+            if (isSamePerson && isThisMonth && r.items) {
               r.items.forEach(it => {
                 if (Number(it.itemId) === item.id) {
                   monthUsed += Number(it.totalPieces || 0);
@@ -2020,10 +2039,11 @@ requester_template = r'''<!DOCTYPE html>
         const currentInCart = (cart.find(c => c.itemId === itemId)?.totalPieces || 0);
         if (monthUsed + currentInCart + totalPieces > Number(item.monthly_limit)) {
           const rem = Math.max(0, Number(item.monthly_limit) - monthUsed - currentInCart);
+          const personLabel = escapeHtml(currentPerson || 'ท่าน');
           Swal.fire({
             icon: 'warning',
-            title: 'เกินโควตาประจำเดือน',
-            html: `พัสดุนี้ถูกจำกัดการเบิกไม่เกิน <b>${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/เดือน</b><br>ในเดือนนี้มีการขอเบิกไปแล้ว <b>${monthUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
+            title: 'เกินโควตารายเดือนต่อบุคลากร',
+            html: `พัสดุนี้ถูกจำกัดโควตาการเบิกไม่เกิน <b>${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/ท่าน/เดือน</b><br>ในเดือนนี้บุคลากร (<b>${personLabel}</b>) มีการขอเบิกไปแล้ว <b>${monthUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
             confirmButtonColor: '#1e40af',
             confirmButtonText: 'เข้าใจแล้ว'
           });
@@ -3650,7 +3670,7 @@ staff_template = r'''<!DOCTYPE html>
                   <th>คงคลังจริง (On-Hand)</th>
                   <th>ยอดจอง (Reserved)</th>
                   <th>พร้อมเบิก (Available)</th>
-                  <th>โควตา/เดือน</th>
+                  <th>โควตา/ท่าน/เดือน</th>
                   <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
                   <th>รับเข้าล่าสุด</th>
                   <th style="width: 210px; text-align: right;">จัดการ / ประวัติ</th>
@@ -5742,7 +5762,7 @@ staff_template = r'''<!DOCTYPE html>
               ${formatStockDisplay(available, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit)}
             </td>
             <td>
-              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `<span style="font-weight: 600; color: #b45309;">${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}</span>` : '<span style="color: var(--neutral-400); font-size: 0.85rem;">ไม่จำกัด</span>'}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `<span style="font-weight: 600; color: #b45309;">${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/ท่าน</span>` : '<span style="color: var(--neutral-400); font-size: 0.85rem;">ไม่จำกัด</span>'}
             </td>
             <td>
               <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
@@ -6379,7 +6399,7 @@ staff_template = r'''<!DOCTYPE html>
                 <input type="number" id="swal-item-min" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${existing ? existing.min_alert : 20}">
               </div>
               <div>
-                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำกัดยอดเบิกต่อเดือน (0 = ไม่จำกัด)</label>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำกัดโควตาต่อบุคลากร/เดือน (0 = ไม่จำกัด)</label>
                 <input type="number" id="swal-item-monthly-limit" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="0" value="${existing ? (existing.monthly_limit || 0) : 0}">
               </div>
             </div>

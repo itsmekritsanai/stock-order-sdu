@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.2.0"
+SYSTEM_VERSION = "3.2.1"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -795,7 +795,7 @@ def handle_create_requisition(payload):
                         "details": {"itemId": item_id, "requested": total_pieces, "available": available},
                     }
 
-                # Monthly quota enforcement
+                # Monthly quota enforcement per personnel (requester)
                 monthly_limit = int(db_item.get("monthly_limit") or 0)
                 if monthly_limit > 0:
                     cur_now = datetime.now()
@@ -808,13 +808,14 @@ def handle_create_requisition(payload):
                             FROM requisitions r
                             JOIN requisition_items ri ON r.id = ri.requisition_id
                             WHERE ri.item_id = %s
+                              AND r.requester = %s
                               AND r.status != 'REJECTED'
                               AND (
                                 (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
                                 OR (r.created_at IS NULL AND r.id LIKE %s)
                               )
                             """,
-                            (item_id, cur_iso_month, cur_be_doc),
+                            (item_id, requester, cur_iso_month, cur_be_doc),
                         )
                     else:
                         cur.execute(
@@ -823,13 +824,14 @@ def handle_create_requisition(payload):
                             FROM requisitions r
                             JOIN requisition_items ri ON r.id = ri.requisition_id
                             WHERE ri.item_id = %s
+                              AND r.requester = %s
                               AND r.status != 'REJECTED'
                               AND (
                                 (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
                                 OR (r.created_at IS NULL AND r.id LIKE %s)
                               )
                             """,
-                            (item_id, cur_iso_month, cur_be_doc),
+                            (item_id, requester, cur_iso_month, cur_be_doc),
                         )
                     month_row = cur.fetchone()
                     current_month_total = int(month_row["month_total"] or 0) if month_row else 0
@@ -840,9 +842,10 @@ def handle_create_requisition(payload):
                         return {
                             "status": "error",
                             "code": "QUOTA_EXCEEDED",
-                            "message": f"ท่านขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือน (จำกัด {monthly_limit} {unit_p}/เดือน, ในเดือนนี้เบิกไปแล้ว {current_month_total} {unit_p}, คงเหลือโควตา {rem} {unit_p})",
+                            "message": f"บุคลากร '{requester}' ขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือนต่อท่าน (จำกัด {monthly_limit} {unit_p}/ท่าน/เดือน, ในเดือนนี้ท่านเบิกไปแล้ว {current_month_total} {unit_p}, คงเหลือโควตา {rem} {unit_p})",
                             "details": {
                                 "itemId": item_id,
+                                "requester": requester,
                                 "monthlyLimit": monthly_limit,
                                 "currentMonthTotal": current_month_total,
                                 "remainingQuota": rem,
