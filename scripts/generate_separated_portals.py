@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.3"
+SYSTEM_VERSION = "3.2.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -2277,12 +2277,15 @@ requester_template = r'''<!DOCTYPE html>
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ยืนยันส่งคำขอ',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
+          const nowObj = new Date();
+          const beYear = nowObj.getFullYear() + 543;
+          const beMonth = String(nowObj.getMonth() + 1).padStart(2, '0');
           const randomNo = Math.floor(1000 + Math.random() * 9000);
-          const newDocNo = `REQ-256910-${randomNo}`;
+          const newDocNo = `REQ-${beYear}${beMonth}-${randomNo}`;
 
-          const nowIso = new Date().toISOString();
+          const nowIso = nowObj.toISOString();
           const newReq = {
             id: newDocNo,
             dept: dept,
@@ -2311,11 +2314,22 @@ requester_template = r'''<!DOCTYPE html>
             }))
           };
 
-          // Save to shared localStorage DB & sync to MySQL API
+          const apiRes = await postToMySQLAPI('createRequisition', newReq);
+          if (apiRes && apiRes.status === 'error') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ส่งคำขอเบิกไม่สำเร็จ',
+              text: apiRes.message || 'ไม่สามารถบันทึกคำขอเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลหรือโควตาคงเหลือ',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
+          // Save to shared localStorage DB
           const reqs = getReqsDB();
           reqs.unshift(newReq);
           saveReqsDB(reqs);
-          postToMySQLAPI('createRequisition', newReq);
 
           cart = [];
           document.getElementById('cartPurpose').value = '';
@@ -3041,14 +3055,27 @@ requester_template = r'''<!DOCTYPE html>
           } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
             resolved = 'HEAD';
             dispName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+          } else {
+            const localUsers = getUsersDB();
+            const foundUser = localUsers.find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
+            const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
+            if (foundUser && (password === validPass || password === 'sdu1234')) {
+              const uRole = String(foundUser.role || 'REQUESTER').toUpperCase();
+              if (['ADMIN', 'HEAD', 'STAFF'].includes(uRole)) {
+                resolved = uRole;
+                dispName = foundUser.name || username;
+              } else {
+                staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ' เพื่อเข้าสู่ระบบ` };
+              }
+            }
           }
-          if (resolved) {
+          if (!staffRes && resolved) {
             if (resolved !== 'ADMIN' && resolved !== selectedRole) {
               staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น ${resolved} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน` };
             } else {
               staffRes = { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: selectedRole };
             }
-          } else {
+          } else if (!staffRes) {
             staffRes = { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก' };
           }
         }
@@ -4723,19 +4750,57 @@ staff_template = r'''<!DOCTYPE html>
         }
       } catch (err) {
         console.warn('Login request failed or offline fallback:', err);
-        const baseRole = resolveRoleFromUsername(username);
-        if (baseRole !== 'ADMIN' && baseRole !== selectedRole) {
+        const uLow = username.toLowerCase();
+        let resolvedRole = null;
+        let resolvedName = username;
+        if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'ADMIN';
+          resolvedName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+        } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'STAFF';
+          resolvedName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+        } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'HEAD';
+          resolvedName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+        } else {
+          const foundUser = getUsersDB().find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
+          const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
+          if (foundUser && (password === validPass || password === 'sdu1234')) {
+            const uRole = String(foundUser.role || 'REQUESTER').toUpperCase();
+            if (['ADMIN', 'HEAD', 'STAFF'].includes(uRole)) {
+              resolvedRole = uRole;
+              resolvedName = foundUser.name || username;
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
+                text: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ'`
+              });
+              return;
+            }
+          }
+        }
+        if (!resolvedRole) {
           Swal.fire({
             icon: 'error',
-            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
-            text: `บัญชี '${username}' มีสิทธิ์เป็น ${baseRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (Offline Fallback)'
           });
           return;
         }
-        const activeRole = baseRole === 'ADMIN' ? selectedRole : baseRole;
+        if (resolvedRole !== 'ADMIN' && resolvedRole !== selectedRole) {
+          Swal.fire({
+            icon: 'error',
+            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
+            text: `บัญชี '${username}' มีสิทธิ์เป็น ${resolvedRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
+          });
+          return;
+        }
+        const activeRole = resolvedRole === 'ADMIN' ? selectedRole : resolvedRole;
         sessionStorage.setItem('staff_auth', 'true');
         sessionStorage.setItem('staff_username', username || 'admin_staff');
-        sessionStorage.setItem('staff_role', baseRole);
+        sessionStorage.setItem('staff_name', resolvedName);
+        sessionStorage.setItem('staff_role', resolvedRole);
         sessionStorage.setItem('staff_active_role', activeRole);
         checkStaffAuth();
       }
@@ -6923,11 +6988,19 @@ staff_template = r'''<!DOCTYPE html>
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ลบรายการพัสดุ',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (!result.isConfirmed) return;
+        const apiRes = await postToMySQLAPI('deleteItem', { id: itemId });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ลบรายการไม่สำเร็จ',
+            text: apiRes.message || 'คุณไม่มีสิทธิ์หรือรายการไม่สามารถลบได้'
+          });
+          return;
+        }
         const updated = items.filter(i => Number(i.id) !== Number(itemId));
         saveItemsDB(updated);
-        postToMySQLAPI('deleteItem', { id: itemId });
         renderInventoryTable();
         Swal.fire({
           icon: 'success',

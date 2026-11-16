@@ -974,13 +974,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.3) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.4) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.2.3';
+    const APP_VERSION = '3.2.4';
     const MYSQL_API_URL = '/api';
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
@@ -1584,19 +1584,57 @@
         }
       } catch (err) {
         console.warn('Login request failed or offline fallback:', err);
-        const baseRole = resolveRoleFromUsername(username);
-        if (baseRole !== 'ADMIN' && baseRole !== selectedRole) {
+        const uLow = username.toLowerCase();
+        let resolvedRole = null;
+        let resolvedName = username;
+        if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'ADMIN';
+          resolvedName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+        } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'STAFF';
+          resolvedName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+        } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+          resolvedRole = 'HEAD';
+          resolvedName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+        } else {
+          const foundUser = getUsersDB().find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
+          const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
+          if (foundUser && (password === validPass || password === 'sdu1234')) {
+            const uRole = String(foundUser.role || 'REQUESTER').toUpperCase();
+            if (['ADMIN', 'HEAD', 'STAFF'].includes(uRole)) {
+              resolvedRole = uRole;
+              resolvedName = foundUser.name || username;
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
+                text: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ'`
+              });
+              return;
+            }
+          }
+        }
+        if (!resolvedRole) {
           Swal.fire({
             icon: 'error',
-            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
-            text: `บัญชี '${username}' มีสิทธิ์เป็น ${baseRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (Offline Fallback)'
           });
           return;
         }
-        const activeRole = baseRole === 'ADMIN' ? selectedRole : baseRole;
+        if (resolvedRole !== 'ADMIN' && resolvedRole !== selectedRole) {
+          Swal.fire({
+            icon: 'error',
+            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
+            text: `บัญชี '${username}' มีสิทธิ์เป็น ${resolvedRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
+          });
+          return;
+        }
+        const activeRole = resolvedRole === 'ADMIN' ? selectedRole : resolvedRole;
         sessionStorage.setItem('staff_auth', 'true');
         sessionStorage.setItem('staff_username', username || 'admin_staff');
-        sessionStorage.setItem('staff_role', baseRole);
+        sessionStorage.setItem('staff_name', resolvedName);
+        sessionStorage.setItem('staff_role', resolvedRole);
         sessionStorage.setItem('staff_active_role', activeRole);
         checkStaffAuth();
       }
@@ -3784,11 +3822,19 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ลบรายการพัสดุ',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (!result.isConfirmed) return;
+        const apiRes = await postToMySQLAPI('deleteItem', { id: itemId });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ลบรายการไม่สำเร็จ',
+            text: apiRes.message || 'คุณไม่มีสิทธิ์หรือรายการไม่สามารถลบได้'
+          });
+          return;
+        }
         const updated = items.filter(i => Number(i.id) !== Number(itemId));
         saveItemsDB(updated);
-        postToMySQLAPI('deleteItem', { id: itemId });
         renderInventoryTable();
         Swal.fire({
           icon: 'success',

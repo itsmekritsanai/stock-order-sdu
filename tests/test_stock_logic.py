@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.3"
+        assert SYSTEM_VERSION == "3.2.4"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1054,6 +1054,37 @@ class TestPhase8ExtendedRequirements:
                 html = f.read()
             assert "function getThaiDatetime(" in html, f"{fname} missing getThaiDatetime"
             assert "function formatThaiDatetime(" in html, f"{fname} missing formatThaiDatetime"
+
+    def test_get_staff_role_resolves_custom_db_users(self):
+        """Verify get_staff_role queries users.role for custom STAFF/HEAD/ADMIN users."""
+        from unittest.mock import MagicMock, patch
+        import server
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {"role": "HEAD"}
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            assert server.get_staff_role("custom_head") == "HEAD"
+
+        mock_cur.fetchone.return_value = {"role": "ADMIN"}
+        with patch("server.get_db_connection", return_value=mock_conn):
+            assert server.get_staff_role("custom_admin") == "ADMIN"
+
+    def test_submit_requisition_dynamic_docno_and_offline_auth_security(self):
+        """Verify submitRequisition uses dynamic BE year-month docNo + API error guard, and staff offline fallback checks password."""
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "REQ-256910-${randomNo}" not in idx_html
+        assert "const newDocNo = `REQ-${beYear}${beMonth}-${randomNo}`" in idx_html
+        assert "const apiRes = await postToMySQLAPI('createRequisition', newReq);" in idx_html
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "password === 'sdu1234'" in stf_html
+        assert "(Offline Fallback)" in stf_html
+
 
 
 

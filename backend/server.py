@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.2.3"
+SYSTEM_VERSION = "3.2.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -126,6 +126,7 @@ def ensure_database_schema(conn=None):
                 cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (default_user_pass,))
                 cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (default_user_pass,))
                 cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (default_user_pass,))
+                cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
                 cur.execute("""
                     INSERT INTO users (id, name, username, password, position, dept, phone, is_active)
                     VALUES (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', %s, 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1)
@@ -154,6 +155,7 @@ def ensure_database_schema(conn=None):
                     """)
                 cur.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 1)) FROM users;")
             else:
+                default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
                 cur.execute("""
                     SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'username';
@@ -161,10 +163,25 @@ def ensure_database_schema(conn=None):
                 if not cur.fetchone():
                     cur.execute("ALTER TABLE `users` ADD COLUMN `username` VARCHAR(100) UNIQUE AFTER `name`;")
                     cur.execute("ALTER TABLE `users` ADD COLUMN `password` VARCHAR(255) DEFAULT '' AFTER `username`;")
-                    cur.execute("UPDATE users SET username = 'wasana.c', password = 'password' WHERE id = 1 AND (username IS NULL OR username = '');")
-                    cur.execute("UPDATE users SET username = 'jeerawan.b', password = 'password' WHERE id = 2 AND (username IS NULL OR username = '');")
-                    cur.execute("UPDATE users SET username = 'patcharaporn.k', password = 'password' WHERE id = 3 AND (username IS NULL OR username = '');")
-                    cur.execute("UPDATE users SET username = 'sineenart.l', password = 'password' WHERE id = 4 AND (username IS NULL OR username = '');")
+                    hashed_default = hash_password(default_user_pass)
+                    cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (hashed_default,))
+                    cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (hashed_default,))
+                    cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (hashed_default,))
+                    cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (hashed_default,))
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `users` ADD COLUMN `role` VARCHAR(50) NOT NULL DEFAULT 'REQUESTER' AFTER `password`;")
+                cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
+                cur.execute("""
+                    SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'requisitions' AND COLUMN_NAME = 'status';
+                """)
+                status_col = cur.fetchone()
+                if status_col and "VERIFIED" not in str(status_col.get("COLUMN_TYPE", "")):
+                    cur.execute("ALTER TABLE `requisitions` MODIFY COLUMN `status` ENUM('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED') NOT NULL DEFAULT 'PENDING';")
                 cur.execute("""
                     SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'requisitions' AND COLUMN_NAME = 'completed_at';
@@ -1885,18 +1902,41 @@ def extract_staff_username(token: str) -> str:
 
 
 def get_staff_role(username: str) -> str:
-    """Resolve RBAC role ('STAFF', 'HEAD', or 'ADMIN') from staff username."""
+    """Resolve RBAC role ('STAFF', 'HEAD', or 'ADMIN') from built-in aliases or database users.role."""
     u = str(username or "").strip().lower()
+    if not u:
+        return "STAFF"
     head_user = str(CONFIG.get("HEAD_USERNAME", "head_approver")).strip().lower()
     staff_screener = str(CONFIG.get("STAFF_SCREENER_USERNAME", "staff")).strip().lower()
     admin_user = str(CONFIG.get("STAFF_USERNAME", "admin_staff")).strip().lower()
 
     if u in (admin_user, "admin_staff", "admin"):
         return "ADMIN"
-    if u in (head_user, "head", "head_approver", "approver", "director", "wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+    if u in (head_user, "head", "head_approver", "approver", "director"):
         return "HEAD"
     if u in (staff_screener, "staff", "warehouse_staff", "screener", "officer"):
         return "STAFF"
+
+    try:
+        conn = get_db_connection()
+        try:
+            with dict_cursor(conn) as cur:
+                cur.execute(
+                    "SELECT role FROM users WHERE LOWER(username) = %s AND is_active = 1 LIMIT 1",
+                    (u,),
+                )
+                row = cur.fetchone()
+                if row:
+                    db_role = str(row.get("role") or "").strip().upper()
+                    if db_role in ("ADMIN", "HEAD", "STAFF"):
+                        return db_role
+        finally:
+            conn.close()
+    except Exception:
+        pass
+
+    if u in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+        return "HEAD"
     return "STAFF"
 
 

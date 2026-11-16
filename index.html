@@ -1147,7 +1147,7 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.3) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.4) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -2058,12 +2058,15 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ยืนยันส่งคำขอ',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
+          const nowObj = new Date();
+          const beYear = nowObj.getFullYear() + 543;
+          const beMonth = String(nowObj.getMonth() + 1).padStart(2, '0');
           const randomNo = Math.floor(1000 + Math.random() * 9000);
-          const newDocNo = `REQ-256910-${randomNo}`;
+          const newDocNo = `REQ-${beYear}${beMonth}-${randomNo}`;
 
-          const nowIso = new Date().toISOString();
+          const nowIso = nowObj.toISOString();
           const newReq = {
             id: newDocNo,
             dept: dept,
@@ -2092,11 +2095,22 @@
             }))
           };
 
-          // Save to shared localStorage DB & sync to MySQL API
+          const apiRes = await postToMySQLAPI('createRequisition', newReq);
+          if (apiRes && apiRes.status === 'error') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ส่งคำขอเบิกไม่สำเร็จ',
+              text: apiRes.message || 'ไม่สามารถบันทึกคำขอเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลหรือโควตาคงเหลือ',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
+          // Save to shared localStorage DB
           const reqs = getReqsDB();
           reqs.unshift(newReq);
           saveReqsDB(reqs);
-          postToMySQLAPI('createRequisition', newReq);
 
           cart = [];
           document.getElementById('cartPurpose').value = '';
@@ -2822,14 +2836,27 @@
           } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
             resolved = 'HEAD';
             dispName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+          } else {
+            const localUsers = getUsersDB();
+            const foundUser = localUsers.find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
+            const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
+            if (foundUser && (password === validPass || password === 'sdu1234')) {
+              const uRole = String(foundUser.role || 'REQUESTER').toUpperCase();
+              if (['ADMIN', 'HEAD', 'STAFF'].includes(uRole)) {
+                resolved = uRole;
+                dispName = foundUser.name || username;
+              } else {
+                staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ' เพื่อเข้าสู่ระบบ` };
+              }
+            }
           }
-          if (resolved) {
+          if (!staffRes && resolved) {
             if (resolved !== 'ADMIN' && resolved !== selectedRole) {
               staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น ${resolved} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน` };
             } else {
               staffRes = { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: selectedRole };
             }
-          } else {
+          } else if (!staffRes) {
             staffRes = { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก' };
           }
         }

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v2.2.0)
+-- ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.2.4)
 -- MySQL 8.0+ / MariaDB 10.5+ Database Schema & Initial Seed Data
 -- =============================================================================
 
@@ -36,6 +36,7 @@ CREATE TABLE `users` (
   `name` VARCHAR(150) NOT NULL COMMENT 'ชื่อ-นามสกุล บุคลากร',
   `username` VARCHAR(100) UNIQUE COMMENT 'ชื่อผู้ใช้งานสำหรับเข้าสู่ระบบ',
   `password` VARCHAR(255) DEFAULT '' COMMENT 'รหัสผ่าน',
+  `role` VARCHAR(50) NOT NULL DEFAULT 'REQUESTER' COMMENT 'บทบาทสิทธิ์ (REQUESTER, STAFF, HEAD, ADMIN)',
   `position` VARCHAR(255) DEFAULT '' COMMENT 'ตำแหน่ง',
   `dept` VARCHAR(255) NOT NULL COMMENT 'กลุ่มงาน/หน่วยงานที่สังกัด',
   `phone` VARCHAR(50) DEFAULT '' COMMENT 'เบอร์โทรศัพท์ติดต่อ',
@@ -62,6 +63,8 @@ CREATE TABLE `inventory_items` (
   `on_hand_pieces` INT NOT NULL DEFAULT 0 COMMENT 'ยอดคงคลังจริง (หน่วยย่อย)',
   `reserved_pieces` INT NOT NULL DEFAULT 0 COMMENT 'ยอดติดจองที่อนุมัติแล้วรอรับของ (หน่วยย่อย)',
   `min_alert` INT NOT NULL DEFAULT 500 COMMENT 'เกณฑ์แจ้งเตือนสต๊อกต่ำกว่าเกณฑ์',
+  `monthly_limit` INT NOT NULL DEFAULT 0 COMMENT 'โควตาเบิกสูงสุดต่อเดือนต่อบุคลากร (0 = ไม่จำกัด)',
+  `last_restocked_at` DATETIME DEFAULT NULL COMMENT 'วันเวลาที่รับเข้าพัสดุล่าสุด',
   `image_piece` LONGTEXT DEFAULT NULL COMMENT 'Path หรือ Base64 รูปภาพหน่วยย่อย',
   `image_box` LONGTEXT DEFAULT NULL COMMENT 'Path หรือ Base64 รูปภาพหน่วยบรรจุกล่อง',
   `is_active` TINYINT(1) NOT NULL DEFAULT 1,
@@ -82,9 +85,19 @@ CREATE TABLE `requisitions` (
   `dept` VARCHAR(255) NOT NULL COMMENT 'กลุ่มงาน/หน่วยงานที่สังกัด',
   `phone` VARCHAR(50) DEFAULT '' COMMENT 'เบอร์โทรศัพท์ติดต่อ',
   `purpose` TEXT NOT NULL COMMENT 'วัตถุประสงค์ในการขอเบิกพัสดุ',
-  `status` ENUM('PENDING', 'APPROVED', 'COMPLETED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+  `status` ENUM('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
   `signature` LONGTEXT DEFAULT NULL COMMENT 'ข้อมูลลายเซ็นดิจิทัล Base64 PNG (E-Signature)',
   `reject_reason` TEXT DEFAULT NULL COMMENT 'เหตุผลกรณีไม่อนุมัติหรือยกเลิกคำขอ',
+  `verified_by` VARCHAR(150) DEFAULT NULL COMMENT 'ชื่อเจ้าหน้าที่ผู้คัดกรอง',
+  `verified_at` DATETIME DEFAULT NULL COMMENT 'วันเวลาคัดกรองเบื้องต้น',
+  `verified_date` VARCHAR(100) DEFAULT NULL COMMENT 'วันที่คัดกรองรูปแบบไทย',
+  `approved_by` VARCHAR(150) DEFAULT NULL COMMENT 'ชื่อหัวหน้าผู้อนุมัติขั้นสุดท้าย',
+  `approved_at` DATETIME DEFAULT NULL COMMENT 'วันเวลาอนุมัติขั้นสุดท้าย',
+  `approved_date` VARCHAR(100) DEFAULT NULL COMMENT 'วันที่อนุมัติรูปแบบไทย',
+  `completed_at` DATETIME DEFAULT NULL COMMENT 'วันเวลาจ่ายพัสดุเสร็จสิ้น',
+  `completed_date` VARCHAR(100) DEFAULT NULL COMMENT 'วันที่จ่ายพัสดุรูปแบบไทย',
+  `rejected_at` DATETIME DEFAULT NULL COMMENT 'วันเวลาที่ปฏิเสธ/ยกเลิกคำขอ',
+  `rejected_date` VARCHAR(100) DEFAULT NULL COMMENT 'วันที่ปฏิเสธรูปแบบไทย',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_req_status` (`status`),
@@ -127,6 +140,7 @@ CREATE TABLE `stock_transactions` (
   `reference_type` VARCHAR(50) NOT NULL COMMENT 'REQUISITION, STOCK_IN, ADJUSTMENT, INITIAL_SEED',
   `reference_id` VARCHAR(50) DEFAULT NULL COMMENT 'เลขที่เอกสารอ้างอิง',
   `reason` VARCHAR(255) DEFAULT NULL COMMENT 'หมายเหตุหรือเหตุผลในการทำรายการ',
+  `recorded_by` VARCHAR(150) DEFAULT NULL COMMENT 'ผู้บันทึกรายการเคลื่อนไหวสต๊อก',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_tx_item_id` (`item_id`),
   CONSTRAINT `fk_tx_inventory` FOREIGN KEY (`item_id`) REFERENCES `inventory_items` (`id`) ON DELETE CASCADE
@@ -145,12 +159,12 @@ INSERT INTO `departments` (`category`, `name`, `parent_name`, `full_label`) VALU
 -- =============================================================================
 -- SEED DATA: 2. ข้อมูลรายชื่อผู้ใช้งานและหัวหน้าหน่วยงาน สวท. (พร้อมบัญชี Login)
 -- =============================================================================
-INSERT INTO `users` (`id`, `name`, `username`, `password`, `position`, `dept`, `phone`, `is_active`) VALUES
-  (1, 'นางสาววาสนา จันทร์จ่าย', 'wasana.c', 'sdu1234', 'หัวหน้าสำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '081-998-7766', 1),
-  (2, 'นางสาวจีรวรรณ บุญพิทักษ์', 'jeerawan.b', 'sdu1234', 'หัวหน้าหน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต', 'หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต', '', 1),
-  (3, 'นางสาวพัชราภรณ์ ขำแป้ง', 'patcharaporn.k', 'sdu1234', 'หัวหน้ากลุ่มงานบริการวิชาการ', 'กลุ่มงานบริการวิชาการ', '', 1),
-  (4, 'นางสาวสินีนาฎ ลักษณะโยธิน', 'sineenart.l', 'sdu1234', 'หัวหน้ากลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ', 'กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ', '', 1),
-  (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', 'sdu1234', 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1);
+INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `position`, `dept`, `phone`, `is_active`) VALUES
+  (1, 'นางสาววาสนา จันทร์จ่าย', 'wasana.c', 'sdu1234', 'HEAD', 'หัวหน้าสำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '081-998-7766', 1),
+  (2, 'นางสาวจีรวรรณ บุญพิทักษ์', 'jeerawan.b', 'sdu1234', 'HEAD', 'หัวหน้าหน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต', 'หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต', '', 1),
+  (3, 'นางสาวพัชราภรณ์ ขำแป้ง', 'patcharaporn.k', 'sdu1234', 'HEAD', 'หัวหน้ากลุ่มงานบริการวิชาการ', 'กลุ่มงานบริการวิชาการ', '', 1),
+  (4, 'นางสาวสินีนาฎ ลักษณะโยธิน', 'sineenart.l', 'sdu1234', 'HEAD', 'หัวหน้ากลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ', 'กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ', '', 1),
+  (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', 'sdu1234', 'REQUESTER', 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1);
 
 -- =============================================================================
 -- SEED DATA: 3. ข้อมูลพัสดุคงคลังตั้งต้น 34 รายการ (66 รูปภาพตรงตามชื่อพัสดุจาก ยอดสต๊อก ตค.xlsx)
