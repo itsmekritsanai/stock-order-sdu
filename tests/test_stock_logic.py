@@ -23,6 +23,20 @@ from server import (
 )
 
 
+def is_db_available():
+    try:
+        import server
+        conn = server.get_db_connection()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+
+db_available = is_db_available()
+require_db = pytest.mark.skipif(not db_available, reason="Live database connection is offline or unreachable")
+
+
 class TestStockInventoryCalculations:
     """Test multi-unit conversions and stock availability formulas."""
 
@@ -73,11 +87,70 @@ class TestRequisitionLifecycleStates:
     """Test state transitions and business rules of requisition lifecycle."""
 
     def test_valid_status_transitions(self):
-        valid_statuses = {"PENDING", "APPROVED", "COMPLETED", "REJECTED"}
+        valid_statuses = {"PENDING", "VERIFIED", "APPROVED", "COMPLETED", "REJECTED"}
         assert "PENDING" in valid_statuses
+        assert "VERIFIED" in valid_statuses
         assert "APPROVED" in valid_statuses
         assert "COMPLETED" in valid_statuses
         assert "REJECTED" in valid_statuses
+
+    def test_two_tier_approval_state_lifecycle(self):
+        # 1. Requester submits -> PENDING
+        req_status = "PENDING"
+        assert req_status == "PENDING"
+
+        # 2. Staff screens -> VERIFIED (no reserved lock yet)
+        staff_screened = True
+        if staff_screened and req_status == "PENDING":
+            req_status = "VERIFIED"
+            verified_by = "เจ้าหน้าที่พัสดุ สวท."
+        assert req_status == "VERIFIED"
+        assert verified_by == "เจ้าหน้าที่พัสดุ สวท."
+
+        # 3. Head approves -> APPROVED (locks reserved quota)
+        on_hand = 1000
+        reserved = 100
+        approved_pieces = 250
+        if req_status == "VERIFIED":
+            req_status = "APPROVED"
+            approved_by = "หัวหน้าสำนักงาน สวท."
+            reserved += approved_pieces
+        assert req_status == "APPROVED"
+        assert approved_by == "หัวหน้าสำนักงาน สวท."
+        assert reserved == 350
+        assert max(0, on_hand - reserved) == 650
+
+        # 4. Handover -> COMPLETED (deducts on_hand and releases reserved)
+        if req_status == "APPROVED":
+            req_status = "COMPLETED"
+            on_hand -= approved_pieces
+            reserved -= approved_pieces
+        assert req_status == "COMPLETED"
+        assert on_hand == 750
+        assert reserved == 100
+
+    def test_monthly_limit_quota_validation(self):
+        monthly_limit = 1000
+        current_month_total = 800
+        requested = 300
+
+        is_exceeded = (current_month_total + requested > monthly_limit)
+        assert is_exceeded is True
+        remaining_quota = max(0, monthly_limit - current_month_total)
+        assert remaining_quota == 200
+
+    def test_incoming_stock_timestamp_and_recorder(self):
+        item_on_hand = 500
+        incoming_qty = 250
+        now_dt = datetime.now()
+        recorded_by = "เจ้าหน้าที่พัสดุ สวท."
+
+        new_on_hand = item_on_hand + incoming_qty
+        last_restocked_at = now_dt
+
+        assert new_on_hand == 750
+        assert last_restocked_at == now_dt
+        assert recorded_by == "เจ้าหน้าที่พัสดุ สวท."
 
     def test_approve_locks_reserved_quota(self):
         on_hand = 1000
@@ -142,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.0.17"
+        assert SYSTEM_VERSION == "3.1.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -255,6 +328,30 @@ class TestApiHandlers:
         assert res["status"] == "error"
         assert "ข้อมูลคำขอเบิกไม่ครบถ้วน" in res["message"]
 
+    def test_handle_verify_requisition_validation(self):
+        res = server.handle_verify_requisition({})
+        assert res["status"] == "error"
+        assert "docNo" in res["message"]
+
+    def test_handle_get_monthly_analytics_mock(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.side_effect = [
+            [{"status": "COMPLETED", "count": 5}],
+            [{"item_id": 1, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_piece_name": "ใบ", "total_pieces": 500, "req_count": 2}]
+        ]
+        mock_cur.fetchone.return_value = {"total_requested": 500, "total_approved": 500}
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_get_monthly_analytics({"month": ["2026-10"]})
+            assert res["status"] == "success"
+            assert res["data"]["month"] == "2026-10"
+            assert res["data"]["totalRequisitions"] == 5
+            assert res["data"]["totalCompleted"] == 5
+            assert res["data"]["totalPiecesRequested"] == 500
+            assert len(res["data"]["topItems"]) == 1
+
     def test_handle_approve_requisition_validation(self):
         res = server.handle_approve_requisition({})
         assert res["status"] == "error"
@@ -300,6 +397,7 @@ class TestApiHandlers:
         res = server.handle_delete_department({})
         assert res["status"] == "error"
 
+    @require_db
     def test_department_crud_lifecycle(self):
         import uuid
         uid = uuid.uuid4().hex[:6]
@@ -329,6 +427,7 @@ class TestApiHandlers:
         res = server.handle_save_item({"name": ""})
         assert res["status"] == "error"
 
+    @require_db
     def test_handle_save_item_partial_min_alert(self):
         res = server.handle_save_item({"id": 1, "min_alert": 250})
         assert res["status"] == "success"
@@ -465,6 +564,7 @@ class TestSecurityEnhancements:
         assert res_fail['status'] == 'error'
 
 
+@require_db
 class TestRequisitionStateMachineSafety:
     """Test prevention of invalid state transitions (CWE-841 / bugscope-requisition-state-machine-bypass)."""
 
@@ -529,6 +629,7 @@ class TestSecurityAuditRun2Patches:
         assert handler.is_safe_static_path("/staff.html") is True
         assert handler.is_safe_static_path("/portal.html") is True
 
+    @require_db
     def test_create_requisition_negative_quantity_rejected(self):
         """sdu-sec-007: Negative piece/box quantities must be strictly rejected."""
         import server
@@ -542,6 +643,7 @@ class TestSecurityAuditRun2Patches:
         assert res["status"] == "error"
         assert "0" in res["message"] or "ไม่สามารถเป็นค่าลบได้" in res["message"]
 
+    @require_db
     def test_create_requisition_arithmetic_mismatch_rejected(self):
         """sdu-sec-007: Client-spoofed totalPieces differing from expected formula must be rejected."""
         import server
@@ -574,6 +676,7 @@ class TestSecurityAuditRun2Patches:
         assert server.verify_requester_token(token, "other.user") is False
         assert server.verify_requester_token("invalid.token", "wasana.c") is False
 
+    @require_db
     def test_handle_login_requester_returns_token(self):
         """sdu-sec-010: handle_login_requester must return an authenticated session token."""
         import server
@@ -582,6 +685,7 @@ class TestSecurityAuditRun2Patches:
         assert "token" in res
         assert server.verify_requester_token(res["token"], "wasana.c") is True
 
+    @require_db
     def test_requester_login_with_default_sdu_password(self):
         """Verify that wasana.c and user can log in with institutional default sdu1234."""
         import server
@@ -647,6 +751,7 @@ class TestSecurityAuditRun2Patches:
             assert "วันที่จ่ายของ" in html
             assert "วันที่ยกเลิก" in html
 
+    @require_db
     def test_complete_and_reject_actions_store_dates(self):
         """Test backend handle_complete_requisition and handle_reject_requisition record dates."""
         import server

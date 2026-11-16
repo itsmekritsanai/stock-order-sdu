@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.0.17"
+SYSTEM_VERSION = "3.1.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -258,6 +258,32 @@ initial_requisitions = [
     "updated_at": "2026-10-05T07:30:00.000Z",
     "items": [
       { "itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000 }
+    ]
+  },
+  {
+    "id": "REQ-256911-0004",
+    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+    "requester": "อาจารย์ผู้แทน สำนักงานผู้อำนวยการ สวท.",
+    "phone": "02-244-5200",
+    "purpose": "ใช้สำหรับงานประชุมวิชาการและการจัดสอบภาคเรียนที่ 1/2569",
+    "date": "10 พ.ย. 2569 11:20 น.",
+    "status": "VERIFIED",
+    "signature": "",
+    "reject_reason": "",
+    "completed_at": None,
+    "completed_date": "",
+    "rejected_at": None,
+    "rejected_date": "",
+    "verified_by": "เจ้าหน้าที่พัสดุ สวท.",
+    "verified_at": "2026-11-10T04:30:00.000Z",
+    "verified_date": "10 พ.ย. 2569 11:30 น.",
+    "approved_by": "",
+    "approved_at": None,
+    "approved_date": "",
+    "created_at": "2026-11-10T04:20:00.000Z",
+    "updated_at": "2026-11-10T04:30:00.000Z",
+    "items": [
+      { "itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 200, "piecesPerBoxSnapshot": 2000 }
     ]
   }
 ]
@@ -963,6 +989,7 @@ requester_template = r'''<!DOCTYPE html>
       transform: translateY(-1px);
     }
     .req-card-item.status-border-pending { border-left-color: #d97706; }
+    .req-card-item.status-border-verified { border-left-color: #0284c7; }
     .req-card-item.status-border-approved { border-left-color: #2563eb; }
     .req-card-item.status-border-completed { border-left-color: #059669; }
     .req-card-item.status-border-rejected { border-left-color: #dc2626; }
@@ -977,6 +1004,7 @@ requester_template = r'''<!DOCTYPE html>
       border-radius: 999px;
     }
     .pill-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .pill-verified { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .pill-approved { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
     .pill-completed { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
     .pill-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
@@ -1221,7 +1249,7 @@ requester_template = r'''<!DOCTYPE html>
 
       <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; max-height: calc(88vh - 130px);">
         <!-- Search and Filter Bar -->
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem; align-items: center;">
           <div style="flex: 1; min-width: 260px; position: relative;">
             <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--neutral-400); display: flex;">
               <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -1230,11 +1258,21 @@ requester_template = r'''<!DOCTYPE html>
                    placeholder="ค้นหาเลขที่คำขอ, ชื่อผู้ขอ, หน่วยงาน, หรือชื่อพัสดุ..." 
                    oninput="handleMyReqsSearch()">
           </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); white-space: nowrap;">เดือน:</label>
+            <select id="myReqsMonthSelect" class="form-control" style="width: auto; min-width: 160px;" onchange="handleMyReqsSearch()">
+              <option value="ALL">ทุกเดือนย้อนหลัง</option>
+              <option value="2026-11" selected>พฤศจิกายน 2569</option>
+              <option value="2026-10">ตุลาคม 2569</option>
+              <option value="2026-09">กันยายน 2569</option>
+            </select>
+          </div>
         </div>
 
         <div class="req-filter-tabs">
           <button class="req-tab-btn active" onclick="filterMyReqsTab('ALL', this)">ทั้งหมด</button>
-          <button class="req-tab-btn" onclick="filterMyReqsTab('PENDING', this)">รออนุมัติ</button>
+          <button class="req-tab-btn" onclick="filterMyReqsTab('PENDING', this)">รอคัดกรอง</button>
+          <button class="req-tab-btn" onclick="filterMyReqsTab('VERIFIED', this)">รอหัวหน้าอนุมัติ</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('APPROVED', this)">อนุมัติแล้ว</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('COMPLETED', this)">รับมอบสำเร็จ</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('REJECTED', this)">ไม่อนุมัติ</button>
@@ -1379,6 +1417,8 @@ requester_template = r'''<!DOCTYPE html>
       building: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
       file_text: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
       printer: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
+      calendar: `<svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+      shield: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
       x: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`
     };
 
@@ -1822,6 +1862,11 @@ requester_template = r'''<!DOCTYPE html>
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `
+                <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                  ${vIcons.shield} จำกัดการเบิก: ${Number(item.monthly_limit).toLocaleString()} ${safePieceName}/เดือน
+                </div>
+              ` : ''}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
@@ -1901,6 +1946,38 @@ requester_template = r'''<!DOCTYPE html>
           confirmButtonText: 'เข้าใจแล้ว'
         });
         return;
+      }
+
+      if (item.monthly_limit && Number(item.monthly_limit) > 0) {
+        const curDate = new Date();
+        const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+        const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+        const reqs = getReqsDB();
+        let monthUsed = 0;
+        reqs.forEach(r => {
+          if (r.status !== 'REJECTED') {
+            const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+            if (isThisMonth && r.items) {
+              r.items.forEach(it => {
+                if (Number(it.itemId) === item.id) {
+                  monthUsed += Number(it.totalPieces || 0);
+                }
+              });
+            }
+          }
+        });
+        const currentInCart = (cart.find(c => c.itemId === itemId)?.totalPieces || 0);
+        if (monthUsed + currentInCart + totalPieces > Number(item.monthly_limit)) {
+          const rem = Math.max(0, Number(item.monthly_limit) - monthUsed - currentInCart);
+          Swal.fire({
+            icon: 'warning',
+            title: 'เกินโควตาประจำเดือน',
+            html: `พัสดุนี้ถูกจำกัดการเบิกไม่เกิน <b>${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/เดือน</b><br>ในเดือนนี้มีการขอเบิกไปแล้ว <b>${monthUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'เข้าใจแล้ว'
+          });
+          return;
+        }
       }
 
       const existing = cart.find(c => c.itemId === itemId);
@@ -2216,6 +2293,7 @@ requester_template = r'''<!DOCTYPE html>
       const listEl = document.getElementById('myRequisitionsList');
       const countEl = document.getElementById('myReqsModalCount');
       const searchVal = (document.getElementById('myReqsSearchInput')?.value || '').trim().toLowerCase();
+      const monthVal = document.getElementById('myReqsMonthSelect')?.value || 'ALL';
       
       const reqs = getReqsDB();
       const currentUser = getLoggedInRequester();
@@ -2226,6 +2304,17 @@ requester_template = r'''<!DOCTYPE html>
 
       let filtered = userReqs.filter(r => {
         if (myReqsFilterStatus !== 'ALL' && r.status !== myReqsFilterStatus) return false;
+        if (monthVal !== 'ALL') {
+          try {
+            const parts = monthVal.split('-');
+            const beYear = parseInt(parts[0], 10) + 543;
+            const beMonth = parts[1];
+            const bePattern = `REQ-${beYear}${beMonth}`;
+            const matchesBeId = (r.id || '').startsWith(bePattern);
+            const matchesCreatedAt = (r.created_at || '').startsWith(monthVal);
+            if (!matchesBeId && !matchesCreatedAt) return false;
+          } catch (e) {}
+        }
         if (searchVal) {
           const matchId = (r.id || '').toLowerCase().includes(searchVal);
           const matchName = (r.requester || '').toLowerCase().includes(searchVal);
@@ -2251,9 +2340,9 @@ requester_template = r'''<!DOCTYPE html>
               ไม่พบรายการคำขอเบิกพัสดุ
             </h4>
             <p style="font-size: 0.85rem; color: var(--neutral-400); max-width: 360px; margin: 0 auto 1.25rem auto;">
-              ${searchVal || myReqsFilterStatus !== 'ALL' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}
+              ${searchVal || myReqsFilterStatus !== 'ALL' || monthVal !== 'ALL' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองเดือน/สถานะ' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}
             </p>
-            ${!searchVal && myReqsFilterStatus === 'ALL' ? `
+            ${!searchVal && myReqsFilterStatus === 'ALL' && monthVal === 'ALL' ? `
               <button class="btn btn-primary" onclick="closeMyRequisitionsModal()">
                 ${vIcons.cart} ไปที่แคตตาล็อกเลือกเบิกพัสดุ
               </button>
@@ -2268,8 +2357,11 @@ requester_template = r'''<!DOCTYPE html>
         let borderClass = 'status-border-pending';
 
         if (req.status === 'PENDING') {
-          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รออนุมัติ (Pending)</span>`;
+          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รอคัดกรอง (Staff Screen)</span>`;
           borderClass = 'status-border-pending';
+        } else if (req.status === 'VERIFIED') {
+          statusBadge = `<span class="req-status-pill pill-verified">${vIcons.clock} ผ่านการคัดกรอง (รอหัวหน้าอนุมัติ)</span>`;
+          borderClass = 'status-border-verified';
         } else if (req.status === 'APPROVED') {
           statusBadge = `<span class="req-status-pill pill-approved">${vIcons.check} อนุมัติแล้ว (รอรับพัสดุ)</span>`;
           borderClass = 'status-border-approved';
@@ -2331,6 +2423,16 @@ requester_template = r'''<!DOCTYPE html>
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
                 <span>${escapeHtml(req.purpose || '-')}</span>
               </div>
+              ${(req.verified_by || req.verifiedBy) ? `
+              <div style="grid-column: 1 / -1; background: #f0fdf4; color: #166534; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                ${vIcons.check} <strong>คัดกรองเบื้องต้นโดย:</strong> ${escapeHtml(req.verified_by || req.verifiedBy)} ${(req.verified_date || req.verifiedDate) ? `(${escapeHtml(req.verified_date || req.verifiedDate)})` : ''}
+              </div>
+              ` : ''}
+              ${(req.approved_by || req.approvedBy) ? `
+              <div style="grid-column: 1 / -1; background: #eff6ff; color: #1e40af; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                ${vIcons.shield} <strong>อนุมัติขั้นสุดท้ายโดย:</strong> ${escapeHtml(req.approved_by || req.approvedBy)} ${(req.approved_date || req.approvedDate) ? `(${escapeHtml(req.approved_date || req.approvedDate)})` : ''}
+              </div>
+              ` : ''}
               ${req.status === 'COMPLETED' && (req.completed_date || req.completedDate) ? `
               <div style="grid-column: 1 / -1; background: #ecfdf5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #a7f3d0; display: flex; align-items: center; gap: 6px;">
                 ${vIcons.check} <strong>วันที่จ่ายของ:</strong> ${escapeHtml(req.completed_date || req.completedDate)}
@@ -3213,6 +3315,7 @@ staff_template = r'''<!DOCTYPE html>
     .req-doc-id { font-size: 1.05rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
     .req-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
     .badge-pending { background: var(--warning-light); color: var(--warning); }
+    .badge-verified { background: #e0f2fe; color: #0369a1; }
     .badge-approved { background: #e0e7ff; color: #4338ca; }
     .badge-completed { background: #dcfce7; color: #15803d; }
     .badge-rejected { background: var(--danger-light); color: var(--danger); }
@@ -3319,6 +3422,9 @@ staff_template = r'''<!DOCTYPE html>
           <button class="view-btn" onclick="switchStaffView('users')">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> จัดการบุคลากร / หน่วยงาน <span class="count-tag" id="navUsersBadge">4</span>
           </button>
+          <button class="view-btn" onclick="switchStaffView('analytics')">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg> สรุปยอดและสถิติรายเดือน
+          </button>
         </nav>
 
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
@@ -3338,14 +3444,28 @@ staff_template = r'''<!DOCTYPE html>
     <main>
       <!-- TAB 1: REQUISITION MANAGEMENT -->
       <section id="view-requisitions" class="view-content active">
-        <div class="dashboard-header">
+        <div class="dashboard-header" style="flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <h2>จัดการและอนุมัติคำขอเบิกพัสดุ</h2>
-            <p style="color: var(--neutral-600); font-size: 0.85rem;">ตรวจสอบคำขอที่ส่งมาจากอาจารย์/หน่วยงาน, อนุมัติกันยอดสต๊อก, และจ่ายของพร้อมเซ็นชื่อ</p>
+            <h2>จัดการและอนุมัติคำขอเบิกพัสดุ (2-Tier Approval)</h2>
+            <p style="color: var(--neutral-600); font-size: 0.85rem;">เจ้าหน้าที่คัดกรองคำขอ (Screening) และหัวหน้าอนุมัติขั้นสุดท้าย (Final Approval) ก่อนจ่ายพัสดุ</p>
           </div>
-          <div class="status-tabs">
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
+            <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+              <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> เดือน:
+            </label>
+            <select id="staffReqMonthFilter" class="form-control" style="width: auto; min-width: 170px;" onchange="handleStaffReqMonthChange()">
+              <option value="ALL">ดูทุกเดือนย้อนหลัง</option>
+              <option value="2026-11" selected>พฤศจิกายน 2569</option>
+              <option value="2026-10">ตุลาคม 2569</option>
+              <option value="2026-09">กันยายน 2569</option>
+            </select>
+          </div>
+          <div class="status-tabs" style="width: 100%; margin-top: 0.5rem;">
             <button class="status-tab active" onclick="filterStaffRequisitionStatus('PENDING', this)">
-              รออนุมัติ <span class="count-tag" id="pendingCount">0</span>
+              รอคัดกรอง <span class="count-tag" id="pendingCount">0</span>
+            </button>
+            <button class="status-tab" onclick="filterStaffRequisitionStatus('VERIFIED', this)">
+              รอหัวหน้าอนุมัติ <span class="count-tag" id="verifiedCount">0</span>
             </button>
             <button class="status-tab" onclick="filterStaffRequisitionStatus('APPROVED', this)">
               รอจ่ายของ <span class="count-tag" id="approvedCount">0</span>
@@ -3405,14 +3525,16 @@ staff_template = r'''<!DOCTYPE html>
             <table class="req-table" style="font-size: 0.9rem;">
               <thead>
                 <tr>
-                  <th style="width: 60px;">ลำดับ</th>
+                  <th style="width: 50px;">ลำดับ</th>
                   <th>ชื่อรายการพัสดุ</th>
                   <th>หน่วยบรรจุ</th>
                   <th>คงคลังจริง (On-Hand)</th>
                   <th>ยอดจอง (Reserved)</th>
                   <th>พร้อมเบิก (Available)</th>
+                  <th>โควตา/เดือน</th>
                   <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
-                  <th style="width: 150px; text-align: right;">จัดการ</th>
+                  <th>รับเข้าล่าสุด</th>
+                  <th style="width: 140px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody">
@@ -3479,6 +3601,102 @@ staff_template = r'''<!DOCTYPE html>
                 </tr>
               </thead>
               <tbody id="staffUsersTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: MONTHLY ANALYTICS & RETROSPECTIVE DASHBOARD -->
+      <section id="view-analytics" class="view-content">
+        <div class="dashboard-header" style="margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h2>สรุปยอดและสถิติการเบิกจ่ายรายเดือน (Monthly Analytics)</h2>
+            <p style="color: var(--neutral-600); font-size: 0.85rem;">รายงานภาพรวมการเบิกจ่ายพัสดุ สถิติรายการพัสดุที่เบิกมาก-น้อย และการสืบค้นข้อมูลย้อนหลัง</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
+            <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+              <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> เลือกเดือนที่ต้องการดูรายงาน:
+            </label>
+            <select id="analyticsMonthSelect" class="form-control" style="width: auto; min-width: 190px;" onchange="handleAnalyticsMonthChange()">
+              <option value="2026-11" selected>พฤศจิกายน 2569 (เดือนปัจจุบัน)</option>
+              <option value="2026-10">ตุลาคม 2569</option>
+              <option value="2026-09">กันยายน 2569</option>
+              <option value="ALL">ภาพรวมข้อมูลย้อนหลังทั้งหมด</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Analytics Metric Cards -->
+        <div class="metrics-row" style="margin-bottom: 1.25rem;">
+          <div class="metric-card">
+            <div class="metric-header"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> คำขอเบิกทั้งหมดในเดือน</div>
+            <span class="metric-val" id="analyticsMetricTotalReqs">0 <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">คำขอ</small></span>
+            <div style="font-size: 0.75rem; color: var(--neutral-500); margin-top: 4px;" id="analyticsReqBreakdown">รอคัดกรอง 0 | รออนุมัติ 0 | สำเร็จ 0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> จำนวนชิ้นพัสดุที่ขอเบิก</div>
+            <span class="metric-val" style="color: var(--primary);" id="analyticsMetricTotalRequested">0 <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small></span>
+            <div style="font-size: 0.75rem; color: var(--neutral-500); margin-top: 4px;">ยอดรวมตามรายการคำขอที่เสนอ</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header" style="color: var(--accent);"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> จำนวนชิ้นที่อนุมัติ/จ่ายสำเร็จ</div>
+            <span class="metric-val" style="color: var(--accent);" id="analyticsMetricTotalApproved">0 <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small></span>
+            <div style="font-size: 0.75rem; color: var(--neutral-500); margin-top: 4px;">ตัดจ่ายจากคลังพัสดุจริง</div>
+          </div>
+        </div>
+
+        <!-- Top 5 vs Least 5 Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+          <!-- Top 5 Most Requisitioned Items -->
+          <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--neutral-100); padding-bottom: 0.5rem;">
+              <h3 style="font-size: 1rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> 5 อันดับพัสดุที่มีการเบิกมากที่สุด
+              </h3>
+              <span class="status-tag" style="background: #eff6ff; color: #1e40af; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;">เบิกสูงสุด</span>
+            </div>
+            <div id="analyticsTopItemsList">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Least 5 Requisitioned Items -->
+          <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--neutral-100); padding-bottom: 0.5rem;">
+              <h3 style="font-size: 1rem; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect width="22" height="5" x="1" y="3"/><line x1="10" x2="14" y1="12" y2="12"/></svg> 5 อันดับพัสดุที่มีการเบิกน้อยที่สุด / สต๊อกนิ่ง
+              </h3>
+              <span class="status-tag" style="background: #fffbeb; color: #b45309; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px;">เบิกน้อยสุด</span>
+            </div>
+            <div id="analyticsLeastItemsList">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Breakdown Table -->
+        <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.25rem; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1rem; font-weight: 700; color: var(--neutral-800); display: flex; align-items: center; gap: 6px;">
+              <svg class="svg-icon" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg> สรุปยอดการเบิกพัสดุทุกรายการประจำเดือน
+            </h3>
+            <span id="analyticsItemTotalCount" style="font-size: 0.85rem; color: var(--neutral-500);"></span>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="req-table" style="font-size: 0.875rem;">
+              <thead>
+                <tr>
+                  <th style="width: 60px; text-align: center;">ลำดับ</th>
+                  <th>ชื่อรายการพัสดุ</th>
+                  <th>หมวดหมู่</th>
+                  <th style="text-align: right;">จำนวนที่เบิกในเดือน</th>
+                  <th style="text-align: center;">จำนวนคำขอ</th>
+                  <th style="text-align: center;">หน่วยนับ</th>
+                </tr>
+              </thead>
+              <tbody id="analyticsAllItemsTbody">
                 <!-- Rendered by JS -->
               </tbody>
             </table>
@@ -3582,7 +3800,7 @@ staff_template = r'''<!DOCTYPE html>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.0.3';
+    const APP_VERSION = '__SYSTEM_VERSION__';
     const MYSQL_API_URL = '/api';
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
@@ -3601,6 +3819,10 @@ staff_template = r'''<!DOCTYPE html>
       building: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
       user: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
       calendar: `<svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+      shield: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      trendingUp: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+      archive: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect width="22" height="5" x="1" y="3"/><line x1="10" x2="14" y1="12" y2="12"/></svg>`,
+      list: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>`,
       fileText: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`
     };
 
@@ -3867,11 +4089,17 @@ staff_template = r'''<!DOCTYPE html>
       if (viewName === 'requisitions' && btns[0]) btns[0].classList.add('active');
       if (viewName === 'inventory' && btns[1]) btns[1].classList.add('active');
       if (viewName === 'users' && btns[2]) btns[2].classList.add('active');
+      if (viewName === 'analytics' && btns[3]) btns[3].classList.add('active');
+      if (viewName === 'analytics') renderMonthlyAnalyticsView();
     }
 
     // Requisition Management Logic
     let currentStaffStatus = 'PENDING';
     let currentActiveReqForSig = null;
+
+    function handleStaffReqMonthChange() {
+      renderStaffRequisitions(currentStaffStatus);
+    }
 
     function filterStaffRequisitionStatus(status, btn) {
       currentStaffStatus = status;
@@ -3883,22 +4111,46 @@ staff_template = r'''<!DOCTYPE html>
     function renderStaffRequisitions(status) {
       const reqs = getReqsDB();
       const container = document.getElementById('requisitionsContainer');
-      const filtered = reqs.filter(r => r.status === status);
+      const monthVal = document.getElementById('staffReqMonthFilter')?.value || 'ALL';
+
+      const monthFilteredReqs = reqs.filter(r => {
+        if (monthVal === 'ALL') return true;
+        try {
+          const parts = monthVal.split('-');
+          const beYear = parseInt(parts[0], 10) + 543;
+          const beMonth = parts[1];
+          const bePattern = `REQ-${beYear}${beMonth}`;
+          const matchesBeId = (r.id || '').startsWith(bePattern);
+          const matchesCreatedAt = (r.created_at || '').startsWith(monthVal);
+          return matchesBeId || matchesCreatedAt;
+        } catch (e) {
+          return true;
+        }
+      });
+
+      const filtered = monthFilteredReqs.filter(r => r.status === status);
 
       // Counters
-      const pendingCount = reqs.filter(r => r.status === 'PENDING').length;
+      const pendingCount = monthFilteredReqs.filter(r => r.status === 'PENDING').length;
+      const verifiedCount = monthFilteredReqs.filter(r => r.status === 'VERIFIED').length;
+      const approvedCount = monthFilteredReqs.filter(r => r.status === 'APPROVED').length;
+      const completedCount = monthFilteredReqs.filter(r => r.status === 'COMPLETED').length;
+      const rejectedCount = monthFilteredReqs.filter(r => r.status === 'REJECTED').length;
+
       document.getElementById('pendingCount').innerText = pendingCount;
-      document.getElementById('navPendingBadge').innerText = pendingCount;
-      document.getElementById('approvedCount').innerText = reqs.filter(r => r.status === 'APPROVED').length;
-      document.getElementById('completedCount').innerText = reqs.filter(r => r.status === 'COMPLETED').length;
+      document.getElementById('navPendingBadge').innerText = pendingCount + verifiedCount;
+      const verifiedCountEl = document.getElementById('verifiedCount');
+      if (verifiedCountEl) verifiedCountEl.innerText = verifiedCount;
+      document.getElementById('approvedCount').innerText = approvedCount;
+      document.getElementById('completedCount').innerText = completedCount;
       const rejectedEl = document.getElementById('rejectedCount');
-      if (rejectedEl) rejectedEl.innerText = reqs.filter(r => r.status === 'REJECTED').length;
+      if (rejectedEl) rejectedEl.innerText = rejectedCount;
 
       if (filtered.length === 0) {
         container.innerHTML = `
           <div style="background: white; border-radius: var(--radius); padding: 3rem; text-align: center; color: var(--neutral-400); border: 1px dashed var(--neutral-300);">
             <div style="margin-bottom: 0.5rem;">${vIcons.fileText}</div>
-            <p>ไม่มีรายการคำขอในสถานะนี้</p>
+            <p>ไม่มีรายการคำขอในสถานะนี้ประจำเดือนที่เลือก</p>
           </div>
         `;
         return;
@@ -3906,7 +4158,8 @@ staff_template = r'''<!DOCTYPE html>
 
       container.innerHTML = filtered.map(req => {
         let badgeClass = 'badge-pending';
-        let badgeText = 'รออนุมัติ (Pending)';
+        let badgeText = 'รอคัดกรอง (Staff Screen)';
+        if (req.status === 'VERIFIED') { badgeClass = 'badge-verified'; badgeText = 'รอหัวหน้าอนุมัติ (Awaiting Head Approval)'; }
         if (req.status === 'APPROVED') { badgeClass = 'badge-approved'; badgeText = 'อนุมัติแล้ว รอผู้เบิกมารับของ'; }
         if (req.status === 'COMPLETED') { badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว (Completed)'; }
         if (req.status === 'REJECTED') { badgeClass = 'badge-rejected'; badgeText = 'ไม่อนุมัติ / ยกเลิก (Rejected)'; }
@@ -3928,6 +4181,16 @@ staff_template = r'''<!DOCTYPE html>
               <div>${vIcons.building} <strong>หน่วยงาน:</strong> ${escapeHtml(req.dept)}</div>
               <div>${vIcons.user} <strong>ผู้ขอเบิก:</strong> ${escapeHtml(req.requester)} (${escapeHtml(req.phone || '-')})</div>
               <div style="grid-column: 1 / -1;">${vIcons.fileText} <strong>วัตถุประสงค์:</strong> ${escapeHtml(req.purpose)}</div>
+              ${(req.verified_by || req.verifiedBy) ? `
+                <div style="grid-column: 1 / -1; background: #f0fdf4; color: #166534; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                  ${vIcons.check} <strong>คัดกรองเบื้องต้นโดย:</strong> ${escapeHtml(req.verified_by || req.verifiedBy)} ${(req.verified_date || req.verifiedDate) ? `(${escapeHtml(req.verified_date || req.verifiedDate)})` : ''}
+                </div>
+              ` : ''}
+              ${(req.approved_by || req.approvedBy) ? `
+                <div style="grid-column: 1 / -1; background: #eff6ff; color: #1e40af; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                  ${vIcons.shield} <strong>อนุมัติขั้นสุดท้ายโดย:</strong> ${escapeHtml(req.approved_by || req.approvedBy)} ${(req.approved_date || req.approvedDate) ? `(${escapeHtml(req.approved_date || req.approvedDate)})` : ''}
+                </div>
+              ` : ''}
               ${req.status === 'COMPLETED' && (req.completed_date || req.completedDate) ? `
                 <div style="grid-column: 1 / -1; background: #ecfdf5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #a7f3d0; display: flex; align-items: center; gap: 6px;">
                   ${vIcons.check} <strong>วันที่จ่ายของ:</strong> ${escapeHtml(req.completed_date || req.completedDate)}
@@ -3964,7 +4227,7 @@ staff_template = r'''<!DOCTYPE html>
                     <td><strong>${safeName}</strong></td>
                     <td>${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''} (${item.totalPieces.toLocaleString()} ${safePiece})</td>
                     <td style="font-weight: 600; color: var(--accent);">
-                      ${req.status === 'PENDING' ? `
+                      ${(req.status === 'PENDING' || req.status === 'VERIFIED') ? `
                         <div style="display: flex; align-items: center; gap: 6px;">
                           <input type="number" id="approve-qty-${req.id}-${item.itemId}"
                                  value="${item.approvedPieces ?? item.totalPieces}"
@@ -3990,8 +4253,17 @@ staff_template = r'''<!DOCTYPE html>
                 <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
                   ${vIcons.x} ปฏิเสธคำขอ
                 </button>
-                <button class="btn btn-primary" onclick="approveRequisition('${req.id}')">
-                  ${vIcons.check} อนุมัติคำขอ (กันสต๊อก)
+                <button class="btn btn-primary" onclick="verifyRequisition('${req.id}')">
+                  ${vIcons.check} คัดกรองและส่งต่อให้หัวหน้าอนุมัติ
+                </button>
+              ` : ''}
+
+              ${req.status === 'VERIFIED' ? `
+                <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
+                  ${vIcons.x} ปฏิเสธคำขอ
+                </button>
+                <button class="btn btn-primary" style="background: #1e3a8a;" onclick="approveRequisition('${req.id}')">
+                  ${vIcons.shield} หัวหน้าอนุมัติขั้นสุดท้าย (กันสต๊อก)
                 </button>
               ` : ''}
 
@@ -4022,6 +4294,54 @@ staff_template = r'''<!DOCTYPE html>
           </div>
         `;
       }).join('');
+    }
+
+    function verifyRequisition(docNo) {
+      const reqs = getReqsDB();
+      const req = reqs.find(r => r.id === docNo);
+      if (!req) return;
+
+      const updatedItems = req.items.map(i => {
+        const inputEl = document.getElementById(`approve-qty-${docNo}-${i.itemId}`);
+        const val = inputEl ? parseInt(inputEl.value, 10) : (i.approvedPieces ?? i.totalPieces);
+        const cleanVal = isNaN(val) || val < 0 ? 0 : val;
+        return { ...i, approvedPieces: cleanVal };
+      });
+
+      Swal.fire({
+        title: 'ยืนยันคัดกรองคำขอ?',
+        html: `คุณกำลังคัดกรองคำขอเลขที่ <b>${docNo}</b> เพื่อเสนอให้หัวหน้าอนุมัติขั้นสุดท้าย`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'คัดกรองและส่งต่อหัวหน้า',
+        cancelButtonText: 'ยกเลิก'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          req.status = 'VERIFIED';
+          req.items = updatedItems;
+          const staffUser = getLoggedInStaff();
+          req.verified_by = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+          req.verified_date = formatThaiDatetime(new Date());
+          saveReqsDB(reqs);
+
+          postToMySQLAPI('verifyRequisition', {
+            docNo: docNo,
+            verifiedBy: req.verified_by,
+            verifiedDate: req.verified_date,
+            items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
+          });
+
+          renderStaffRequisitions(currentStaffStatus);
+          Swal.fire({
+            icon: 'success',
+            title: 'คัดกรองสำเร็จ',
+            text: `ส่งคำขอ ${docNo} ให้หัวหน้าพิจารณาอนุมัติแล้ว`,
+            confirmButtonColor: '#1e40af'
+          });
+        }
+      });
     }
 
     function approveRequisition(docNo) {
@@ -4057,14 +4377,14 @@ staff_template = r'''<!DOCTYPE html>
       }
 
       Swal.fire({
-        title: 'ยืนยันการอนุมัติคำขอเบิก?',
+        title: 'ยืนยันการอนุมัติขั้นสุดท้าย (หัวหน้า)?',
         html: `
           <div style="text-align: left; font-size: 0.95rem; margin-top: 0.5rem; color: #475569; line-height: 1.6;">
             <p><strong>เลขที่เอกสาร:</strong> <span style="color: #1e40af; font-weight: 700;">${docNo}</span></p>
             <p><strong>ผู้ขอเบิก:</strong> ${escapeHtml(req.requester)} (${escapeHtml(req.dept)})</p>
             <p><strong>จำนวนพัสดุ:</strong> ${req.items.length} รายการ</p>
-            <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.85rem;">
-              • ระบบจะทำการกันยอดสต๊อก (Reserved Stock) ตามจำนวนที่อนุมัติทันที
+            <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e40af; font-size: 0.85rem;">
+              • หัวหน้าอนุมัติคำขอขั้นสุดท้าย และระบบทำการกันยอดสต๊อก (Reserved Stock) ทันที
             </div>
           </div>
         `,
@@ -4072,13 +4392,16 @@ staff_template = r'''<!DOCTYPE html>
         showCancelButton: true,
         confirmButtonColor: '#1e40af',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'ยืนยันอนุมัติ',
+        confirmButtonText: 'อนุมัติขั้นสุดท้าย (กันสต๊อก)',
         cancelButtonText: 'ยกเลิก'
       }).then((result) => {
         if (result.isConfirmed) {
           req.status = 'APPROVED';
           req.updated_at = new Date().toISOString();
           req.items = updatedItems;
+          const staffUser = getLoggedInStaff();
+          req.approved_by = staffUser ? (staffUser.name || staffUser.username) : 'หัวหน้า/ผู้อำนวยการ สวท.';
+          req.approved_date = formatThaiDatetime(new Date());
           req.items.forEach(i => {
             const itm = items.find(si => si.id === i.itemId);
             if (itm) itm.reserved_pieces += i.approvedPieces;
@@ -4087,6 +4410,8 @@ staff_template = r'''<!DOCTYPE html>
           saveItemsDB(items);
           postToMySQLAPI('approveRequisition', {
             docNo: docNo,
+            approvedBy: req.approved_by,
+            approvedDate: req.approved_date,
             items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
           });
           renderStaffRequisitions(currentStaffStatus);
@@ -4094,7 +4419,7 @@ staff_template = r'''<!DOCTYPE html>
 
           Swal.fire({
             icon: 'success',
-            title: 'อนุมัติคำขอสำเร็จ!',
+            title: 'อนุมัติขั้นสุดท้ายสำเร็จ!',
             text: `คำขอเลขที่ ${docNo} ได้รับการอนุมัติและกันสต๊อกเรียบร้อยแล้ว`,
             confirmButtonColor: '#1e40af',
             confirmButtonText: 'ตกลง'
@@ -4435,8 +4760,11 @@ staff_template = r'''<!DOCTYPE html>
             const ratio = itm.is_multi_unit ? (itm.pieces_per_box || 1) : 1;
             const totalAdded = (boxes * ratio) + pieces;
             itm.on_hand_pieces += totalAdded;
+            itm.last_restocked_at = formatThaiDatetime(new Date());
             saveItemsDB(items);
-            postToMySQLAPI('restockItem', { itemId: itm.id, quantityPieces: totalAdded });
+            const staffUser = getLoggedInStaff();
+            const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+            postToMySQLAPI('restockItem', { itemId: itm.id, quantityPieces: totalAdded, recordedBy: recBy });
             renderInventoryTable();
 
             Swal.fire({
@@ -4929,6 +5257,9 @@ staff_template = r'''<!DOCTYPE html>
               ${formatStockDisplay(available, item.pieces_per_box, item.unit_box_name, item.unit_piece_name, item.is_multi_unit)}
             </td>
             <td>
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `<span style="font-weight: 600; color: #b45309;">${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}</span>` : '<span style="color: var(--neutral-400); font-size: 0.85rem;">ไม่จำกัด</span>'}
+            </td>
+            <td>
               <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
                 <span style="background: ${isLow ? 'var(--danger-light)' : '#dcfce7'}; color: ${isLow ? 'var(--danger)' : '#166534'}; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px;">
                   ${isLow ? `${vIcons.alertTriangle} ต่ำกว่าเกณฑ์` : `${vIcons.checkCircle} ปกติ`}
@@ -4942,6 +5273,9 @@ staff_template = r'''<!DOCTYPE html>
                   <span style="color: #3b82f6; display: inline-flex; align-items: center;">${vIcons.pen}</span>
                 </button>
               </div>
+            </td>
+            <td>
+              ${item.last_restocked_at ? `<span style="font-size: 0.775rem; color: var(--neutral-600); white-space: nowrap;">${escapeHtml(String(item.last_restocked_at))}</span>` : '<span style="color: var(--neutral-400); font-size: 0.8rem;">-</span>'}
             </td>
             <td style="text-align: right; white-space: nowrap;">
               <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openItemModal(${item.id})">
@@ -4961,6 +5295,184 @@ staff_template = r'''<!DOCTYPE html>
       }
       document.getElementById('metricReserved').innerHTML = `${totalReserved.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small>`;
       document.getElementById('metricLowStock').innerHTML = `${lowStockCount} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small>`;
+    }
+
+    function handleAnalyticsMonthChange() {
+      renderMonthlyAnalyticsView();
+    }
+
+    async function renderMonthlyAnalyticsView() {
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const selectedMonth = monthSelect ? monthSelect.value : '2026-11';
+      let analyticsData = null;
+
+      // Try fetching from server API if online
+      if (MYSQL_API_URL && navigator.onLine) {
+        try {
+          const res = await fetch(`${MYSQL_API_URL}?action=getMonthlyAnalytics&month=${encodeURIComponent(selectedMonth)}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json && json.status === 'success' && json.data) {
+              analyticsData = json.data;
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch monthly analytics from API, falling back to local DB:', e);
+        }
+      }
+
+      // Offline / LocalStorage calculation fallback
+      if (!analyticsData) {
+        const reqs = getReqsDB();
+        const items = getItemsDB();
+        const isAll = (selectedMonth === 'ALL');
+
+        const monthReqs = reqs.filter(r => {
+          if (isAll) return true;
+          try {
+            const parts = selectedMonth.split('-');
+            const beYear = parseInt(parts[0], 10) + 543;
+            const beMonth = parts[1];
+            const bePattern = `REQ-${beYear}${beMonth}`;
+            return (r.id || '').startsWith(bePattern) || (r.created_at || '').startsWith(selectedMonth);
+          } catch (err) {
+            return true;
+          }
+        });
+
+        const statusMap = {};
+        monthReqs.forEach(r => {
+          statusMap[r.status] = (statusMap[r.status] || 0) + 1;
+        });
+
+        let totalRequested = 0;
+        let totalApproved = 0;
+        const itemUsageMap = {};
+
+        monthReqs.forEach(r => {
+          (r.items || []).forEach(it => {
+            const itId = Number(it.itemId);
+            const pTot = Number(it.totalPieces || 0);
+            const pApp = Number(it.approvedPieces !== undefined ? it.approvedPieces : it.totalPieces || 0);
+            totalRequested += pTot;
+            if (r.status === 'APPROVED' || r.status === 'COMPLETED') {
+              totalApproved += pApp;
+            }
+            if (r.status !== 'REJECTED') {
+              if (!itemUsageMap[itId]) {
+                itemUsageMap[itId] = { totalPieces: 0, reqCount: 0 };
+              }
+              itemUsageMap[itId].totalPieces += pTot;
+              itemUsageMap[itId].reqCount += 1;
+            }
+          });
+        });
+
+        const allItemsUsage = items.map(itm => {
+          const usage = itemUsageMap[itm.id] || { totalPieces: 0, reqCount: 0 };
+          return {
+            itemId: itm.id,
+            name: itm.name,
+            category: itm.category,
+            unit: itm.unit_piece_name,
+            totalPieces: usage.totalPieces,
+            requisitionCount: usage.reqCount
+          };
+        });
+
+        allItemsUsage.sort((a, b) => b.totalPieces - a.totalPieces);
+
+        const topItems = allItemsUsage.slice(0, 5);
+        const leastItems = allItemsUsage.slice(-5).reverse();
+
+        analyticsData = {
+          month: selectedMonth,
+          totalRequisitions: monthReqs.length,
+          totalPending: statusMap['PENDING'] || 0,
+          totalVerified: statusMap['VERIFIED'] || 0,
+          totalApproved: statusMap['APPROVED'] || 0,
+          totalCompleted: statusMap['COMPLETED'] || 0,
+          totalRejected: statusMap['REJECTED'] || 0,
+          totalPiecesRequested: totalRequested,
+          totalPiecesApproved: totalApproved,
+          topItems: topItems,
+          leastItems: leastItems,
+          allItemUsage: allItemsUsage
+        };
+      }
+
+      // Update Metric Cards
+      document.getElementById('analyticsMetricTotalReqs').innerHTML = `${analyticsData.totalRequisitions.toLocaleString()} <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">คำขอ</small>`;
+      document.getElementById('analyticsReqBreakdown').innerText = `รอคัดกรอง ${analyticsData.totalPending || 0} | รออนุมัติ ${analyticsData.totalVerified || 0} | รอจ่าย ${analyticsData.totalApproved || 0} | สำเร็จ ${analyticsData.totalCompleted || 0} | ไม่อนุมัติ ${analyticsData.totalRejected || 0}`;
+      document.getElementById('analyticsMetricTotalRequested').innerHTML = `${(analyticsData.totalPiecesRequested || 0).toLocaleString()} <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small>`;
+      document.getElementById('analyticsMetricTotalApproved').innerHTML = `${(analyticsData.totalPiecesApproved || 0).toLocaleString()} <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small>`;
+
+      // Render Top 5 Items
+      const topContainer = document.getElementById('analyticsTopItemsList');
+      if (topContainer) {
+        if (!analyticsData.topItems || analyticsData.topItems.length === 0 || analyticsData.topItems.every(i => i.totalPieces === 0)) {
+          topContainer.innerHTML = `<div style="text-align: center; color: var(--neutral-400); padding: 1.5rem 0;">ไม่มีรายการเบิกพัสดุในเดือนนี้</div>`;
+        } else {
+          topContainer.innerHTML = analyticsData.topItems.map((itm, idx) => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px dashed var(--neutral-100); font-size: 0.875rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-weight: 700; color: #1e3a8a; width: 22px; height: 22px; border-radius: 50%; background: #eff6ff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">${idx + 1}</span>
+                <div>
+                  <div style="font-weight: 600; color: var(--neutral-800);">${escapeHtml(itm.name)}</div>
+                  <div style="font-size: 0.75rem; color: var(--neutral-400);">${escapeHtml(itm.category || '')}</div>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: 700; color: #1e3a8a;">${(itm.totalPieces || 0).toLocaleString()} ${escapeHtml(itm.unit || 'ชิ้น')}</div>
+                <div style="font-size: 0.75rem; color: var(--neutral-500);">${(itm.requisitionCount || 0).toLocaleString()} คำขอ</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Render Least 5 Items
+      const leastContainer = document.getElementById('analyticsLeastItemsList');
+      if (leastContainer) {
+        if (!analyticsData.leastItems || analyticsData.leastItems.length === 0) {
+          leastContainer.innerHTML = `<div style="text-align: center; color: var(--neutral-400); padding: 1.5rem 0;">ไม่มีรายการพัสดุ</div>`;
+        } else {
+          leastContainer.innerHTML = analyticsData.leastItems.map((itm, idx) => `
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px dashed var(--neutral-100); font-size: 0.875rem;">
+              <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-weight: 700; color: #92400e; width: 22px; height: 22px; border-radius: 50%; background: #fffbeb; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem;">${idx + 1}</span>
+                <div>
+                  <div style="font-weight: 600; color: var(--neutral-800);">${escapeHtml(itm.name)}</div>
+                  <div style="font-size: 0.75rem; color: var(--neutral-400);">${escapeHtml(itm.category || '')}</div>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-weight: 700; color: ${itm.totalPieces > 0 ? '#b45309' : 'var(--neutral-400)'};">${(itm.totalPieces || 0).toLocaleString()} ${escapeHtml(itm.unit || 'ชิ้น')}</div>
+                <div style="font-size: 0.75rem; color: var(--neutral-500);">${(itm.requisitionCount || 0).toLocaleString()} คำขอ</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Render All Items Breakdown
+      const allTbody = document.getElementById('analyticsAllItemsTbody');
+      if (allTbody) {
+        const allItems = analyticsData.allItemUsage || [];
+        const countSpan = document.getElementById('analyticsItemTotalCount');
+        if (countSpan) countSpan.innerText = `(ทั้งหมด ${allItems.length.toLocaleString()} รายการ)`;
+
+        allTbody.innerHTML = allItems.map((itm, idx) => `
+          <tr>
+            <td style="text-align: center; color: var(--neutral-500);">${idx + 1}</td>
+            <td><strong>${escapeHtml(itm.name)}</strong></td>
+            <td><span style="font-size: 0.8rem; background: var(--neutral-100); padding: 2px 8px; border-radius: 999px;">${escapeHtml(itm.category || '')}</span></td>
+            <td style="text-align: right; font-weight: 700; color: ${itm.totalPieces > 0 ? '#1e40af' : 'var(--neutral-400)'};">${(itm.totalPieces || 0).toLocaleString()}</td>
+            <td style="text-align: center;">${(itm.requisitionCount || 0).toLocaleString()}</td>
+            <td style="text-align: center; color: var(--neutral-600);">${escapeHtml(itm.unit || 'ชิ้น')}</td>
+          </tr>
+        `).join('');
+      }
     }
 
     function readFileAsDataURL(fileInput) {
@@ -5083,7 +5595,7 @@ staff_template = r'''<!DOCTYPE html>
                 <input type="number" id="swal-item-ratio" min="1" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น 500" value="${existing ? (existing.pieces_per_box || 1) : 500}">
               </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
               <div>
                 <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อหน่วยย่อย *</label>
                 <input id="swal-item-unit-piece" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="เช่น ชิ้น, ซอง, ใบ" value="${existing ? (existing.unit_piece_name || 'ชิ้น') : 'ชิ้น'}">
@@ -5092,9 +5604,15 @@ staff_template = r'''<!DOCTYPE html>
                 <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ยอดคงคลัง (หน่วยย่อย) ${existing ? '<small style="color: #64748b; font-weight: normal;">(ปรับยอดที่ปุ่มปรับสต๊อก)</small>' : '*'}</label>
                 <input type="number" id="swal-item-onhand" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem; ${existing ? 'background-color: #f1f5f9; cursor: not-allowed;' : ''}" value="${existing ? existing.on_hand_pieces : 100}" ${existing ? 'readonly disabled' : ''}>
               </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
               <div>
                 <label style="font-size: 0.8rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">เกณฑ์เตือนขั้นต่ำ</label>
                 <input type="number" id="swal-item-min" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" value="${existing ? existing.min_alert : 20}">
+              </div>
+              <div>
+                <label style="font-size: 0.8rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">จำกัดยอดเบิกต่อเดือน (0 = ไม่จำกัด)</label>
+                <input type="number" id="swal-item-monthly-limit" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 38px; font-size: 0.9rem;" placeholder="0" value="${existing ? (existing.monthly_limit || 0) : 0}">
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
@@ -5131,6 +5649,7 @@ staff_template = r'''<!DOCTYPE html>
             ? Number(existing.on_hand_pieces)
             : Math.max(0, parseInt(document.getElementById('swal-item-onhand').value, 10) || 0);
           const min_alert = Math.max(0, parseInt(document.getElementById('swal-item-min').value, 10) || 0);
+          const monthly_limit = Math.max(0, parseInt(document.getElementById('swal-item-monthly-limit').value, 10) || 0);
 
           if (!name) {
             Swal.showValidationMessage('กรุณาระบุชื่อรายการพัสดุ');
@@ -5152,6 +5671,7 @@ staff_template = r'''<!DOCTYPE html>
             pieces_per_box,
             on_hand_pieces,
             min_alert,
+            monthly_limit,
             image_piece,
             image_box
           };

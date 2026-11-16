@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.0.17"
+SYSTEM_VERSION = "3.1.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -105,10 +105,21 @@ def ensure_database_schema(conn=None):
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE;")
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '';")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);")
+                cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS monthly_limit INT NOT NULL DEFAULT 0;")
+                cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS last_restocked_at TIMESTAMP DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS verified_by VARCHAR(150) DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS verified_date VARCHAR(100) DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS approved_by VARCHAR(150) DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS approved_date VARCHAR(100) DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS completed_date VARCHAR(100) DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_date VARCHAR(100) DEFAULT NULL;")
+                cur.execute("ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS recorded_by VARCHAR(150) DEFAULT NULL;")
+                cur.execute("ALTER TABLE requisitions DROP CONSTRAINT IF EXISTS requisitions_status_check;")
+                cur.execute("ALTER TABLE requisitions ADD CONSTRAINT requisitions_status_check CHECK (status IN ('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED'));")
                 default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
                 cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (default_user_pass,))
                 cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (default_user_pass,))
@@ -162,6 +173,25 @@ def ensure_database_schema(conn=None):
                     cur.execute("ALTER TABLE `requisitions` ADD COLUMN `completed_date` VARCHAR(100) DEFAULT NULL AFTER `completed_at`;")
                     cur.execute("ALTER TABLE `requisitions` ADD COLUMN `rejected_at` DATETIME DEFAULT NULL AFTER `completed_date`;")
                     cur.execute("ALTER TABLE `requisitions` ADD COLUMN `rejected_date` VARCHAR(100) DEFAULT NULL AFTER `rejected_at`;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `verified_by` VARCHAR(150) DEFAULT NULL;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `verified_at` DATETIME DEFAULT NULL;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `verified_date` VARCHAR(100) DEFAULT NULL;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `approved_by` VARCHAR(150) DEFAULT NULL;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `approved_at` DATETIME DEFAULT NULL;")
+                    cur.execute("ALTER TABLE `requisitions` ADD COLUMN `approved_date` VARCHAR(100) DEFAULT NULL;")
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_items' AND COLUMN_NAME = 'monthly_limit';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `inventory_items` ADD COLUMN `monthly_limit` INT NOT NULL DEFAULT 0;")
+                    cur.execute("ALTER TABLE `inventory_items` ADD COLUMN `last_restocked_at` DATETIME DEFAULT NULL;")
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stock_transactions' AND COLUMN_NAME = 'recorded_by';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `stock_transactions` ADD COLUMN `recorded_by` VARCHAR(150) DEFAULT NULL;")
         conn.commit()
         _SCHEMA_CHECKED = True
     except Exception as err:
@@ -292,6 +322,8 @@ def handle_get_items(params):
                 "reserved_pieces": reserved,
                 "available_pieces": available,
                 "min_alert": int(r["min_alert"] or 500),
+                "monthly_limit": int(r.get("monthly_limit") or 0),
+                "last_restocked_at": str(r["last_restocked_at"]) if r.get("last_restocked_at") else "",
                 "image_piece": r["image_piece"] or "",
                 "image_box": r["image_box"] or "",
             })
@@ -302,16 +334,33 @@ def handle_get_items(params):
 
 def handle_get_requisitions(params):
     status_filter = params.get("status", ["ALL"])[0]
+    month_filter = params.get("month", ["ALL"])[0].strip()
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
+            query = "SELECT * FROM requisitions WHERE 1=1"
+            q_params = []
             if status_filter and status_filter != "ALL":
-                cur.execute(
-                    "SELECT * FROM requisitions WHERE status = %s ORDER BY created_at DESC",
-                    (status_filter,),
-                )
-            else:
-                cur.execute("SELECT * FROM requisitions ORDER BY created_at DESC")
+                query += " AND status = %s"
+                q_params.append(status_filter)
+            if month_filter and month_filter != "ALL":
+                # Match ISO YYYY-MM or Buddhist doc prefix REQ-YYYYMM-
+                try:
+                    parts = month_filter.split("-")
+                    y = int(parts[0])
+                    m = int(parts[1]) if len(parts) > 1 else 1
+                    y_be = y + 543 if y < 2400 else y
+                    y_ce = y if y < 2400 else y - 543
+                    iso_pfx = f"{y_ce:04d}-{m:02d}"
+                    doc_pfx = f"REQ-{y_be}{m:02d}-"
+                except Exception:
+                    iso_pfx = month_filter
+                    doc_pfx = f"REQ-%{month_filter}%"
+                query += " AND ((created_at IS NOT NULL AND created_at::text LIKE %s) OR id LIKE %s)" if IS_POSTGRES else " AND ((created_at IS NOT NULL AND DATE_FORMAT(created_at, '%%Y-%%m') = %s) OR id LIKE %s)"
+                q_params.extend([f"{iso_pfx}%" if IS_POSTGRES else iso_pfx, f"{doc_pfx}%"])
+
+            query += " ORDER BY created_at DESC"
+            cur.execute(query, tuple(q_params))
             req_rows = cur.fetchall()
 
             cur.execute("SELECT * FROM requisition_items ORDER BY id ASC")
@@ -346,6 +395,12 @@ def handle_get_requisitions(params):
                 "signature": r["signature"],
                 "reject_reason": r["reject_reason"] or "",
                 "rejectReason": r["reject_reason"] or "",
+                "verified_by": r.get("verified_by") or "",
+                "verified_at": str(r["verified_at"]) if r.get("verified_at") else "",
+                "verified_date": r.get("verified_date") or "",
+                "approved_by": r.get("approved_by") or "",
+                "approved_at": str(r["approved_at"]) if r.get("approved_at") else "",
+                "approved_date": r.get("approved_date") or "",
                 "completed_at": str(r["completed_at"]) if r.get("completed_at") else "",
                 "completed_date": r.get("completed_date") or "",
                 "completedDate": r.get("completed_date") or "",
@@ -463,6 +518,152 @@ def handle_get_users():
         conn.close()
 
 
+def handle_get_monthly_analytics(params):
+    month_filter = params.get("month", [""])[0].strip() if isinstance(params.get("month"), list) else str(params.get("month") or "").strip()
+    cur_now = datetime.now()
+    if not month_filter:
+        month_filter = cur_now.strftime("%Y-%m")
+
+    is_all = (month_filter.lower() == "all")
+
+    thai_month_label = "ข้อมูลย้อนหลังทั้งหมด"
+    if not is_all:
+        try:
+            parts = month_filter.split("-")
+            year = int(parts[0])
+            m = int(parts[1])
+            thai_year = year + 543
+            thai_m_name = THAI_MONTHS[m - 1]
+            thai_month_label = f"{thai_m_name} {thai_year}"
+        except Exception:
+            thai_month_label = month_filter
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            where_req_clause = ""
+            query_args = []
+            be_doc_pattern = "REQ-%"
+            if not is_all:
+                if IS_POSTGRES:
+                    where_req_clause = """
+                    WHERE (
+                        (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
+                        OR (r.created_at IS NULL AND r.id LIKE %s)
+                    )
+                    """
+                else:
+                    where_req_clause = """
+                    WHERE (
+                        (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
+                        OR (r.created_at IS NULL AND r.id LIKE %s)
+                    )
+                    """
+                try:
+                    parts = month_filter.split("-")
+                    be_year = int(parts[0]) + 543
+                    be_m = int(parts[1])
+                    be_doc_pattern = f"REQ-{be_year}{be_m:02d}-%"
+                except Exception:
+                    be_doc_pattern = "REQ-%"
+                query_args = [month_filter, be_doc_pattern]
+
+            status_query = f"""
+                SELECT r.status, COUNT(*) as count
+                FROM requisitions r
+                {where_req_clause}
+                GROUP BY r.status
+            """
+            cur.execute(status_query, tuple(query_args))
+            status_rows = cur.fetchall()
+            status_map = {row["status"]: int(row["count"]) for row in status_rows}
+
+            total_reqs = sum(status_map.values())
+            total_pending = status_map.get("PENDING", 0)
+            total_verified = status_map.get("VERIFIED", 0)
+            total_approved = status_map.get("APPROVED", 0)
+            total_completed = status_map.get("COMPLETED", 0)
+            total_rejected = status_map.get("REJECTED", 0)
+
+            pieces_query = f"""
+                SELECT 
+                    COALESCE(SUM(ri.total_pieces), 0) as total_requested,
+                    COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'COMPLETED') THEN COALESCE(ri.approved_pieces, ri.total_pieces) ELSE 0 END), 0) as total_approved
+                FROM requisitions r
+                JOIN requisition_items ri ON r.id = ri.requisition_id
+                {where_req_clause}
+            """
+            cur.execute(pieces_query, tuple(query_args))
+            p_row = cur.fetchone()
+            total_pieces_requested = int(p_row["total_requested"] or 0) if p_row else 0
+            total_pieces_approved = int(p_row["total_approved"] or 0) if p_row else 0
+
+            # Item usage query
+            if is_all:
+                item_join_cond = ""
+                item_args = []
+            else:
+                if IS_POSTGRES:
+                    item_join_cond = "AND ((r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                else:
+                    item_join_cond = "AND ((r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                item_args = [month_filter, be_doc_pattern]
+
+            items_query = f"""
+                SELECT 
+                    i.id as item_id,
+                    i.name,
+                    i.category,
+                    i.unit_piece_name,
+                    COALESCE(SUM(ri.total_pieces), 0) as total_pieces,
+                    COUNT(DISTINCT r.id) as req_count
+                FROM inventory_items i
+                LEFT JOIN requisition_items ri ON i.id = ri.item_id
+                LEFT JOIN requisitions r ON ri.requisition_id = r.id AND r.status != 'REJECTED' {item_join_cond}
+                WHERE i.is_active = 1
+                GROUP BY i.id, i.name, i.category, i.unit_piece_name
+                ORDER BY total_pieces DESC, i.id ASC
+            """
+            cur.execute(items_query, tuple(item_args))
+            item_rows = cur.fetchall()
+
+            all_items = [
+                {
+                    "itemId": int(row["item_id"]),
+                    "name": row["name"],
+                    "category": row["category"],
+                    "unit": row["unit_piece_name"] or "ชิ้น",
+                    "totalPieces": int(row["total_pieces"] or 0),
+                    "requisitionCount": int(row["req_count"] or 0),
+                }
+                for row in item_rows
+            ]
+
+            top_items = all_items[:5] if all_items else []
+            least_items = list(reversed(all_items[-5:])) if len(all_items) >= 5 else list(reversed(all_items))
+
+            return {
+                "status": "success",
+                "data": {
+                    "month": month_filter,
+                    "thaiMonth": thai_month_label,
+                    "totalRequisitions": total_reqs,
+                    "totalPending": total_pending,
+                    "totalVerified": total_verified,
+                    "totalApproved": total_approved,
+                    "totalCompleted": total_completed,
+                    "totalRejected": total_rejected,
+                    "totalPiecesRequested": total_pieces_requested,
+                    "totalPiecesApproved": total_pieces_approved,
+                    "topItems": top_items,
+                    "leastItems": least_items,
+                    "allItemUsage": all_items,
+                }
+            }
+    finally:
+        conn.close()
+
+
 # ==============================================================================
 # POST HANDLERS (MySQL ACID Transactions & Row-Level Locking)
 # ==============================================================================
@@ -503,7 +704,7 @@ def handle_create_requisition(payload):
                     return {"status": "error", "message": "จำนวนพัสดุที่ขอเบิกต้องมากกว่า 0 และไม่สามารถเป็นค่าลบได้"}
 
                 cur.execute(
-                    "SELECT id, name, is_multi_unit, on_hand_pieces, reserved_pieces, pieces_per_box FROM inventory_items WHERE id = %s FOR UPDATE",
+                    "SELECT id, name, is_multi_unit, on_hand_pieces, reserved_pieces, pieces_per_box, monthly_limit, unit_piece_name FROM inventory_items WHERE id = %s FOR UPDATE",
                     (item_id,),
                 )
                 db_item = cur.fetchone()
@@ -530,6 +731,61 @@ def handle_create_requisition(payload):
                         "message": "ยอดพัสดุคงเหลือพร้อมเบิกไม่เพียงพอ",
                         "details": {"itemId": item_id, "requested": total_pieces, "available": available},
                     }
+
+                # Monthly quota enforcement
+                monthly_limit = int(db_item.get("monthly_limit") or 0)
+                if monthly_limit > 0:
+                    cur_now = datetime.now()
+                    cur_iso_month = cur_now.strftime("%Y-%m")
+                    cur_be_doc = f"REQ-{(cur_now.year + 543)}{cur_now.month:02d}-%"
+                    if IS_POSTGRES:
+                        cur.execute(
+                            """
+                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                            FROM requisitions r
+                            JOIN requisition_items ri ON r.id = ri.requisition_id
+                            WHERE ri.item_id = %s
+                              AND r.status != 'REJECTED'
+                              AND (
+                                (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
+                                OR (r.created_at IS NULL AND r.id LIKE %s)
+                              )
+                            """,
+                            (item_id, cur_iso_month, cur_be_doc),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                            FROM requisitions r
+                            JOIN requisition_items ri ON r.id = ri.requisition_id
+                            WHERE ri.item_id = %s
+                              AND r.status != 'REJECTED'
+                              AND (
+                                (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
+                                OR (r.created_at IS NULL AND r.id LIKE %s)
+                              )
+                            """,
+                            (item_id, cur_iso_month, cur_be_doc),
+                        )
+                    month_row = cur.fetchone()
+                    current_month_total = int(month_row["month_total"] or 0) if month_row else 0
+                    if current_month_total + total_pieces > monthly_limit:
+                        conn.rollback()
+                        unit_p = db_item.get("unit_piece_name") or "ชิ้น"
+                        rem = max(0, monthly_limit - current_month_total)
+                        return {
+                            "status": "error",
+                            "code": "QUOTA_EXCEEDED",
+                            "message": f"ท่านขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือน (จำกัด {monthly_limit} {unit_p}/เดือน, ในเดือนนี้เบิกไปแล้ว {current_month_total} {unit_p}, คงเหลือโควตา {rem} {unit_p})",
+                            "details": {
+                                "itemId": item_id,
+                                "monthlyLimit": monthly_limit,
+                                "currentMonthTotal": current_month_total,
+                                "remainingQuota": rem,
+                                "requested": total_pieces,
+                            },
+                        }
 
             cur.execute(
                 """
@@ -579,15 +835,9 @@ def handle_create_requisition(payload):
         conn.close()
 
 
-def handle_approve_requisition(payload):
-    for i in payload.get("items", []):
-        try:
-            if "approvedPieces" in i and int(i["approvedPieces"]) < 0:
-                return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องไม่น้อยกว่า 0"}
-        except (ValueError, TypeError):
-            return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องเป็นตัวเลขที่ถูกต้อง"}
-
+def handle_verify_requisition(payload):
     doc_no = str(payload.get("docNo") or payload.get("id") or "").strip()
+    verified_by = str(payload.get("verifiedBy") or payload.get("verified_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
     approved_overrides = {
         int(i["itemId"]): int(i["approvedPieces"])
         for i in payload.get("items", [])
@@ -612,6 +862,88 @@ def handle_approve_requisition(payload):
                 return {
                     "status": "error",
                     "code": "INVALID_STATE",
+                    "message": f"ไม่สามารถคัดกรองได้เนื่องจากคำขอเลขที่ {doc_no} อยู่ในสถานะ {current_status} (ต้องอยู่ในสถานะ PENDING)",
+                }
+
+            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
+            req_items = cur.fetchall()
+
+            for ri in req_items:
+                item_id = int(ri["item_id"])
+                approved_qty = approved_overrides.get(item_id, int(ri["approved_pieces"] if ri["approved_pieces"] is not None else ri["total_pieces"]))
+                if approved_qty < 0:
+                    conn.rollback()
+                    return {"status": "error", "message": "จำนวนพัสดุที่เสนออนุมัติต้องไม่น้อยกว่า 0"}
+
+                cur.execute(
+                    "UPDATE requisition_items SET approved_pieces = %s WHERE id = %s",
+                    (approved_qty, ri["id"]),
+                )
+
+            now = datetime.now()
+            verified_date = str(payload.get("verified_date") or payload.get("verifiedDate") or format_thai_datetime(now)).strip()
+
+            cur.execute(
+                """
+                UPDATE requisitions 
+                SET status = 'VERIFIED', verified_by = %s, verified_at = %s, verified_date = %s
+                WHERE id = %s
+                """,
+                (verified_by, now, verified_date, doc_no),
+            )
+
+        conn.commit()
+        return {
+            "status": "success",
+            "docNo": doc_no,
+            "statusNow": "VERIFIED",
+            "verified_by": verified_by,
+            "verified_at": str(now),
+            "verified_date": verified_date,
+            "message": "ผ่านการคัดกรองเบื้องต้นและส่งต่อให้หัวหน้าอนุมัติเรียบร้อยแล้ว",
+        }
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def handle_approve_requisition(payload):
+    for i in payload.get("items", []):
+        try:
+            if "approvedPieces" in i and int(i["approvedPieces"]) < 0:
+                return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องไม่น้อยกว่า 0"}
+        except (ValueError, TypeError):
+            return {"status": "error", "message": "จำนวนพัสดุที่อนุมัติต้องเป็นตัวเลขที่ถูกต้อง"}
+
+    doc_no = str(payload.get("docNo") or payload.get("id") or "").strip()
+    approved_by = str(payload.get("approvedBy") or payload.get("approved_by") or "หัวหน้าฝ่าย/ผู้อำนวยการ สวท.").strip()
+    approved_overrides = {
+        int(i["itemId"]): int(i["approvedPieces"])
+        for i in payload.get("items", [])
+        if "itemId" in i and "approvedPieces" in i
+    }
+
+    if not doc_no:
+        return {"status": "error", "message": "กรุณาระบุเลขที่เอกสารคำขอ (docNo)"}
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            cur.execute("SELECT * FROM requisitions WHERE id = %s FOR UPDATE", (doc_no,))
+            req = cur.fetchone()
+            if not req:
+                conn.rollback()
+                return {"status": "error", "message": f"ไม่พบเอกสารคำขอเลขที่ {doc_no}"}
+
+            current_status = req.get("status", "")
+            # Accepts both VERIFIED (2-tier workflow) and PENDING (direct approval backward compatibility)
+            if current_status not in ("VERIFIED", "PENDING"):
+                conn.rollback()
+                return {
+                    "status": "error",
+                    "code": "INVALID_STATE",
                     "message": f"ไม่สามารถอนุมัติได้เนื่องจากคำขอเลขที่ {doc_no} อยู่ในสถานะ {current_status}",
                 }
 
@@ -620,7 +952,7 @@ def handle_approve_requisition(payload):
 
             for ri in req_items:
                 item_id = int(ri["item_id"])
-                approved_qty = approved_overrides.get(item_id, int(ri["approved_pieces"] or ri["total_pieces"]))
+                approved_qty = approved_overrides.get(item_id, int(ri["approved_pieces"] if ri["approved_pieces"] is not None else ri["total_pieces"]))
 
                 cur.execute("SELECT * FROM inventory_items WHERE id = %s FOR UPDATE", (item_id,))
                 inv = cur.fetchone()
@@ -649,14 +981,27 @@ def handle_approve_requisition(payload):
                     (approved_qty, ri["id"]),
                 )
 
-            cur.execute("UPDATE requisitions SET status = 'APPROVED' WHERE id = %s", (doc_no,))
+            now = datetime.now()
+            approved_date = str(payload.get("approved_date") or payload.get("approvedDate") or format_thai_datetime(now)).strip()
+
+            cur.execute(
+                """
+                UPDATE requisitions 
+                SET status = 'APPROVED', approved_by = %s, approved_at = %s, approved_date = %s
+                WHERE id = %s
+                """,
+                (approved_by, now, approved_date, doc_no),
+            )
 
         conn.commit()
         return {
             "status": "success",
             "docNo": doc_no,
             "statusNow": "APPROVED",
-            "message": "อนุมัติคำขอและล็อกยอดพัสดุใน MySQL สำเร็จ",
+            "approved_by": approved_by,
+            "approved_at": str(now),
+            "approved_date": approved_date,
+            "message": "อนุมัติคำขอขั้นสุดท้ายและล็อกยอดพัสดุสำเร็จ",
         }
     except Exception as e:
         conn.rollback()
@@ -825,6 +1170,7 @@ def handle_restock_item(payload):
     item_id = int(payload.get("itemId") or 0)
     qty = int(payload.get("quantityPieces") or payload.get("quantity") or payload.get("qty") or 0)
     note = str(payload.get("note") or "รับพัสดุเข้าคลัง").strip()
+    recorded_by = str(payload.get("recordedBy") or payload.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
 
     if not item_id or qty <= 0:
         return {"status": "error", "message": "กรุณาระบุรหัสพัสดุ (itemId) และจำนวนที่รับเข้ามากกว่า 0"}
@@ -839,16 +1185,17 @@ def handle_restock_item(payload):
                 return {"status": "error", "message": f"ไม่พบพัสดุ ID {item_id}"}
 
             new_on_hand = int(inv["on_hand_pieces"] or 0) + qty
+            now = datetime.now()
             cur.execute(
-                "UPDATE inventory_items SET on_hand_pieces = %s WHERE id = %s",
-                (new_on_hand, item_id),
+                "UPDATE inventory_items SET on_hand_pieces = %s, last_restocked_at = %s WHERE id = %s",
+                (new_on_hand, now, item_id),
             )
             cur.execute(
                 """
-                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason)
-                VALUES (%s, 'IN', %s, %s, 'STOCK_IN', NULL, %s)
+                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason, recorded_by, created_at)
+                VALUES (%s, 'IN', %s, %s, 'STOCK_IN', NULL, %s, %s, %s)
                 """,
-                (item_id, qty, new_on_hand, note),
+                (item_id, qty, new_on_hand, note, recorded_by, now),
             )
 
         conn.commit()
@@ -857,6 +1204,7 @@ def handle_restock_item(payload):
             "message": "รับพัสดุเข้าคลัง MySQL สำเร็จ",
             "itemId": item_id,
             "on_hand_pieces": new_on_hand,
+            "last_restocked_at": str(now),
         }
     except Exception as e:
         conn.rollback()
@@ -1110,6 +1458,8 @@ def handle_update_department(payload):
 
     if not new_name:
         return {"status": "error", "message": "กรุณาระบุชื่อกลุ่มงาน/หน่วยงาน"}
+    if not dept_id and not old_name:
+        return {"status": "error", "message": "กรุณาระบุ ID หรือชื่อเดิมของกลุ่มงาน"}
 
     conn = get_db_connection()
     try:
@@ -1164,15 +1514,16 @@ def handle_delete_department(payload):
     dept_id = payload.get("id")
     name = str(payload.get("name", "")).strip()
 
+    if not dept_id and not name:
+        return {"status": "error", "message": "กรุณาระบุ ID หรือชื่อหน่วยงานที่ต้องการลบ"}
+
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
             if dept_id:
                 cur.execute("SELECT * FROM departments WHERE id = %s AND is_active = 1", (int(dept_id),))
-            elif name:
-                cur.execute("SELECT * FROM departments WHERE (name = %s OR full_label = %s) AND is_active = 1 LIMIT 1", (name, name))
             else:
-                return {"status": "error", "message": "กรุณาระบุ ID หรือชื่อหน่วยงานที่ต้องการลบ"}
+                cur.execute("SELECT * FROM departments WHERE (name = %s OR full_label = %s) AND is_active = 1 LIMIT 1", (name, name))
 
             dept = cur.fetchone()
             if not dept:
@@ -1219,6 +1570,7 @@ def handle_save_item(payload):
     pieces_per_box = max(1, int(payload.get("pieces_per_box") or 1)) if is_multi_unit else 1
     on_hand_pieces = max(0, int(payload.get("on_hand_pieces") or 0))
     min_alert = max(0, int(payload.get("min_alert") or 0))
+    monthly_limit = max(0, int(payload.get("monthly_limit") or payload.get("monthlyLimit") or 0))
     image_piece = str(payload.get("image_piece") or "assets/images/แฟ้มเสนอ เล่ม.jpeg").strip()
     image_box = str(payload.get("image_box") or image_piece).strip()
 
@@ -1249,6 +1601,8 @@ def handle_save_item(payload):
                         on_hand_pieces = existing["on_hand_pieces"]
                     if "min_alert" not in payload:
                         min_alert = existing["min_alert"]
+                    if "monthly_limit" not in payload and "monthlyLimit" not in payload:
+                        monthly_limit = existing.get("monthly_limit") or 0
                     if "image_piece" not in payload:
                         image_piece = existing["image_piece"]
                     if "image_box" not in payload:
@@ -1259,13 +1613,13 @@ def handle_save_item(payload):
                         UPDATE inventory_items
                         SET name = %s, category = %s, is_multi_unit = %s,
                             unit_box_name = %s, unit_piece_name = %s, pieces_per_box = %s,
-                            on_hand_pieces = %s, min_alert = %s,
+                            on_hand_pieces = %s, min_alert = %s, monthly_limit = %s,
                             image_piece = %s, image_box = %s, is_active = 1
                         WHERE id = %s
                         """,
                         (
                             name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                            pieces_per_box, on_hand_pieces, min_alert,
+                            pieces_per_box, on_hand_pieces, min_alert, monthly_limit,
                             image_piece, image_box, int(item_id),
                         ),
                     )
@@ -1274,13 +1628,13 @@ def handle_save_item(payload):
                         """
                         INSERT INTO inventory_items
                           (id, name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
+                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert, monthly_limit,
                            image_piece, image_box, is_active)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, %s, 1)
                         """,
                         (
                             int(item_id), name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                            pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
+                            pieces_per_box, on_hand_pieces, min_alert, monthly_limit, image_piece, image_box,
                         ),
                     )
             else:
@@ -1289,14 +1643,14 @@ def handle_save_item(payload):
                         """
                         INSERT INTO inventory_items
                           (name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
+                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert, monthly_limit,
                            image_piece, image_box, is_active)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, %s, 1)
                         RETURNING id
                         """,
                         (
                             name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                            pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
+                            pieces_per_box, on_hand_pieces, min_alert, monthly_limit, image_piece, image_box,
                         ),
                     )
                     row = cur.fetchone()
@@ -1306,13 +1660,13 @@ def handle_save_item(payload):
                         """
                         INSERT INTO inventory_items
                           (name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert,
+                           pieces_per_box, on_hand_pieces, reserved_pieces, min_alert, monthly_limit,
                            image_piece, image_box, is_active)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, 1)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, 0, %s, %s, %s, %s, 1)
                         """,
                         (
                             name, category, is_multi_unit, unit_box_name, unit_piece_name,
-                            pieces_per_box, on_hand_pieces, min_alert, image_piece, image_box,
+                            pieces_per_box, on_hand_pieces, min_alert, monthly_limit, image_piece, image_box,
                         ),
                     )
                     item_id = cur.lastrowid
@@ -1575,6 +1929,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json(handle_get_departments())
                 elif action == "getUsers":
                     return self.send_json(handle_get_users())
+                elif action == "getMonthlyAnalytics":
+                    return self.send_json(handle_get_monthly_analytics(params))
                 elif action in ("health", "ping"):
                     db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
                     try:
@@ -1643,7 +1999,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         payload = body.get("payload", body)
 
         STAFF_ACTIONS = {
-            "approveRequisition", "completeRequisition", "rejectRequisition",
+            "verifyRequisition", "approveRequisition", "completeRequisition", "rejectRequisition",
             "restockItem", "adjustStock", "saveUser", "deleteUser",
             "addDepartment", "updateDepartment", "deleteDepartment",
             "saveItem", "deleteItem"
@@ -1673,6 +2029,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 return self.send_json(handle_login_requester(payload))
             elif action == "loginStaff":
                 return self.send_json(handle_login_staff(payload))
+            elif action == "verifyRequisition":
+                return self.send_json(handle_verify_requisition(payload))
             elif action == "approveRequisition":
                 return self.send_json(handle_approve_requisition(payload))
             elif action == "completeRequisition":

@@ -693,6 +693,7 @@
       transform: translateY(-1px);
     }
     .req-card-item.status-border-pending { border-left-color: #d97706; }
+    .req-card-item.status-border-verified { border-left-color: #0284c7; }
     .req-card-item.status-border-approved { border-left-color: #2563eb; }
     .req-card-item.status-border-completed { border-left-color: #059669; }
     .req-card-item.status-border-rejected { border-left-color: #dc2626; }
@@ -707,6 +708,7 @@
       border-radius: 999px;
     }
     .pill-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .pill-verified { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .pill-approved { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
     .pill-completed { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
     .pill-rejected { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
@@ -951,7 +953,7 @@
 
       <div class="modal-body" style="padding: 1.25rem; overflow-y: auto; max-height: calc(88vh - 130px);">
         <!-- Search and Filter Bar -->
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem;">
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.85rem; align-items: center;">
           <div style="flex: 1; min-width: 260px; position: relative;">
             <span style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--neutral-400); display: flex;">
               <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -960,11 +962,21 @@
                    placeholder="ค้นหาเลขที่คำขอ, ชื่อผู้ขอ, หน่วยงาน, หรือชื่อพัสดุ..." 
                    oninput="handleMyReqsSearch()">
           </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); white-space: nowrap;">เดือน:</label>
+            <select id="myReqsMonthSelect" class="form-control" style="width: auto; min-width: 160px;" onchange="handleMyReqsSearch()">
+              <option value="ALL">ทุกเดือนย้อนหลัง</option>
+              <option value="2026-11" selected>พฤศจิกายน 2569</option>
+              <option value="2026-10">ตุลาคม 2569</option>
+              <option value="2026-09">กันยายน 2569</option>
+            </select>
+          </div>
         </div>
 
         <div class="req-filter-tabs">
           <button class="req-tab-btn active" onclick="filterMyReqsTab('ALL', this)">ทั้งหมด</button>
-          <button class="req-tab-btn" onclick="filterMyReqsTab('PENDING', this)">รออนุมัติ</button>
+          <button class="req-tab-btn" onclick="filterMyReqsTab('PENDING', this)">รอคัดกรอง</button>
+          <button class="req-tab-btn" onclick="filterMyReqsTab('VERIFIED', this)">รอหัวหน้าอนุมัติ</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('APPROVED', this)">อนุมัติแล้ว</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('COMPLETED', this)">รับมอบสำเร็จ</button>
           <button class="req-tab-btn" onclick="filterMyReqsTab('REJECTED', this)">ไม่อนุมัติ</button>
@@ -1080,7 +1092,7 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.0.17) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.1.0) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -1186,6 +1198,8 @@
       building: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
       file_text: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
       printer: `<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
+      calendar: `<svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+      shield: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
       x: `<svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`
     };
 
@@ -1196,7 +1210,7 @@
     const DB_DEPTS_KEY = 'inventory_departments';
 
     const defaultItems = [{"id": 1, "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) กล่อง.jpeg"}, {"id": 2, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 ซอง.jpeg", "image_box": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 กล่อง.jpeg"}, {"id": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ใบ", "pieces_per_box": 2000, "on_hand_pieces": 32000, "reserved_pieces": 0, "min_alert": 5000, "image_piece": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) ใบ.jpeg", "image_box": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) กล่อง.jpeg"}, {"id": 4, "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1250, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 5, "name": "กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 4500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย แผ่น.jpeg", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย กล่อง.jpeg"}, {"id": 6, "name": "กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 500, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ กล่อง.jpeg"}, {"id": 7, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 23000, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) แผ่น.jpeg", "image_box": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) กล่อง.jpeg"}, {"id": 8, "name": "กระดาษสติ๊กเกอร์ เต็มแผ่น", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 100, "image_piece": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น กล่อง.jpeg"}, {"id": 9, "name": "แบบฟอร์มแก้ I", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ชิ้น", "pieces_per_box": 500, "on_hand_pieces": 2500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มแก้ I ชิ้น.jpeg", "image_box": "assets/images/แบบฟอร์มแก้ I กล่อง.jpeg"}, {"id": 10, "name": "ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 3700, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) ซอง.jpeg", "image_box": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) กล่อง.jpeg"}, {"id": 11, "name": "ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 12, "name": "แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 13, "name": "แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 14, "name": "ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 200, "image_piece": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ กล่อง.png"}, {"id": 15, "name": "ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 16, "name": "ใบรับรอง(ไทย)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 2000, "reserved_pieces": 0, "min_alert": 400, "image_piece": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 17, "name": "ใบรับรอง(อังกฤษ)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3000, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ กล่อง.png"}, {"id": 18, "name": "คลิปดำNO.108", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 72, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.108 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.108 ลัง.jpeg"}, {"id": 19, "name": "คลิปดำNO.110", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 60, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.110 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.110 ลัง.jpeg"}, {"id": 20, "name": "ไส้MAX 10 MM", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 10 MM กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 10 MM ลัง.jpeg"}, {"id": 21, "name": "ไส้MAX 12", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 12 กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 12 ลัง.jpeg"}, {"id": 22, "name": "ซองกันกระแทก 270´327", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 80, "on_hand_pieces": 2400, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg", "image_box": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg"}, {"id": 23, "name": "แฟ้มเสนอ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "เล่ม", "unit_piece_name": "เล่ม", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/แฟ้มเสนอ เล่ม.jpeg", "image_box": "assets/images/แฟ้มเสนอ เล่ม.jpeg"}, {"id": 24, "name": "แม็กเล็ก", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กเล็ก อัน.jpeg", "image_box": "assets/images/แม็กเล็ก กล่อง.jpeg"}, {"id": 25, "name": "แม็กใหญ่", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กใหญ่ อัน.jpeg", "image_box": "assets/images/แม็กใหญ่ กล่อง.png"}, {"id": 26, "name": "สก็อตเทปใส", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 4, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปใส ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปใส กล่อง.jpeg"}, {"id": 27, "name": "สก็อตเทปขุ่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 25, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปขุ่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปขุ่น กล่อง.png"}, {"id": 28, "name": "สก็อตเทปย่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปย่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปย่น กล่อง.jpeg"}, {"id": 29, "name": "กาวแท่ง", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "แท่ง", "pieces_per_box": 1, "on_hand_pieces": 8, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กาวแท่ง แท่ง.jpeg", "image_box": "assets/images/กาวแท่ง กล่อง.png"}, {"id": 30, "name": "กาวขวด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "ขวด", "pieces_per_box": 1, "on_hand_pieces": 4, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/กาวขวด ขวด.jpeg", "image_box": "assets/images/กาวขวด กล่อง.png"}, {"id": 31, "name": "กรรไกร", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กรรไกร อัน.jpeg", "image_box": "assets/images/กรรไกร กล่อง.png"}, {"id": 32, "name": "คัตเตอร์", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 12, "reserved_pieces": 0, "min_alert": 3, "image_piece": "assets/images/คัตเตอร์ อัน.jpeg", "image_box": "assets/images/คัตเตอร์ กล่อง.png"}, {"id": 33, "name": "เครื่องเจาะกระดาษ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "เครื่อง", "pieces_per_box": 1, "on_hand_pieces": 2, "reserved_pieces": 0, "min_alert": 1, "image_piece": "assets/images/เครื่องเจาะกระดาษ เครื่อง.jpeg", "image_box": "assets/images/เครื่องเจาะกระดาษ กล่อง.png"}, {"id": 34, "name": "ไม้บรรทัด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/ไม้บรรทัด อัน.jpeg", "image_box": "assets/images/ไม้บรรทัด กล่อง.png"}];
-    const defaultReqs = [{"id": "REQ-256910-0001", "dept": "โรงเรียนการเรือน", "requester": "อาจารย์ผู้แทน โรงเรียนการเรือน", "phone": "", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "1 ต.ค. 2569 09:30 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน", "reject_reason": "", "completed_at": "2026-10-01T03:00:00.000Z", "completed_date": "1 ต.ค. 2569 10:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-01T02:30:00.000Z", "updated_at": "2026-10-01T03:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 500, "piecesPerBoxSnapshot": 2000}, {"itemId": 7, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}]}, {"id": "REQ-256910-0002", "dept": "คณะพยาบาลศาสตร์", "requester": "อาจารย์ผู้แทน คณะพยาบาลศาสตร์", "phone": "", "purpose": "ใช้สำหรับการสอบประเมินความรู้ทางการพยาบาล ภาคเรียน 1/2569", "date": "2 ต.ค. 2569 10:15 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะพยาบาลศาสตร์", "reject_reason": "", "completed_at": "2026-10-02T04:00:00.000Z", "completed_date": "2 ต.ค. 2569 11:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-02T03:15:00.000Z", "updated_at": "2026-10-02T04:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}, {"id": "REQ-256910-0003", "dept": "คณะวิทยาศาสตร์และเทคโนโลยี", "requester": "อาจารย์ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "phone": "", "purpose": "ใช้สำหรับการจัดสอบวัดผลภาคบรรยายและปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "5 ต.ค. 2569 13:45 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "reject_reason": "", "completed_at": "2026-10-05T07:30:00.000Z", "completed_date": "5 ต.ค. 2569 14:30 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-05T06:45:00.000Z", "updated_at": "2026-10-05T07:30:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}];
+    const defaultReqs = [{"id": "REQ-256910-0001", "dept": "โรงเรียนการเรือน", "requester": "อาจารย์ผู้แทน โรงเรียนการเรือน", "phone": "", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "1 ต.ค. 2569 09:30 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน", "reject_reason": "", "completed_at": "2026-10-01T03:00:00.000Z", "completed_date": "1 ต.ค. 2569 10:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-01T02:30:00.000Z", "updated_at": "2026-10-01T03:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 500, "piecesPerBoxSnapshot": 2000}, {"itemId": 7, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}]}, {"id": "REQ-256910-0002", "dept": "คณะพยาบาลศาสตร์", "requester": "อาจารย์ผู้แทน คณะพยาบาลศาสตร์", "phone": "", "purpose": "ใช้สำหรับการสอบประเมินความรู้ทางการพยาบาล ภาคเรียน 1/2569", "date": "2 ต.ค. 2569 10:15 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะพยาบาลศาสตร์", "reject_reason": "", "completed_at": "2026-10-02T04:00:00.000Z", "completed_date": "2 ต.ค. 2569 11:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-02T03:15:00.000Z", "updated_at": "2026-10-02T04:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}, {"id": "REQ-256910-0003", "dept": "คณะวิทยาศาสตร์และเทคโนโลยี", "requester": "อาจารย์ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "phone": "", "purpose": "ใช้สำหรับการจัดสอบวัดผลภาคบรรยายและปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "5 ต.ค. 2569 13:45 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "reject_reason": "", "completed_at": "2026-10-05T07:30:00.000Z", "completed_date": "5 ต.ค. 2569 14:30 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-05T06:45:00.000Z", "updated_at": "2026-10-05T07:30:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}, {"id": "REQ-256911-0004", "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน", "requester": "อาจารย์ผู้แทน สำนักงานผู้อำนวยการ สวท.", "phone": "02-244-5200", "purpose": "ใช้สำหรับงานประชุมวิชาการและการจัดสอบภาคเรียนที่ 1/2569", "date": "10 พ.ย. 2569 11:20 น.", "status": "VERIFIED", "signature": "", "reject_reason": "", "completed_at": null, "completed_date": "", "rejected_at": null, "rejected_date": "", "verified_by": "เจ้าหน้าที่พัสดุ สวท.", "verified_at": "2026-11-10T04:30:00.000Z", "verified_date": "10 พ.ย. 2569 11:30 น.", "approved_by": "", "approved_at": null, "approved_date": "", "created_at": "2026-11-10T04:20:00.000Z", "updated_at": "2026-11-10T04:30:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 200, "piecesPerBoxSnapshot": 2000}]}];
 
     function getDeptsDB() {
       const data = localStorage.getItem(DB_DEPTS_KEY);
@@ -1629,6 +1643,11 @@
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `
+                <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;">
+                  ${vIcons.shield} จำกัดการเบิก: ${Number(item.monthly_limit).toLocaleString()} ${safePieceName}/เดือน
+                </div>
+              ` : ''}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
@@ -1708,6 +1727,38 @@
           confirmButtonText: 'เข้าใจแล้ว'
         });
         return;
+      }
+
+      if (item.monthly_limit && Number(item.monthly_limit) > 0) {
+        const curDate = new Date();
+        const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+        const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+        const reqs = getReqsDB();
+        let monthUsed = 0;
+        reqs.forEach(r => {
+          if (r.status !== 'REJECTED') {
+            const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+            if (isThisMonth && r.items) {
+              r.items.forEach(it => {
+                if (Number(it.itemId) === item.id) {
+                  monthUsed += Number(it.totalPieces || 0);
+                }
+              });
+            }
+          }
+        });
+        const currentInCart = (cart.find(c => c.itemId === itemId)?.totalPieces || 0);
+        if (monthUsed + currentInCart + totalPieces > Number(item.monthly_limit)) {
+          const rem = Math.max(0, Number(item.monthly_limit) - monthUsed - currentInCart);
+          Swal.fire({
+            icon: 'warning',
+            title: 'เกินโควตาประจำเดือน',
+            html: `พัสดุนี้ถูกจำกัดการเบิกไม่เกิน <b>${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/เดือน</b><br>ในเดือนนี้มีการขอเบิกไปแล้ว <b>${monthUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'เข้าใจแล้ว'
+          });
+          return;
+        }
       }
 
       const existing = cart.find(c => c.itemId === itemId);
@@ -2023,6 +2074,7 @@
       const listEl = document.getElementById('myRequisitionsList');
       const countEl = document.getElementById('myReqsModalCount');
       const searchVal = (document.getElementById('myReqsSearchInput')?.value || '').trim().toLowerCase();
+      const monthVal = document.getElementById('myReqsMonthSelect')?.value || 'ALL';
       
       const reqs = getReqsDB();
       const currentUser = getLoggedInRequester();
@@ -2033,6 +2085,17 @@
 
       let filtered = userReqs.filter(r => {
         if (myReqsFilterStatus !== 'ALL' && r.status !== myReqsFilterStatus) return false;
+        if (monthVal !== 'ALL') {
+          try {
+            const parts = monthVal.split('-');
+            const beYear = parseInt(parts[0], 10) + 543;
+            const beMonth = parts[1];
+            const bePattern = `REQ-${beYear}${beMonth}`;
+            const matchesBeId = (r.id || '').startsWith(bePattern);
+            const matchesCreatedAt = (r.created_at || '').startsWith(monthVal);
+            if (!matchesBeId && !matchesCreatedAt) return false;
+          } catch (e) {}
+        }
         if (searchVal) {
           const matchId = (r.id || '').toLowerCase().includes(searchVal);
           const matchName = (r.requester || '').toLowerCase().includes(searchVal);
@@ -2058,9 +2121,9 @@
               ไม่พบรายการคำขอเบิกพัสดุ
             </h4>
             <p style="font-size: 0.85rem; color: var(--neutral-400); max-width: 360px; margin: 0 auto 1.25rem auto;">
-              ${searchVal || myReqsFilterStatus !== 'ALL' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}
+              ${searchVal || myReqsFilterStatus !== 'ALL' || monthVal !== 'ALL' ? 'ลองเปลี่ยนคำค้นหาหรือตัวกรองเดือน/สถานะ' : 'คุณยังไม่มีประวัติการส่งคำขอเบิกพัสดุในระบบ'}
             </p>
-            ${!searchVal && myReqsFilterStatus === 'ALL' ? `
+            ${!searchVal && myReqsFilterStatus === 'ALL' && monthVal === 'ALL' ? `
               <button class="btn btn-primary" onclick="closeMyRequisitionsModal()">
                 ${vIcons.cart} ไปที่แคตตาล็อกเลือกเบิกพัสดุ
               </button>
@@ -2075,8 +2138,11 @@
         let borderClass = 'status-border-pending';
 
         if (req.status === 'PENDING') {
-          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รออนุมัติ (Pending)</span>`;
+          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รอคัดกรอง (Staff Screen)</span>`;
           borderClass = 'status-border-pending';
+        } else if (req.status === 'VERIFIED') {
+          statusBadge = `<span class="req-status-pill pill-verified">${vIcons.clock} ผ่านการคัดกรอง (รอหัวหน้าอนุมัติ)</span>`;
+          borderClass = 'status-border-verified';
         } else if (req.status === 'APPROVED') {
           statusBadge = `<span class="req-status-pill pill-approved">${vIcons.check} อนุมัติแล้ว (รอรับพัสดุ)</span>`;
           borderClass = 'status-border-approved';
@@ -2138,6 +2204,16 @@
                 <span style="color: var(--neutral-400); font-size: 0.8rem;">วัตถุประสงค์:</span><br>
                 <span>${escapeHtml(req.purpose || '-')}</span>
               </div>
+              ${(req.verified_by || req.verifiedBy) ? `
+              <div style="grid-column: 1 / -1; background: #f0fdf4; color: #166534; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                ${vIcons.check} <strong>คัดกรองเบื้องต้นโดย:</strong> ${escapeHtml(req.verified_by || req.verifiedBy)} ${(req.verified_date || req.verifiedDate) ? `(${escapeHtml(req.verified_date || req.verifiedDate)})` : ''}
+              </div>
+              ` : ''}
+              ${(req.approved_by || req.approvedBy) ? `
+              <div style="grid-column: 1 / -1; background: #eff6ff; color: #1e40af; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                ${vIcons.shield} <strong>อนุมัติขั้นสุดท้ายโดย:</strong> ${escapeHtml(req.approved_by || req.approvedBy)} ${(req.approved_date || req.approvedDate) ? `(${escapeHtml(req.approved_date || req.approvedDate)})` : ''}
+              </div>
+              ` : ''}
               ${req.status === 'COMPLETED' && (req.completed_date || req.completedDate) ? `
               <div style="grid-column: 1 / -1; background: #ecfdf5; color: #065f46; padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid #a7f3d0; display: flex; align-items: center; gap: 6px;">
                 ${vIcons.check} <strong>วันที่จ่ายของ:</strong> ${escapeHtml(req.completed_date || req.completedDate)}

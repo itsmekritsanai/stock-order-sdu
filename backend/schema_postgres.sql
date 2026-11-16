@@ -60,6 +60,8 @@ CREATE TABLE inventory_items (
   on_hand_pieces INT NOT NULL DEFAULT 0,
   reserved_pieces INT NOT NULL DEFAULT 0,
   min_alert INT NOT NULL DEFAULT 500,
+  monthly_limit INT NOT NULL DEFAULT 0,
+  last_restocked_at TIMESTAMP DEFAULT NULL,
   image_piece TEXT DEFAULT NULL,
   image_box TEXT DEFAULT NULL,
   is_active SMALLINT NOT NULL DEFAULT 1,
@@ -80,9 +82,15 @@ CREATE TABLE requisitions (
   dept VARCHAR(255) NOT NULL,
   phone VARCHAR(50) DEFAULT '',
   purpose TEXT NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'COMPLETED', 'REJECTED')),
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED')),
   signature TEXT DEFAULT NULL,
   reject_reason TEXT DEFAULT NULL,
+  verified_by VARCHAR(150) DEFAULT NULL,
+  verified_at TIMESTAMP DEFAULT NULL,
+  verified_date VARCHAR(100) DEFAULT NULL,
+  approved_by VARCHAR(150) DEFAULT NULL,
+  approved_at TIMESTAMP DEFAULT NULL,
+  approved_date VARCHAR(100) DEFAULT NULL,
   completed_at TIMESTAMP DEFAULT NULL,
   completed_date VARCHAR(100) DEFAULT NULL,
   rejected_at TIMESTAMP DEFAULT NULL,
@@ -127,6 +135,7 @@ CREATE TABLE stock_transactions (
   reference_type VARCHAR(50) NOT NULL,
   reference_id VARCHAR(50) DEFAULT NULL,
   reason VARCHAR(255) DEFAULT NULL,
+  recorded_by VARCHAR(150) DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

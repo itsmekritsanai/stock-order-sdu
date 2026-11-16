@@ -3,17 +3,18 @@
 
 ---
 
-## 🎯 สรุปภาพรวมความคืบหน้า (Progress Summary)
+## สรุปภาพรวมความคืบหน้า (Progress Summary)
 - [x] **Phase 1: สถาปัตยกรรมหลักและการแยกระบบพอร์ทัล 100% (Completed)**
 - [x] **Phase 2: ยกระดับ UI/UX, Vector Icons, SweetAlert2 และระบบรายการคำขอ (Completed)**
 - [x] **Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support (Completed)**
 - [x] **Phase 4: การออกแบบฐานข้อมูล PostgreSQL 17 / Docker Compose & pgAdmin 4 (Completed)**
 - [x] **Phase 5: พัฒนา Python PostgreSQL REST API Server & เชื่อมต่อ Frontend พร้อม Offline Fallback (Completed)**
 - [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
+- [ ] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (In Progress)**
 
 ---
 
-## ✅ Phase 1: สถาปัตยกรรมหลักและการแยกระบบ (Completed)
+## Phase 1: สถาปัตยกรรมหลักและการแยกระบบ (Completed)
 - [x] **Task 1.1:** สกัดข้อมูลพัสดุจริง 34 รายการ (66 รูปภาพหน่วยย่อยและหน่วยกล่อง ตั้งชื่อไฟล์ตรงตามชื่อพัสดุภาษาไทย) จากไฟล์ Excel `data/ยอดสต๊อก ตค.xlsx`
 - [x] **Task 1.2:** โครงสร้างข้อมูลกลุ่มงาน 5 หน่วยงานภายใน สวท. และรายชื่อหัวหน้าหน่วยงาน 4 ท่าน จากไฟล์ `data/รายนามบุคลากร สวท.docx`
 - [x] **Task 1.3:** แยกโค้ดเป็น 2 พอร์ทัลอิสระ `index.html` (ผู้ขอเบิก) และ `staff.html` (เจ้าหน้าที่)
@@ -27,7 +28,7 @@
 
 ---
 
-## ✅ Phase 2: ยกระดับ UI/UX, SweetAlert2 และระบบรายการคำขอ (Completed)
+## Phase 2: ยกระดับ UI/UX, SweetAlert2 และระบบรายการคำขอ (Completed)
 - [x] **Task 2.1:** ปรับเปลี่ยนไอคอนทั้งหมดเป็น 100% Vector SVG Icons (Stroke-based) ปราศจากการใช้ Emoji ใน UI
 - [x] **Task 2.2:** ปรับระบบ Searchable User & Department Combobox ให้เลือกชื่อหัวหน้าหน่วยงาน/บุคลากรเพื่อเติมกลุ่มงาน สวท. ทั้ง 5 หน่วยงานให้อัตโนมัติ
 - [x] **Task 2.3:** นำเข้าไลบรารี **SweetAlert2** และดาวน์โหลดเป็น Local Asset (`assets/js/sweetalert2.all.min.js`) รองรับ Offline 100%
@@ -39,7 +40,7 @@
 
 ---
 
-## ✅ Phase 3: ความสมบูรณ์ของระบบ, Favicon, ลิขสิทธิ์ และ PWA Support (Completed)
+## Phase 3: ความสมบูรณ์ของระบบ, Favicon, ลิขสิทธิ์ และ PWA Support (Completed)
 - [x] **Task 3.1:** นำเข้าตราสัญลักษณ์ทางการ มสด. (`logo_sdu.png`) ย้ายจัดเก็บใน `assets/logo_sdu.png` และสร้างไอคอน **`favicon.ico`**, **`assets/favicon.svg`**, **`assets/icon-192.png`**, **`assets/icon-512.png`** เพื่อลบข้อผิดพลาด `404 Not Found: /favicon.ico` บนเซิร์ฟเวอร์
 - [x] **Task 3.2:** สร้างไฟล์ **`LICENSE`** (MIT License) อย่างเป็นทางการให้สอดคล้องกับ Badge ใน README
 - [x] **Task 3.3:** พัฒนาหน้า **`404.html`** แบบ Custom ธีม SDU Blue พร้อมปุ่มพากลับสู่หน้าหลัก (`index.html`) และพอร์ทัลกลาง (`portal.html`)
@@ -48,7 +49,7 @@
 
 ---
 
-## ✅ Phase 4: สถาปัตยกรรมฐานข้อมูล PostgreSQL 17, Docker Compose & pgAdmin 4 (Completed)
+## Phase 4: สถาปัตยกรรมฐานข้อมูล PostgreSQL 17, Docker Compose & pgAdmin 4 (Completed)
 - [x] **Task 4.1:** ออกแบบและสร้างไฟล์ **`backend/schema_postgres.sql`** สำหรับฐานข้อมูล **PostgreSQL 17** (`sdu_inventory`) ครอบคลุม 6 ตารางหลัก:
   - `departments`: ข้อมูลกลุ่มงาน/หน่วยงานภายใน สวท. 5 หน่วยงาน
   - `users`: ข้อมูลรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (หัวหน้าหน่วยงาน 4 ท่านจาก `รายนามบุคลากร สวท.docx`)
@@ -64,7 +65,7 @@
 
 ---
 
-## ✅ Phase 5: พัฒนา Python PostgreSQL REST API Server & ระบบจัดการบุคลากร/พัสดุ (Completed)
+## Phase 5: พัฒนา Python PostgreSQL REST API Server & ระบบจัดการบุคลากร/พัสดุ (Completed)
 - [x] **Task 5.1:** พัฒนาเซิร์ฟเวอร์ **`backend/server.py`** ให้บริการทั้ง Static Web Portals และ REST API (`/api`) ที่พอร์ต `8080` รองรับไดรเวอร์ `psycopg2`
 - [x] **Task 5.2:** ติดตั้งระบบ **ACID Transactions** และ **Row-Level Locking (`SELECT ... FOR UPDATE`)** เพื่อป้องกันปัญหา Concurrency / Race Condition 100%
 - [x] **Task 5.3:** รองรับการทำรายการด้วยคำสั่ง `INSERT ... RETURNING id` บน PostgreSQL สำหรับการบันทึก User และ Inventory Item ใหม่
@@ -73,7 +74,7 @@
 
 ---
 
-## ✅ Phase 6: การทดสอบอัตโนมัติ & CI/CD Workflow (Completed)
+## Phase 6: การทดสอบอัตโนมัติ & CI/CD Workflow (Completed)
 - [x] **Task 6.1:** สร้างชุดทดสอบอัตโนมัติ **`tests/test_stock_logic.py`** ด้วย **`pytest`** ครอบคลุม:
   - การคำนวณแปลง 2 หน่วยนับ $(\text{Boxes} \times \text{Ratio}) + \text{Pieces}$
   - สูตรคำนวณสต๊อกคงเหลือจริง $\text{Available} = \text{On-Hand} - \text{Reserved}$
@@ -82,3 +83,35 @@
   - ตรวจสอบฟังก์ชันตัวช่วยระบบ (Buddhist Era, Document Number Generator, Configuration)
 - [x] **Task 6.2:** สร้าง **GitHub Actions CI Workflow (`.github/workflows/ci.yml`)** เพื่อรันการตรวจสอบ Python Test (`pytest`) อัตโนมัติทุกครั้งที่มีการ Push โค้ด
 - [x] **Task 6.3:** ปรับปรุงเอกสารคู่มือทั้งหมดสู่เวอร์ชัน `3.0.0`
+
+---
+
+## Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (In Progress)
+- [ ] **Task 7.1:** อัปเดตสคีมาฐานข้อมูล PostgreSQL 17 (`backend/schema_postgres.sql` และ `backend/server.py` auto-migration):
+  - เพิ่มคอลัมน์ `monthly_limit INT DEFAULT 0` ในตาราง `inventory_items`
+  - เพิ่มคอลัมน์ `last_restocked_at TIMESTAMP DEFAULT NULL` ในตาราง `inventory_items`
+  - ขยายสถานะคำขอใน `requisitions.status` รองรับ `VERIFIED` (`PENDING`, `VERIFIED`, `APPROVED`, `COMPLETED`, `REJECTED`)
+  - เพิ่มคอลัมน์ `verified_by VARCHAR(150)`, `verified_at TIMESTAMP`, `approved_by VARCHAR(150)`, `approved_at TIMESTAMP` ในตาราง `requisitions`
+  - เพิ่มคอลัมน์ `recorded_by VARCHAR(150)` ในตาราง `stock_transactions`
+- [ ] **Task 7.2:** พัฒนาระบบจำกัดจำนวนการเบิกต่อเดือน (Monthly Quota Limit Enforcement):
+  - ตรวจสอบผลรวมยอดเบิกสะสมในงวดเดือนปัจจุบันก่อนสร้างคำขอใน `handle_create_requisition`
+  - ปฏิเสธคำขอหากผลรวมเกิน `monthly_limit`
+  - แสดงป้ายแจ้งเตือนโควตารายเดือนและยอดโควตาคงเหลือในแคตตาล็อกหน้าผู้เบิก (`index.html`)
+  - หน้าต่างปรับตั้งค่าโควตาประจำเดือนในหน้าคลังพัสดุเจ้าหน้าที่ (`staff.html`)
+- [ ] **Task 7.3:** ปรับปรุงวงจรคำขอเบิก 2 ขั้นตอน (Staff Screening -> Head Final Approval):
+  - เจ้าหน้าที่พัสดุกดปุ่ม "ผ่านการคัดกรอง (ส่งต่อหัวหน้า)" เปลี่ยนสถานะเป็น `VERIFIED`
+  - เพิ่มแท็บ "รอหัวหน้าอนุมัติ (`VERIFIED`)" ในหน้า `staff.html`
+  - หัวหน้าหน่วยงานกดยืนยันอนุมัติขั้นสุดท้าย เปลี่ยนสถานะเป็น `APPROVED` (ล็อกยอด `reserved_pieces`)
+  - อัปเดต REST API: `verifyRequisition`, `approveRequisition`, `rejectRequisition`
+- [ ] **Task 7.4:** ระบบประทับเวลาการรับเข้าพัสดุ (Incoming Stock Timestamp):
+  - บันทึก Timestamp ละเอียดระดับวินาทีใน `stock_transactions` เมื่อรับเข้าพัสดุ (`restockItem`)
+  - แสดงคอลัมน์ "วันเวลารับเข้าล่าสุด" ในตารางคลังพัสดุ และแสดงตารางประวัติการรับเข้าย้อนหลัง
+- [ ] **Task 7.5:** ระบบจัดเก็บข้อมูลระยะยาวและตัวกรองเรียกดูย้อนหลังรายเดือน (Monthly Historical Filter):
+  - เพิ่ม Dropdown กรองเดือน/ปี พ.ศ. ในหน้าคำขอเบิก (`renderStaffRequisitions`, `myRequisitionsModal`)
+  - เพิ่มตัวกรองงวดเดือนในตารางประวัติความเคลื่อนไหวสต๊อก
+- [ ] **Task 7.6:** แดชบอร์ดสรุปยอดสถิติและการวิเคราะห์การเบิกรายเดือน (Monthly Analytics Dashboard):
+  - สร้าง Endpoint `getMonthlyAnalytics` สรุปภาพรวมประจำเดือน
+  - แสดงอันดับพัสดุที่ถูกเบิกมากที่สุด (Top Requisitioned Items)
+  - แสดงอันดับพัสดุที่ถูกเบิกน้อยที่สุด / ไม่มีการเบิก (Least Requisitioned / Slow-Moving Items)
+- [ ] **Task 7.7:** อัปเดตแบบฟอร์มใบเบิกพัสดุทางการ (Official PDF) รองรับการลงนาม 3 ฝ่าย (ผู้เบิก, เจ้าหน้าที่ผู้คัดกรอง, หัวหน้าผู้อนุมัติ)
+- [ ] **Task 7.8:** อัปเดตชุดทดสอบอัตโนมัติ `tests/test_stock_logic.py` ครอบคลุม State Machine 2 ชั้น และ Quota Validation

@@ -365,3 +365,81 @@
   "id": 6
 }
 ```
+
+
+---
+
+### 3.16 `POST /api` (Action: `verifyRequisition`)
+เจ้าหน้าที่พัสดุคัดกรองรายการและส่งต่อให้หัวหน้าหน่วยงานอนุมัติ เปลี่ยนสถานะจาก `PENDING` เป็น `VERIFIED`
+
+* **Headers:** `Authorization: Bearer <staff_hmac_token>`
+* **Request Payload:**
+```json
+{
+  "action": "verifyRequisition",
+  "payload": {
+    "docNo": "REQ-256911-0001",
+    "verifiedBy": "เจ้าหน้าที่พัสดุ สวท.",
+    "items": [
+      {
+        "itemId": 1,
+        "approvedPieces": 250
+      }
+    ]
+  }
+}
+```
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "docNo": "REQ-256911-0001",
+  "statusNow": "VERIFIED",
+  "message": "ผ่านการคัดกรองเบื้องต้นและส่งต่อหัวหน้าเรียบร้อยแล้ว"
+}
+```
+
+---
+
+### 3.17 `GET /api?action=getMonthlyAnalytics`
+ดึงข้อมูลรายงานวิเคราะห์การเบิกจ่ายประจำเดือน ตัวชี้วัดภาพรวม และการจัดอันดับพัสดุที่ถูกเบิกมากที่สุด-น้อยที่สุด
+
+* **Query Parameters:**
+  * `action=getMonthlyAnalytics` (จำเป็น)
+  * `month=YYYY-MM` เช่น `2026-11` (ตัวเลือก: หากไม่ระบุจะดึงเดือนปัจจุบัน)
+
+* **Response Success (200 OK):**
+```json
+{
+  "status": "success",
+  "month": "2026-11",
+  "thaiMonth": "พฤศจิกายน 2569",
+  "metrics": {
+    "totalRequisitions": 15,
+    "completedRequisitions": 12,
+    "rejectedRequisitions": 1,
+    "totalPiecesIssued": 4500
+  },
+  "topItems": [
+    {
+      "rank": 1,
+      "itemId": 1,
+      "name": "กระดาษคำตอบ ปรนัย",
+      "totalPieces": 2000,
+      "displayQty": "4 กล่อง",
+      "percentage": 44.4
+    }
+  ],
+  "leastItems": [
+    {
+      "rank": 1,
+      "itemId": 34,
+      "name": "แบบฟอร์มคำร้องทั่วไป",
+      "totalPieces": 0,
+      "displayQty": "0 ชิ้น",
+      "percentage": 0.0
+    }
+  ]
+}
+```
