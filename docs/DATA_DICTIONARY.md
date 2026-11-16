@@ -57,6 +57,7 @@ erDiagram
         varchar name "ชื่อ-นามสกุล"
         varchar username UK "ชื่อผู้ใช้งาน"
         varchar password "รหัสผ่านแฮช PBKDF2"
+        varchar role "บทบาท RBAC (REQUESTER, STAFF, HEAD, ADMIN)"
         varchar position "ตำแหน่ง"
         varchar dept "หน่วยงานที่สังกัด"
         varchar phone "เบอร์โทรศัพท์"

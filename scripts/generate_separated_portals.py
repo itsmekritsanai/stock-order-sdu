@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.1.0"
+SYSTEM_VERSION = "3.2.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -601,7 +601,7 @@ requester_template = r'''<!DOCTYPE html>
     .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
     .pdf-footer-section { margin-top: auto; width: 100%; page-break-inside: avoid; break-inside: avoid; }
     .pdf-ack-note { font-size: 0.85rem; margin-bottom: 0.75rem; }
-    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: auto; text-align: center; font-size: 0.875rem; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-signatures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: auto; text-align: center; font-size: 0.825rem; page-break-inside: avoid; break-inside: avoid; }
     .pdf-footer-section .pdf-signatures { margin-top: 0.75rem; }
     .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
     .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
@@ -1349,28 +1349,39 @@ requester_template = r'''<!DOCTYPE html>
           </table>
 
           <div class="pdf-footer-section">
+            <div class="pdf-ack-note">
+              * ข้าพเจ้าได้รับมอบพัสดุตามรายการและจำนวนที่ระบุข้างต้นไว้ในสภาพเรียบร้อยครบถ้วนแล้ว
+            </div>
             <div class="pdf-signatures">
               <div class="sig-box">
                 <div class="sig-line"></div>
-                <div>ลงชื่อ.......................................................</div>
                 <div style="margin-top: 4px;">(<span id="pdfSigRequester">-</span>)</div>
-                <div style="font-size: 0.8rem; color: #555;">ผู้ขอเบิก</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้ขอเบิกพัสดุ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigReqDate">-</div>
               </div>
 
               <div class="sig-box">
+                <div id="pdfSigVerifierStamp" style="font-size: 0.75rem; color: #0369a1; font-weight: 700; margin-bottom: 6px;"></div>
                 <div class="sig-line"></div>
-                <div>ลงชื่อ.......................................................</div>
-                <div style="margin-top: 4px;">(.......................................................)</div>
-                <div style="font-size: 0.8rem; color: #555;">หัวหน้าหน่วยงาน / ผู้เห็นชอบ</div>
+                <div style="margin-top: 4px;">(<span id="pdfSigVerifier">เจ้าหน้าที่พัสดุ</span>)</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">เจ้าหน้าที่ผู้คัดกรอง</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigVerifiedDate">-</div>
               </div>
 
               <div class="sig-box">
+                <div id="pdfSigApproverStamp" style="font-size: 0.75rem; color: #15803d; font-weight: 700; margin-bottom: 6px;"></div>
                 <div class="sig-line"></div>
-                <div id="pdfSigOfficerBox">
-                  <div>ลงชื่อ.......................................................</div>
-                </div>
+                <div style="margin-top: 4px;">(<span id="pdfSigApprover">หัวหน้าหน่วยงาน</span>)</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">หัวหน้าผู้อนุมัติ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigApprovedDate">-</div>
+              </div>
+
+              <div class="sig-box">
+                <div id="pdfSigOfficerBox"></div>
+                <div class="sig-line"></div>
                 <div style="margin-top: 4px;">(<span id="pdfSigRecipient">-</span>)</div>
-                <div style="font-size: 0.8rem; color: #555;">ผู้รับพัสดุ / เจ้าหน้าที่จ่ายของ</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้รับมอบพัสดุ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigReceiveDate">-</div>
               </div>
             </div>
           </div>
@@ -1803,6 +1814,37 @@ requester_template = r'''<!DOCTYPE html>
       return `${pieces} ${safePiece}`;
     }
 
+    function getPersonalMonthlyQuotaInfo(item) {
+      const limit = Number(item.monthly_limit || 0);
+      if (limit <= 0) return { limit: 0, used: 0, remaining: Infinity };
+      const curDate = new Date();
+      const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+      const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+      const reqs = getReqsDB();
+      let used = 0;
+      reqs.forEach(r => {
+        if (r.status !== 'REJECTED') {
+          const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+          if (isThisMonth && Array.isArray(r.items)) {
+            r.items.forEach(ri => {
+              if (Number(ri.itemId) === Number(item.id)) {
+                used += Number(ri.totalPieces || 0);
+              }
+            });
+          }
+        }
+      });
+      if (typeof cart !== 'undefined' && Array.isArray(cart)) {
+        const inCart = cart.find(c => Number(c.itemId) === Number(item.id));
+        if (inCart) used += Number(inCart.totalPieces || 0);
+      }
+      return {
+        limit,
+        used,
+        remaining: Math.max(0, limit - used)
+      };
+    }
+
     function renderCatalog() {
       const items = getItemsDB();
       const grid = document.getElementById('catalogGrid');
@@ -1862,11 +1904,20 @@ requester_template = r'''<!DOCTYPE html>
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
-              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `
-                <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                  ${vIcons.shield} จำกัดการเบิก: ${Number(item.monthly_limit).toLocaleString()} ${safePieceName}/เดือน
-                </div>
-              ` : ''}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? (() => {
+                const qInfo = getPersonalMonthlyQuotaInfo(item);
+                const isQuotaEmpty = qInfo.remaining <= 0;
+                return `
+                  <div style="font-size: 0.75rem; color: ${isQuotaEmpty ? '#991b1b' : '#b45309'}; background: ${isQuotaEmpty ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isQuotaEmpty ? '#fecaca' : '#fde68a'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                      ${vIcons.shield} จำกัดการเบิก: ${qInfo.limit.toLocaleString()} ${safePieceName}/เดือน
+                    </span>
+                    <span style="font-size: 0.72rem; color: ${isQuotaEmpty ? '#dc2626' : '#92400e'};">
+                      โควตาคงเหลือของท่านในเดือนนี้: <strong>${qInfo.remaining.toLocaleString()} ${safePieceName}</strong> (เบิกแล้ว ${qInfo.used.toLocaleString()})
+                    </span>
+                  </div>
+                `;
+              })() : ''}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
@@ -2018,6 +2069,7 @@ requester_template = r'''<!DOCTYPE html>
 
     function updateCartBadge() {
       document.getElementById('cartCount').innerText = cart.length;
+      renderCatalog();
     }
 
     function toggleCartDrawer(forceOpen) {
@@ -2496,6 +2548,25 @@ requester_template = r'''<!DOCTYPE html>
       document.getElementById('pdfSigRequester').innerText = req.requester;
       document.getElementById('pdfSigRecipient').innerText = req.requester;
 
+      const reqDateEl = document.getElementById('pdfSigReqDate');
+      if (reqDateEl) reqDateEl.innerText = req.date || '-';
+
+      const verifierEl = document.getElementById('pdfSigVerifier');
+      const verifiedDateEl = document.getElementById('pdfSigVerifiedDate');
+      const verifierStampEl = document.getElementById('pdfSigVerifierStamp');
+      const isVerifiedOrLater = ['VERIFIED', 'APPROVED', 'COMPLETED'].includes(req.status);
+      if (verifierEl) verifierEl.innerText = req.verified_by || (isVerifiedOrLater ? 'เจ้าหน้าที่พัสดุ สวท.' : '.........................................');
+      if (verifiedDateEl) verifiedDateEl.innerText = req.verified_date || req.verified_at || (isVerifiedOrLater ? (req.date || '-') : 'วันที่ ....../....../......');
+      if (verifierStampEl) verifierStampEl.innerText = isVerifiedOrLater ? '[ ผ่านการคัดกรอง ]' : '';
+
+      const approverEl = document.getElementById('pdfSigApprover');
+      const approvedDateEl = document.getElementById('pdfSigApprovedDate');
+      const approverStampEl = document.getElementById('pdfSigApproverStamp');
+      const isApprovedOrCompleted = ['APPROVED', 'COMPLETED'].includes(req.status);
+      if (approverEl) approverEl.innerText = req.approved_by || (isApprovedOrCompleted ? 'หัวหน้าสำนักงานผู้อำนวยการ สวท.' : '.........................................');
+      if (approvedDateEl) approvedDateEl.innerText = req.approved_date || req.approved_at || (isApprovedOrCompleted ? (req.completed_date || req.date || '-') : 'วันที่ ....../....../......');
+      if (approverStampEl) approverStampEl.innerText = isApprovedOrCompleted ? '[ อนุมัติขั้นสุดท้าย ]' : '';
+
       const tbody = document.getElementById('pdfItemsTbody');
       tbody.innerHTML = (req.items || []).map((it, idx) => {
         let reqQty = it.qtyBoxes > 0 && it.qtyPieces > 0 ?
@@ -2504,8 +2575,9 @@ requester_template = r'''<!DOCTYPE html>
         
         let approvedQty = it.approvedPieces !== undefined ? `${it.approvedPieces.toLocaleString()} ${it.unitPiece}` : (req.status === 'COMPLETED' ? reqQty : '-');
 
-        let noteText = 'รออนุมัติ';
-        if (req.status === 'APPROVED') noteText = 'อนุมัติแล้ว';
+        let noteText = 'รอคัดกรอง';
+        if (req.status === 'VERIFIED') noteText = 'ผ่านการคัดกรอง';
+        else if (req.status === 'APPROVED') noteText = 'อนุมัติแล้ว';
         else if (req.status === 'COMPLETED') noteText = 'จ่ายพัสดุครบถ้วน';
         else if (req.status === 'REJECTED') noteText = 'ไม่อนุมัติ';
 
@@ -2521,11 +2593,17 @@ requester_template = r'''<!DOCTYPE html>
       }).join('');
 
       const sigBox = document.getElementById('pdfSigOfficerBox');
+      const recDateEl = document.getElementById('pdfSigReceiveDate');
       const payDate = req.completed_date || req.completedDate || (req.status === 'COMPLETED' ? req.date : '');
-      if (req.signature) {
-        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">${payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
+      if (req.signature && req.signature.startsWith('data:image')) {
+        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
+      } else if (req.status === 'COMPLETED') {
+        sigBox.innerHTML = `<div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-bottom: 6px;">[ รับมอบพัสดุแล้ว ]</div>`;
       } else {
-        sigBox.innerHTML = `<div>ลงชื่อ.......................................................</div>${req.status === 'COMPLETED' && payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
+        sigBox.innerHTML = '';
+      }
+      if (recDateEl) {
+        recDateEl.innerText = (req.status === 'COMPLETED' && payDate) ? `วันที่รับของ: ${payDate}` : 'วันที่ ....../....../......';
       }
 
       const modal = document.getElementById('requisitionPdfModal');
@@ -2663,11 +2741,11 @@ requester_template = r'''<!DOCTYPE html>
             }
             .pdf-signatures {
               display: grid;
-              grid-template-columns: 1fr 1fr 1fr;
-              gap: 1rem;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 0.75rem;
               margin-top: auto;
               text-align: center;
-              font-size: 0.85rem;
+              font-size: 0.82rem;
               page-break-inside: avoid;
               break-inside: avoid;
             }
@@ -3224,7 +3302,7 @@ staff_template = r'''<!DOCTYPE html>
     .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
     .pdf-footer-section { margin-top: auto; width: 100%; page-break-inside: avoid; break-inside: avoid; }
     .pdf-ack-note { font-size: 0.85rem; margin-bottom: 0.75rem; }
-    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: auto; text-align: center; font-size: 0.875rem; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-signatures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: auto; text-align: center; font-size: 0.825rem; page-break-inside: avoid; break-inside: avoid; }
     .pdf-footer-section .pdf-signatures { margin-top: 0.75rem; }
     .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
     .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
@@ -3387,7 +3465,14 @@ staff_template = r'''<!DOCTYPE html>
       </button>
     </form>
 
-    <div style="margin-top: 1.5rem; text-align: center; border-top: 1px solid var(--neutral-200); padding-top: 1rem; display: flex; justify-content: center; gap: 0.75rem; align-items: center;">
+    <div style="margin-top: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.775rem; color: #475569; line-height: 1.5;">
+      <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 4px;">สิทธิ์การเข้าใช้งานตามบทบาท (RBAC Roles):</div>
+      <div>• <strong>staff</strong> : เจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify / จัดการสต๊อก)</div>
+      <div>• <strong>head</strong> : หัวหน้าหน่วยงาน (อนุมัติขั้นสุดท้าย Approve)</div>
+      <div>• <strong>admin_staff</strong> : ผู้ดูแลระบบสูงสุด (เข้าถึงและสลับมุมมองได้ทุกสิทธิ์)</div>
+    </div>
+
+    <div style="margin-top: 1.25rem; text-align: center; border-top: 1px solid var(--neutral-200); padding-top: 1rem; display: flex; justify-content: center; gap: 0.75rem; align-items: center;">
       <a href="portal.html" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; font-weight: 500;">
         ศูนย์กลางพอร์ทัล
       </a>
@@ -3427,7 +3512,18 @@ staff_template = r'''<!DOCTYPE html>
           </button>
         </nav>
 
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <div id="staffRoleBadge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.775rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            <span id="staffRoleLabelText">ผู้ดูแลระบบสูงสุด (Admin)</span>
+          </div>
+          <div id="staffRoleSwitcherWrap" style="display: inline-flex; align-items: center; gap: 4px;">
+            <select id="staffRoleSelect" class="form-control" style="width: auto; font-size: 0.775rem; padding: 0.32rem 0.6rem; height: auto; border-color: #cbd5e1;" onchange="switchActiveRole(this.value)" title="สลับมุมมองสิทธิ์การใช้งาน (RBAC View Switcher)">
+              <option value="ADMIN">มุมมอง: ผู้ดูแลระบบ (All)</option>
+              <option value="STAFF">มุมมอง: เจ้าหน้าที่พัสดุ (Staff)</option>
+              <option value="HEAD">มุมมอง: หัวหน้าผู้อนุมัติ (Head)</option>
+            </select>
+          </div>
           <a href="portal.html" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> ศูนย์กลางพอร์ทัล
           </a>
@@ -3444,10 +3540,20 @@ staff_template = r'''<!DOCTYPE html>
     <main>
       <!-- TAB 1: REQUISITION MANAGEMENT -->
       <section id="view-requisitions" class="view-content active">
+        <div id="reqLowStockBanner" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #991b1b; font-size: 0.85rem;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="color: #dc2626; flex-shrink: 0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+            <span id="reqLowStockBannerText">แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert): มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำ</span>
+          </div>
+          <button class="btn btn-outline" style="font-size: 0.775rem; padding: 0.35rem 0.75rem; background: white; color: #b91c1c; border-color: #fca5a5;" onclick="jumpToLowStockInventory()">
+            ตรวจสอบรายการสต๊อกต่ำ →
+          </button>
+        </div>
+
         <div class="dashboard-header" style="flex-wrap: wrap; gap: 0.75rem;">
           <div>
             <h2>จัดการและอนุมัติคำขอเบิกพัสดุ (2-Tier Approval)</h2>
-            <p style="color: var(--neutral-600); font-size: 0.85rem;">เจ้าหน้าที่คัดกรองคำขอ (Screening) และหัวหน้าอนุมัติขั้นสุดท้าย (Final Approval) ก่อนจ่ายพัสดุ</p>
+            <p style="color: var(--neutral-600); font-size: 0.85rem;" id="reqRoleHintSubtitle">เจ้าหน้าที่คัดกรองคำขอ (Screening) และหัวหน้าอนุมัติขั้นสุดท้าย (Final Approval) ก่อนจ่ายพัสดุ</p>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
             <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
@@ -3491,8 +3597,8 @@ staff_template = r'''<!DOCTYPE html>
             <div class="metric-header"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> รายการพัสดุทั้งหมดในระบบ</div>
             <span class="metric-val" id="metricTotalItems">34 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small></span>
           </div>
-          <div class="metric-card">
-            <div class="metric-header" style="color: var(--danger);"><svg class="svg-icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> พัสดุต่ำกว่าเกณฑ์ขั้นต่ำ (Reorder Alert)</div>
+          <div class="metric-card" onclick="toggleLowStockFilter()" style="cursor: pointer;" title="คลิกเพื่อกรองเฉพาะรายการพัสดุที่ต่ำกว่าเกณฑ์ขั้นต่ำ">
+            <div class="metric-header" style="color: var(--danger);"><svg class="svg-icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg> พัสดุต่ำกว่าเกณฑ์ขั้นต่ำ (คลิกกรอง)</div>
             <span class="metric-val" style="color: var(--danger);" id="metricLowStock">12 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small></span>
           </div>
           <div class="metric-card">
@@ -3501,14 +3607,27 @@ staff_template = r'''<!DOCTYPE html>
           </div>
           <div class="metric-card">
             <div class="metric-header" style="color: var(--accent);"><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> รอบบัญชีปัจจุบัน</div>
-            <span class="metric-val" style="color: var(--accent);">ต.ค. 2569</span>
+            <span class="metric-val" style="color: var(--accent);">พ.ย. 2569</span>
           </div>
+        </div>
+
+        <div id="lowStockAlertBanner" style="display: none; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 0.85rem 1.1rem; margin-bottom: 1.25rem; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #be123c; font-size: 0.9rem;">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+              <span id="lowStockBannerTitle">แจ้งเตือนจุดสั่งซื้อใหม่ (Low Stock Reorder Point Alert)</span>
+            </div>
+            <div id="lowStockBannerItems" style="font-size: 0.8rem; color: #881337;"></div>
+          </div>
+          <button type="button" id="btnFilterLowStock" class="btn btn-outline" style="background: white; color: #be123c; border-color: #fda4af; font-size: 0.8rem;" onclick="toggleLowStockFilter()">
+            แสดงเฉพาะรายการต่ำกว่าเกณฑ์
+          </button>
         </div>
 
         <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง (On-Hand vs Available)</h3>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div id="inventoryActionButtonsWrap" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" onclick="openStockAdjustModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> ปรับยอดสต๊อก (Adjustment)
               </button>
@@ -3534,7 +3653,7 @@ staff_template = r'''<!DOCTYPE html>
                   <th>โควตา/เดือน</th>
                   <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
                   <th>รับเข้าล่าสุด</th>
-                  <th style="width: 140px; text-align: right;">จัดการ</th>
+                  <th style="width: 210px; text-align: right;">จัดการ / ประวัติ</th>
                 </tr>
               </thead>
               <tbody id="inventoryTableBody">
@@ -3615,7 +3734,7 @@ staff_template = r'''<!DOCTYPE html>
             <h2>สรุปยอดและสถิติการเบิกจ่ายรายเดือน (Monthly Analytics)</h2>
             <p style="color: var(--neutral-600); font-size: 0.85rem;">รายงานภาพรวมการเบิกจ่ายพัสดุ สถิติรายการพัสดุที่เบิกมาก-น้อย และการสืบค้นข้อมูลย้อนหลัง</p>
           </div>
-          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
             <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
               <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> เลือกเดือนที่ต้องการดูรายงาน:
             </label>
@@ -3625,6 +3744,12 @@ staff_template = r'''<!DOCTYPE html>
               <option value="2026-09">กันยายน 2569</option>
               <option value="ALL">ภาพรวมข้อมูลย้อนหลังทั้งหมด</option>
             </select>
+            <button type="button" class="btn btn-outline" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="exportMonthlyAnalyticsCsv()">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> ส่งออก Excel / CSV
+            </button>
+            <button type="button" class="btn btn-primary" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="printMonthlyAnalyticsPdf()">
+              <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> พิมพ์รายงานสรุปผู้บริหาร (PDF)
+            </button>
           </div>
         </div>
 
@@ -3757,29 +3882,37 @@ staff_template = r'''<!DOCTYPE html>
                 * ข้าพเจ้าได้รับมอบพัสดุตามรายการและจำนวนที่ระบุข้างต้นไว้ในสภาพเรียบร้อยครบถ้วนแล้ว
               </div>
 
-              <!-- Signatures Section -->
+              <!-- Signatures Section (4-Party Institutional Form) -->
               <div class="pdf-signatures">
                 <div class="sig-box">
                   <div class="sig-line"></div>
                   <div>( <span id="pdfSignRequester">นางสาววาสนา จันทร์จ่าย</span> )</div>
-                  <div style="font-size: 0.75rem; color: #666;">ผู้ขอเบิกพัสดุ</div>
-                  <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569</div>
+                  <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้ขอเบิกพัสดุ</div>
+                  <div style="font-size: 0.72rem; color: #666;" id="pdfSignReqDate">21 ต.ค. 2569</div>
                 </div>
 
                 <div class="sig-box">
-                  <div style="font-size: 0.8rem; color: #0284c7; font-weight: bold; margin-bottom: 8px;">[ ประทับตราอนุมัติ ]</div>
+                  <div id="pdfSignVerifierStamp" style="font-size: 0.75rem; color: #0369a1; font-weight: bold; margin-bottom: 6px;">[ ผ่านการคัดกรอง ]</div>
                   <div class="sig-line"></div>
-                  <div>( นางสมศรี พัสดุดี )</div>
-                  <div style="font-size: 0.75rem; color: #666;">เจ้าหน้าที่พัสดุผู้จ่ายของ</div>
-                  <div style="font-size: 0.75rem; color: #666;">21 ต.ค. 2569 11:15 น.</div>
+                  <div>( <span id="pdfSignVerifier">เจ้าหน้าที่พัสดุ สวท.</span> )</div>
+                  <div style="font-size: 0.78rem; color: #444; font-weight: 600;">เจ้าหน้าที่ผู้คัดกรอง</div>
+                  <div style="font-size: 0.72rem; color: #666;" id="pdfSignVerifiedDate">-</div>
                 </div>
 
                 <div class="sig-box">
-                  <div style="height: 50px;"></div>
+                  <div id="pdfSignApproverStamp" style="font-size: 0.75rem; color: #15803d; font-weight: bold; margin-bottom: 6px;">[ อนุมัติขั้นสุดท้าย ]</div>
+                  <div class="sig-line"></div>
+                  <div>( <span id="pdfSignApprover">หัวหน้าสำนักงานผู้อำนวยการ สวท.</span> )</div>
+                  <div style="font-size: 0.78rem; color: #444; font-weight: 600;">หัวหน้าผู้อนุมัติ</div>
+                  <div style="font-size: 0.72rem; color: #666;" id="pdfSignApprovedDate">-</div>
+                </div>
+
+                <div class="sig-box">
+                  <div id="pdfReceiverSigArea"></div>
                   <div class="sig-line"></div>
                   <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
-                  <div style="font-size: 0.75rem; color: #666;">ผู้รับพัสดุ</div>
-                  <div style="font-size: 0.75rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
+                  <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้รับมอบพัสดุ</div>
+                  <div style="font-size: 0.72rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
                 </div>
               </div>
             </div>
@@ -3982,16 +4115,156 @@ staff_template = r'''<!DOCTYPE html>
       }
     }
 
+    const DB_TX_KEY = 'sdu_stock_tx_v3';
+    const defaultTransactions = [
+      { id: 4, itemId: 3, itemName: 'กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)', unitPiece: 'ใบ', transactionType: 'OUT', changePieces: -1000, balanceAfter: 32000, referenceType: 'REQUISITION', referenceId: 'REQ-256910-0003', reason: 'เบิกจ่ายสำเร็จ (คณะวิทยาศาสตร์และเทคโนโลยี)', recordedBy: 'เจ้าหน้าที่พัสดุ สวท.', formattedDate: '5 ต.ค. 2569 14:30 น.' },
+      { id: 3, itemId: 3, itemName: 'กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)', unitPiece: 'ใบ', transactionType: 'OUT', changePieces: -1000, balanceAfter: 33000, referenceType: 'REQUISITION', referenceId: 'REQ-256910-0002', reason: 'เบิกจ่ายสำเร็จ (คณะพยาบาลศาสตร์)', recordedBy: 'เจ้าหน้าที่พัสดุ สวท.', formattedDate: '2 ต.ค. 2569 11:00 น.' },
+      { id: 2, itemId: 3, itemName: 'กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)', unitPiece: 'ใบ', transactionType: 'OUT', changePieces: -500, balanceAfter: 34000, referenceType: 'REQUISITION', referenceId: 'REQ-256910-0001', reason: 'เบิกจ่ายสำเร็จ (โรงเรียนการเรือน)', recordedBy: 'เจ้าหน้าที่พัสดุ สวท.', formattedDate: '1 ต.ค. 2569 10:00 น.' },
+      { id: 1, itemId: 7, itemName: 'กระดาษลายเส้น (ห่อละ 500 แผ่น)', unitPiece: 'แผ่น', transactionType: 'OUT', changePieces: -500, balanceAfter: 23000, referenceType: 'REQUISITION', referenceId: 'REQ-256910-0001', reason: 'เบิกจ่ายสำเร็จ (โรงเรียนการเรือน)', recordedBy: 'เจ้าหน้าที่พัสดุ สวท.', formattedDate: '1 ต.ค. 2569 10:00 น.' }
+    ];
+
+    function getTransactionsDB(itemId = null) {
+      const raw = localStorage.getItem(DB_TX_KEY);
+      let list = defaultTransactions;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+        } catch (e) {}
+      } else {
+        localStorage.setItem(DB_TX_KEY, JSON.stringify(defaultTransactions));
+      }
+      if (itemId !== null && itemId !== undefined) {
+        return list.filter(t => Number(t.itemId) === Number(itemId));
+      }
+      return list;
+    }
+
+    function recordLocalTransaction(tx) {
+      const list = getTransactionsDB();
+      const nextId = list.length > 0 ? Math.max(...list.map(t => Number(t.id) || 0)) + 1 : 1;
+      const entry = {
+        id: nextId,
+        itemId: Number(tx.itemId),
+        itemName: tx.itemName || '',
+        unitPiece: tx.unitPiece || 'ชิ้น',
+        transactionType: tx.transactionType || 'IN',
+        changePieces: Number(tx.changePieces || 0),
+        balanceAfter: Number(tx.balanceAfter || 0),
+        referenceType: tx.referenceType || '',
+        referenceId: tx.referenceId || '',
+        reason: tx.reason || '',
+        recordedBy: tx.recordedBy || 'เจ้าหน้าที่พัสดุ สวท.',
+        formattedDate: tx.formattedDate || formatThaiDatetime(new Date())
+      };
+      list.unshift(entry);
+      localStorage.setItem(DB_TX_KEY, JSON.stringify(list));
+    }
+
+    function resolveRoleFromUsername(username) {
+      const u = String(username || '').trim().toLowerCase();
+      if (['admin_staff', 'admin'].includes(u)) return 'ADMIN';
+      if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(u)) return 'HEAD';
+      return 'STAFF';
+    }
+
+    function getBaseStaffRole() {
+      return (sessionStorage.getItem('staff_role') || 'ADMIN').toUpperCase();
+    }
+
+    function getActiveStaffRole() {
+      return (sessionStorage.getItem('staff_active_role') || sessionStorage.getItem('staff_role') || 'ADMIN').toUpperCase();
+    }
+
+    function getLoggedInStaff() {
+      const role = getActiveStaffRole();
+      const username = sessionStorage.getItem('staff_username') || (role === 'HEAD' ? 'head_approver' : role === 'STAFF' ? 'staff' : 'admin_staff');
+      let defaultName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+      if (role === 'STAFF') defaultName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+      if (role === 'HEAD') defaultName = 'หัวหน้าสำนักงานผู้อำนวยการ สวท. (ผู้อนุมัติ)';
+      const name = sessionStorage.getItem('staff_name') || defaultName;
+      return { username, name: role !== getBaseStaffRole() ? defaultName : name, role };
+    }
+
+    function updateRoleUI() {
+      const baseRole = getBaseStaffRole();
+      const activeRole = getActiveStaffRole();
+      const badgeEl = document.getElementById('staffRoleBadge');
+      const labelEl = document.getElementById('staffRoleLabelText');
+      const switcherWrap = document.getElementById('staffRoleSwitcherWrap');
+      const selectEl = document.getElementById('staffRoleSelect');
+      const subtitleEl = document.getElementById('reqRoleHintSubtitle');
+      const invButtonsWrap = document.getElementById('inventoryActionButtonsWrap');
+
+      if (selectEl) selectEl.value = activeRole;
+      if (switcherWrap) {
+        switcherWrap.style.display = (baseRole === 'ADMIN') ? 'inline-flex' : 'none';
+      }
+
+      if (badgeEl && labelEl) {
+        if (activeRole === 'HEAD') {
+          badgeEl.style.background = '#f5f3ff';
+          badgeEl.style.color = '#6d28d9';
+          badgeEl.style.borderColor = '#ddd6fe';
+          labelEl.innerText = 'สิทธิ์: หัวหน้าผู้อนุมัติ (HEAD)';
+        } else if (activeRole === 'STAFF') {
+          badgeEl.style.background = '#ecfdf5';
+          badgeEl.style.color = '#047857';
+          badgeEl.style.borderColor = '#a7f3d0';
+          labelEl.innerText = 'สิทธิ์: เจ้าหน้าที่พัสดุ (STAFF)';
+        } else {
+          badgeEl.style.background = '#eff6ff';
+          badgeEl.style.color = '#1e40af';
+          badgeEl.style.borderColor = '#bfdbfe';
+          labelEl.innerText = 'สิทธิ์: ผู้ดูแลระบบสูงสุด (ADMIN)';
+        }
+      }
+
+      if (subtitleEl) {
+        if (activeRole === 'STAFF') {
+          subtitleEl.innerText = 'โหมดเจ้าหน้าที่พัสดุ (STAFF): ตรวจสอบความถูกต้องของคำขอ (Verify), รับของเข้าคลัง, และบันทึกจ่ายพัสดุ';
+        } else if (activeRole === 'HEAD') {
+          subtitleEl.innerText = 'โหมดหัวหน้าหน่วยงาน (HEAD): พิจารณาอนุมัติคำขอขั้นสุดท้าย (Approve) สำหรับรายการที่ผ่านการคัดกรองแล้ว';
+        } else {
+          subtitleEl.innerText = 'โหมดผู้ดูแลระบบ (ADMIN): สามารถดำเนินการคัดกรอง (Verify), อนุมัติขั้นสุดท้าย (Approve), และบริหารจัดการระบบทั้งหมด';
+        }
+      }
+
+      if (invButtonsWrap) {
+        invButtonsWrap.style.display = (activeRole === 'HEAD') ? 'none' : 'flex';
+      }
+    }
+
+    function switchActiveRole(newRole) {
+      const r = String(newRole || 'ADMIN').toUpperCase();
+      sessionStorage.setItem('staff_active_role', r);
+      updateRoleUI();
+      if (r === 'HEAD') {
+        const tabs = document.querySelectorAll('.status-tab');
+        if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+        else renderStaffRequisitions(currentStaffStatus);
+      } else if (r === 'STAFF') {
+        const tabs = document.querySelectorAll('.status-tab');
+        if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
+        else renderStaffRequisitions(currentStaffStatus);
+      } else {
+        renderStaffRequisitions(currentStaffStatus);
+      }
+      renderInventoryTable();
+    }
+
     async function postToMySQLAPI(action, payload) {
       if (!MYSQL_API_URL || !navigator.onLine) return null;
       try {
         const token = sessionStorage.getItem('staff_token') || '';
-        const headers = { 'Content-Type': 'application/json' };
+        const activeRole = getActiveStaffRole();
+        const headers = { 'Content-Type': 'application/json', 'X-Staff-Role': activeRole };
         if (token) headers['Authorization'] = 'Bearer ' + token;
+        const enrichedPayload = (payload && typeof payload === 'object') ? { ...payload, caller_role: activeRole } : payload;
         const res = await fetch(MYSQL_API_URL, {
           method: 'POST',
           headers: headers,
-          body: JSON.stringify({ action, payload, staff_token: token })
+          body: JSON.stringify({ action, payload: enrichedPayload, staff_token: token })
         });
         if (res.status === 401) {
           sessionStorage.removeItem('staff_auth');
@@ -4022,6 +4295,7 @@ staff_template = r'''<!DOCTYPE html>
       } else {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('staffPortalApp').style.display = 'block';
+        updateRoleUI();
         loadStaffDashboard();
       }
     }
@@ -4041,9 +4315,18 @@ staff_template = r'''<!DOCTYPE html>
         });
         const data = await res.json();
         if (data && data.status === 'success') {
+          const role = (data.role || resolveRoleFromUsername(username)).toUpperCase();
           sessionStorage.setItem('staff_auth', 'true');
           sessionStorage.setItem('staff_token', data.token || '');
+          sessionStorage.setItem('staff_username', data.username || username);
+          sessionStorage.setItem('staff_name', data.name || username);
+          sessionStorage.setItem('staff_role', role);
+          sessionStorage.setItem('staff_active_role', role);
           checkStaffAuth();
+          if (role === 'HEAD') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+          }
         } else {
           Swal.fire({
             icon: 'error',
@@ -4053,7 +4336,11 @@ staff_template = r'''<!DOCTYPE html>
         }
       } catch (err) {
         console.warn('Login request failed or offline fallback:', err);
+        const role = resolveRoleFromUsername(username);
         sessionStorage.setItem('staff_auth', 'true');
+        sessionStorage.setItem('staff_username', username || 'admin_staff');
+        sessionStorage.setItem('staff_role', role);
+        sessionStorage.setItem('staff_active_role', role);
         checkStaffAuth();
       }
     }
@@ -4072,6 +4359,10 @@ staff_template = r'''<!DOCTYPE html>
         if (result.isConfirmed) {
           sessionStorage.removeItem('staff_auth');
           sessionStorage.removeItem('staff_token');
+          sessionStorage.removeItem('staff_username');
+          sessionStorage.removeItem('staff_name');
+          sessionStorage.removeItem('staff_role');
+          sessionStorage.removeItem('staff_active_role');
           checkStaffAuth();
         }
       });
@@ -4249,47 +4540,81 @@ staff_template = r'''<!DOCTYPE html>
             </table>
 
             <div class="req-actions">
-              ${req.status === 'PENDING' ? `
-                <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
-                  ${vIcons.x} ปฏิเสธคำขอ
-                </button>
-                <button class="btn btn-primary" onclick="verifyRequisition('${req.id}')">
-                  ${vIcons.check} คัดกรองและส่งต่อให้หัวหน้าอนุมัติ
-                </button>
-              ` : ''}
-
-              ${req.status === 'VERIFIED' ? `
-                <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
-                  ${vIcons.x} ปฏิเสธคำขอ
-                </button>
-                <button class="btn btn-primary" style="background: #1e3a8a;" onclick="approveRequisition('${req.id}')">
-                  ${vIcons.shield} หัวหน้าอนุมัติขั้นสุดท้าย (กันสต๊อก)
-                </button>
-              ` : ''}
-
-              ${req.status === 'APPROVED' ? `
-                <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
-                  ${vIcons.x} ยกเลิก / คืนสต๊อกจอง
-                </button>
-                <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
-                  ${vIcons.eye} ดูตัวอย่างใบเบิก PDF
-                </button>
-                <button class="btn btn-success" onclick="confirmCompleteRequisition('${req.id}')">
-                  ${vIcons.check} จ่ายพัสดุเรียบร้อย
-                </button>
-              ` : ''}
-
-              ${req.status === 'COMPLETED' ? `
-                <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
-                  ${vIcons.printer} พิมพ์ใบเบิกทางการ (PDF)
-                </button>
-              ` : ''}
-
-              ${req.status === 'REJECTED' ? `
-                <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
-                  ${vIcons.eye} ดูใบคำขอ PDF
-                </button>
-              ` : ''}
+              ${(() => {
+                const activeRole = getActiveStaffRole();
+                if (req.status === 'PENDING') {
+                  if (activeRole === 'HEAD') {
+                    return `
+                      <span style="font-size: 0.825rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        ${vIcons.clock} รอเจ้าหน้าที่พัสดุ (STAFF) ตรวจสอบและคัดกรองเบื้องต้นก่อนเสนอหัวหน้าอนุมัติ
+                      </span>
+                    `;
+                  }
+                  return `
+                    <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
+                      ${vIcons.x} ปฏิเสธคำขอ
+                    </button>
+                    <button class="btn btn-primary" onclick="verifyRequisition('${req.id}')">
+                      ${vIcons.check} คัดกรองและส่งต่อให้หัวหน้าอนุมัติ
+                    </button>
+                  `;
+                }
+                if (req.status === 'VERIFIED') {
+                  if (activeRole === 'STAFF') {
+                    return `
+                      <span style="font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        ${vIcons.shield} ผ่านการคัดกรองแล้ว — รอหัวหน้าหน่วยงาน (HEAD) กดอนุมัติขั้นสุดท้าย
+                      </span>
+                    `;
+                  }
+                  return `
+                    <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
+                      ${vIcons.x} ปฏิเสธคำขอ
+                    </button>
+                    <button class="btn btn-primary" style="background: #1e3a8a;" onclick="approveRequisition('${req.id}')">
+                      ${vIcons.shield} หัวหน้าอนุมัติขั้นสุดท้าย (กันสต๊อก)
+                    </button>
+                  `;
+                }
+                if (req.status === 'APPROVED') {
+                  if (activeRole === 'HEAD') {
+                    return `
+                      <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
+                        ${vIcons.eye} ดูตัวอย่างใบเบิก PDF
+                      </button>
+                      <span style="font-size: 0.825rem; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                        ${vIcons.check} อนุมัติแล้ว — รอเจ้าหน้าที่พัสดุ (STAFF) ส่งมอบพัสดุ
+                      </span>
+                    `;
+                  }
+                  return `
+                    <button class="btn btn-outline" style="color: var(--danger);" onclick="rejectRequisition('${req.id}')">
+                      ${vIcons.x} ยกเลิก / คืนสต๊อกจอง
+                    </button>
+                    <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
+                      ${vIcons.eye} ดูตัวอย่างใบเบิก PDF
+                    </button>
+                    <button class="btn btn-success" onclick="confirmCompleteRequisition('${req.id}')">
+                      ${vIcons.check} จ่ายพัสดุเรียบร้อย
+                    </button>
+                  `;
+                }
+                if (req.status === 'COMPLETED') {
+                  return `
+                    <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
+                      ${vIcons.printer} พิมพ์ใบเบิกทางการ (PDF)
+                    </button>
+                  `;
+                }
+                if (req.status === 'REJECTED') {
+                  return `
+                    <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
+                      ${vIcons.eye} ดูใบคำขอ PDF
+                    </button>
+                  `;
+                }
+                return '';
+              })()}
             </div>
           </div>
         `;
@@ -4297,6 +4622,16 @@ staff_template = r'''<!DOCTYPE html>
     }
 
     function verifyRequisition(docNo) {
+      if (getActiveStaffRole() === 'HEAD') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'จำกัดสิทธิ์ตามบทบาท (RBAC)',
+          text: 'สิทธิ์หัวหน้าหน่วยงาน (HEAD) สำหรับอนุมัติขั้นสุดท้ายเท่านั้น การคัดกรองเบื้องต้นเป็นหน้าที่ของเจ้าหน้าที่พัสดุ (STAFF)',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
       const reqs = getReqsDB();
       const req = reqs.find(r => r.id === docNo);
       if (!req) return;
@@ -4345,6 +4680,16 @@ staff_template = r'''<!DOCTYPE html>
     }
 
     function approveRequisition(docNo) {
+      if (getActiveStaffRole() === 'STAFF') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'จำกัดสิทธิ์ตามบทบาท (RBAC)',
+          text: 'สิทธิ์เจ้าหน้าที่พัสดุ (STAFF) ไม่สามารถกดอนุมัติคำขอขั้นสุดท้ายได้ ต้องให้หัวหน้าหน่วยงาน (HEAD) เป็นผู้อนุมัติ',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
       const reqs = getReqsDB();
       const items = getItemsDB();
       const req = reqs.find(r => r.id === docNo);
@@ -4527,12 +4872,27 @@ staff_template = r'''<!DOCTYPE html>
         req.updated_at = now.toISOString();
 
         // Deduct permanently from On-Hand and release Reserved
+        const staffUser = getLoggedInStaff();
+        const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
         req.items.forEach(i => {
           const itm = items.find(si => si.id === i.itemId);
           if (itm) {
             const deductQty = i.approvedPieces ?? i.totalPieces;
             itm.on_hand_pieces = Math.max(0, itm.on_hand_pieces - deductQty);
             itm.reserved_pieces = Math.max(0, (itm.reserved_pieces || 0) - deductQty);
+            recordLocalTransaction({
+              itemId: itm.id,
+              itemName: itm.name,
+              unitPiece: itm.unit_piece_name,
+              transactionType: 'OUT',
+              changePieces: -deductQty,
+              balanceAfter: itm.on_hand_pieces,
+              referenceType: 'REQUISITION',
+              referenceId: req.id,
+              reason: `จ่ายพัสดุตามใบเบิก ${req.id} (${req.dept})`,
+              recordedBy: recBy,
+              formattedDate: thaiNow
+            });
           }
         });
 
@@ -4540,7 +4900,8 @@ staff_template = r'''<!DOCTYPE html>
         saveItemsDB(items);
         postToMySQLAPI('completeRequisition', {
           docNo: req.id,
-          completed_date: thaiNow
+          completed_date: thaiNow,
+          recordedBy: recBy
         });
 
         renderStaffRequisitions('APPROVED');
@@ -4745,26 +5106,41 @@ staff_template = r'''<!DOCTYPE html>
           }
           const boxes = parseInt(document.getElementById('swalStockBoxes').value, 10) || 0;
           const pieces = parseInt(document.getElementById('swalStockQty').value, 10) || 0;
+          const note = (document.getElementById('swalStockNote')?.value || '').trim() || 'รับพัสดุเข้าคลัง';
           if (boxes <= 0 && pieces <= 0) {
             Swal.showValidationMessage('กรุณาระบุจำนวนที่รับเข้าอย่างน้อย 1 กล่องหรือ 1 ชิ้นครับ');
             return false;
           }
-          return { itemId, boxes, pieces };
+          return { itemId, boxes, pieces, note };
         }
       }).then((res) => {
         if (res.isConfirmed && res.value) {
-          const { itemId, boxes, pieces } = res.value;
+          const { itemId, boxes, pieces, note } = res.value;
           const items = getItemsDB();
           const itm = items.find(i => i.id === itemId);
           if (itm) {
             const ratio = itm.is_multi_unit ? (itm.pieces_per_box || 1) : 1;
             const totalAdded = (boxes * ratio) + pieces;
+            const nowStr = formatThaiDatetime(new Date());
             itm.on_hand_pieces += totalAdded;
-            itm.last_restocked_at = formatThaiDatetime(new Date());
+            itm.last_restocked_at = nowStr;
             saveItemsDB(items);
             const staffUser = getLoggedInStaff();
             const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
-            postToMySQLAPI('restockItem', { itemId: itm.id, quantityPieces: totalAdded, recordedBy: recBy });
+            recordLocalTransaction({
+              itemId: itm.id,
+              itemName: itm.name,
+              unitPiece: itm.unit_piece_name,
+              transactionType: 'IN',
+              changePieces: totalAdded,
+              balanceAfter: itm.on_hand_pieces,
+              referenceType: 'STOCK_IN',
+              referenceId: '',
+              reason: note,
+              recordedBy: recBy,
+              formattedDate: nowStr
+            });
+            postToMySQLAPI('restockItem', { itemId: itm.id, quantityPieces: totalAdded, note: note, recordedBy: recBy });
             renderInventoryTable();
 
             Swal.fire({
@@ -4990,9 +5366,25 @@ staff_template = r'''<!DOCTYPE html>
           const itm = items.find(i => i.id === itemId);
           if (itm) {
             const oldQty = itm.on_hand_pieces;
+            const diff = newQty - oldQty;
             itm.on_hand_pieces = newQty;
             saveItemsDB(items);
-            postToMySQLAPI('adjustStock', { itemId: itm.id, newQty: newQty, reason: reason });
+            const staffUser = getLoggedInStaff();
+            const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+            recordLocalTransaction({
+              itemId: itm.id,
+              itemName: itm.name,
+              unitPiece: itm.unit_piece_name,
+              transactionType: 'ADJUST',
+              changePieces: diff,
+              balanceAfter: newQty,
+              referenceType: 'ADJUSTMENT',
+              referenceId: '',
+              reason: reason,
+              recordedBy: recBy,
+              formattedDate: formatThaiDatetime(new Date())
+            });
+            postToMySQLAPI('adjustStock', { itemId: itm.id, newQty: newQty, reason: reason, recordedBy: recBy });
             renderInventoryTable();
 
             Swal.fire({
@@ -5131,11 +5523,11 @@ staff_template = r'''<!DOCTYPE html>
             }
             .pdf-signatures {
               display: grid;
-              grid-template-columns: 1fr 1fr 1fr;
-              gap: 1rem;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 0.75rem;
               margin-top: auto;
               text-align: center;
-              font-size: 0.85rem;
+              font-size: 0.82rem;
               page-break-inside: avoid;
               break-inside: avoid;
             }
@@ -5195,33 +5587,77 @@ staff_template = r'''<!DOCTYPE html>
       document.getElementById('pdfSignRequester').innerText = req.requester;
       document.getElementById('pdfReceiverName').innerText = req.requester;
 
+      const reqDateEl = document.getElementById('pdfSignReqDate');
+      if (reqDateEl) reqDateEl.innerText = req.date || '-';
+
+      const isVerifiedOrLater = ['VERIFIED', 'APPROVED', 'COMPLETED'].includes(req.status);
+      const verifierEl = document.getElementById('pdfSignVerifier');
+      const verifiedDateEl = document.getElementById('pdfSignVerifiedDate');
+      const verifierStampEl = document.getElementById('pdfSignVerifierStamp');
+      if (verifierEl) verifierEl.innerText = req.verified_by || (isVerifiedOrLater ? 'เจ้าหน้าที่พัสดุ สวท.' : '.........................................');
+      if (verifiedDateEl) verifiedDateEl.innerText = req.verified_date || req.verified_at || (isVerifiedOrLater ? (req.date || '-') : 'วันที่ ....../....../......');
+      if (verifierStampEl) verifierStampEl.innerText = isVerifiedOrLater ? '[ ผ่านการคัดกรอง ]' : '';
+
+      const isApprovedOrCompleted = ['APPROVED', 'COMPLETED'].includes(req.status);
+      const approverEl = document.getElementById('pdfSignApprover');
+      const approvedDateEl = document.getElementById('pdfSignApprovedDate');
+      const approverStampEl = document.getElementById('pdfSignApproverStamp');
+      if (approverEl) approverEl.innerText = req.approved_by || (isApprovedOrCompleted ? 'หัวหน้าสำนักงานผู้อำนวยการ สวท.' : '.........................................');
+      if (approvedDateEl) approvedDateEl.innerText = req.approved_date || req.approved_at || (isApprovedOrCompleted ? (req.completed_date || req.date || '-') : 'วันที่ ....../....../......');
+      if (approverStampEl) approverStampEl.innerText = isApprovedOrCompleted ? '[ อนุมัติขั้นสุดท้าย ]' : '';
+
       const tbody = document.getElementById('pdfItemsTbody');
       tbody.innerHTML = req.items.map((item, idx) => {
         const safeName = escapeHtml(item.name);
         const safeBox = escapeHtml(item.unitBox);
         const safePiece = escapeHtml(item.unitPiece);
+        let noteTxt = 'ครบถ้วน';
+        if (req.status === 'REJECTED') noteTxt = 'ไม่อนุมัติ';
+        else if (req.status === 'PENDING') noteTxt = 'รอคัดกรอง';
+        else if (req.status === 'VERIFIED') noteTxt = 'ผ่านการคัดกรอง';
         return `
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
           <td>${safeName}</td>
           <td style="text-align: center;">${item.qtyBoxes > 0 ? `${item.qtyBoxes} ${safeBox} ` : ''}${item.qtyPieces > 0 ? `${item.qtyPieces} ${safePiece}` : ''}</td>
           <td style="text-align: center; font-weight: bold; color: #166534;">${(item.approvedPieces ?? item.totalPieces).toLocaleString()} ${safePiece}</td>
-          <td style="text-align: center;">${req.status === 'REJECTED' ? 'ไม่อนุมัติ' : 'ครบถ้วน'}</td>
+          <td style="text-align: center;">${noteTxt}</td>
         </tr>
         `;
       }).join('');
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
-      if (sigArea) sigArea.innerHTML = '';
+      if (sigArea) {
+        if (req.signature && req.signature.startsWith('data:image')) {
+          sigArea.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นผู้รับพัสดุ">`;
+        } else if (req.status === 'COMPLETED') {
+          sigArea.innerHTML = `<div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-bottom: 6px;">[ รับมอบพัสดุแล้ว ]</div>`;
+        } else {
+          sigArea.innerHTML = '';
+        }
+      }
       const recTimeEl = document.getElementById('pdfReceiveTime');
       if (recTimeEl) {
         const payDate = req.completed_date || req.completedDate;
-        recTimeEl.innerText = req.status === 'COMPLETED' ? `วันที่จ่ายของ: ${payDate || req.date || ''}` : 'วันที่ ........../........../..........';
+        recTimeEl.innerText = req.status === 'COMPLETED' ? `วันที่รับของ: ${payDate || req.date || ''}` : 'วันที่ ........../........../..........';
       }
       switchStaffView('pdf');
     }
 
-    // Inventory Table
+    // Inventory Table & Low Stock Filter
+    let lowStockFilterActive = false;
+
+    function toggleLowStockFilter() {
+      lowStockFilterActive = !lowStockFilterActive;
+      renderInventoryTable();
+    }
+
+    function jumpToLowStockInventory() {
+      lowStockFilterActive = true;
+      switchStaffView('inventory');
+      renderInventoryTable();
+    }
+
     function formatStockDisplay(totalPieces, ratio, boxName, pieceName, isMulti) {
       const safePiece = escapeHtml(pieceName);
       const safeBox = escapeHtml(boxName);
@@ -5236,15 +5672,64 @@ staff_template = r'''<!DOCTYPE html>
     function renderInventoryTable() {
       const items = getItemsDB();
       const tbody = document.getElementById('inventoryTableBody');
+      const activeRole = getActiveStaffRole();
 
       let totalReserved = 0;
-      let lowStockCount = 0;
+      const lowStockItems = [];
 
-      tbody.innerHTML = items.map((item, idx) => {
+      items.forEach(item => {
         const available = Math.max(0, item.on_hand_pieces - item.reserved_pieces);
         const isLow = available <= item.min_alert;
         totalReserved += item.reserved_pieces;
-        if (isLow) lowStockCount++;
+        if (isLow) lowStockItems.push(item);
+      });
+
+      const lowStockCount = lowStockItems.length;
+      const displayItems = lowStockFilterActive
+        ? items.filter(item => Math.max(0, item.on_hand_pieces - item.reserved_pieces) <= item.min_alert)
+        : items;
+
+      const lowBanner = document.getElementById('lowStockAlertBanner');
+      const lowBannerTitle = document.getElementById('lowStockBannerTitle');
+      const lowBannerItems = document.getElementById('lowStockBannerItems');
+      const btnFilterLow = document.getElementById('btnFilterLowStock');
+      const reqLowBanner = document.getElementById('reqLowStockBanner');
+      const reqLowBannerText = document.getElementById('reqLowStockBannerText');
+
+      if (lowBanner) {
+        if (lowStockCount > 0) {
+          lowBanner.style.display = 'flex';
+          if (lowBannerTitle) {
+            lowBannerTitle.innerText = `แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert): พบพัสดุต่ำกว่าเกณฑ์ขั้นต่ำ ${lowStockCount} รายการ`;
+          }
+          if (lowBannerItems) {
+            const sampleNames = lowStockItems.slice(0, 5).map(i => i.name).join(', ');
+            lowBannerItems.innerText = `รายการที่ควรสั่งซื้อเติมคลัง: ${sampleNames}${lowStockItems.length > 5 ? ` และอื่นๆ อีก ${lowStockItems.length - 5} รายการ` : ''}`;
+          }
+          if (btnFilterLow) {
+            btnFilterLow.innerText = lowStockFilterActive ? 'แสดงพัสดุทั้งหมด (ยกเลิกตัวกรอง)' : `กรองเฉพาะรายการต่ำกว่าเกณฑ์ (${lowStockCount})`;
+            btnFilterLow.style.background = lowStockFilterActive ? '#be123c' : 'white';
+            btnFilterLow.style.color = lowStockFilterActive ? 'white' : '#be123c';
+          }
+        } else {
+          lowBanner.style.display = 'none';
+        }
+      }
+
+      if (reqLowBanner) {
+        if (lowStockCount > 0) {
+          reqLowBanner.style.display = 'flex';
+          if (reqLowBannerText) {
+            reqLowBannerText.innerHTML = `<strong>แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert):</strong> มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำจำนวน <strong>${lowStockCount} รายการ</strong>`;
+          }
+        } else {
+          reqLowBanner.style.display = 'none';
+        }
+      }
+
+      tbody.innerHTML = displayItems.map((item, idx) => {
+        const available = Math.max(0, item.on_hand_pieces - item.reserved_pieces);
+        const isLow = available <= item.min_alert;
 
         return `
           <tr>
@@ -5278,12 +5763,17 @@ staff_template = r'''<!DOCTYPE html>
               ${item.last_restocked_at ? `<span style="font-size: 0.775rem; color: var(--neutral-600); white-space: nowrap;">${escapeHtml(String(item.last_restocked_at))}</span>` : '<span style="color: var(--neutral-400); font-size: 0.8rem;">-</span>'}
             </td>
             <td style="text-align: right; white-space: nowrap;">
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openItemModal(${item.id})">
-                แก้ไข
+              <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 3px; color: #1e40af; border-color: #bfdbfe;" onclick="openItemHistoryModal(${item.id})" title="ดูประวัติความเคลื่อนไหวสต๊อกย้อนหลัง">
+                ${vIcons.clock} ประวัติ
               </button>
-              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: var(--danger);" onclick="deleteInventoryItem(${item.id})">
-                ลบ
-              </button>
+              ${activeRole !== 'HEAD' ? `
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 3px;" onclick="openItemModal(${item.id})">
+                  แก้ไข
+                </button>
+                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; color: var(--danger);" onclick="deleteInventoryItem(${item.id})">
+                  ลบ
+                </button>
+              ` : ''}
             </td>
           </tr>
         `;
@@ -5295,6 +5785,97 @@ staff_template = r'''<!DOCTYPE html>
       }
       document.getElementById('metricReserved').innerHTML = `${totalReserved.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small>`;
       document.getElementById('metricLowStock').innerHTML = `${lowStockCount} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small>`;
+    }
+
+    async function openItemHistoryModal(itemId) {
+      const items = getItemsDB();
+      const itm = items.find(i => Number(i.id) === Number(itemId));
+      if (!itm) return;
+
+      let txList = null;
+      if (MYSQL_API_URL && navigator.onLine) {
+        try {
+          const res = await fetch(`${MYSQL_API_URL}?action=getItemTransactions&itemId=${encodeURIComponent(itemId)}`);
+          if (res.ok) {
+            const json = await res.json();
+            if (json && json.status === 'success' && Array.isArray(json.data)) {
+              txList = json.data;
+            }
+          }
+        } catch (e) {
+          console.warn('Fallback to local transactions DB:', e);
+        }
+      }
+      if (!txList || txList.length === 0) {
+        txList = getTransactionsDB(itemId);
+      }
+
+      const available = Math.max(0, itm.on_hand_pieces - itm.reserved_pieces);
+      const rowsHtml = txList.length === 0
+        ? `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">ยังไม่มีประวัติความเคลื่อนไหวสำหรับพัสดุรายการนี้</td></tr>`
+        : txList.map((t, idx) => {
+            let typeBadge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">รับเข้า (IN)</span>`;
+            if (t.transactionType === 'OUT') {
+              typeBadge = `<span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">จ่ายออก (OUT)</span>`;
+            } else if (t.transactionType === 'ADJUST') {
+              typeBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">ปรับยอด (ADJUST)</span>`;
+            }
+            const chg = Number(t.changePieces || 0);
+            const chgStr = chg > 0 ? `+${chg.toLocaleString()}` : `${chg.toLocaleString()}`;
+            const chgColor = chg > 0 ? '#059669' : chg < 0 ? '#dc2626' : '#475569';
+            const refTxt = t.referenceId ? `<strong>${escapeHtml(t.referenceId)}</strong> — ${escapeHtml(t.reason || '')}` : escapeHtml(t.reason || '-');
+            return `
+              <tr>
+                <td style="font-size: 0.78rem; white-space: nowrap; color: #475569;">${escapeHtml(t.formattedDate || t.createdAt || '-')}</td>
+                <td style="text-align: center;">${typeBadge}</td>
+                <td style="text-align: right; font-weight: 700; color: ${chgColor};">${chgStr} ${escapeHtml(itm.unit_piece_name)}</td>
+                <td style="text-align: right; font-weight: 600;">${Number(t.balanceAfter || 0).toLocaleString()} ${escapeHtml(itm.unit_piece_name)}</td>
+                <td style="font-size: 0.78rem; color: #334155;">${refTxt}</td>
+                <td style="font-size: 0.78rem; color: #475569;">${escapeHtml(t.recordedBy || 'เจ้าหน้าที่พัสดุ สวท.')}</td>
+              </tr>
+            `;
+          }).join('');
+
+      Swal.fire({
+        title: 'ประวัติความเคลื่อนไหวสต๊อก (Stock Audit Trail)',
+        width: 820,
+        html: `
+          <div style="text-align: left; margin-top: 0.5rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <div style="font-size: 1rem; font-weight: 700; color: #0f172a;">${escapeHtml(itm.name)}</div>
+                <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                  หมวดหมู่: ${escapeHtml(itm.category || '-')} • รับเข้าล่าสุด: <strong>${escapeHtml(itm.last_restocked_at || 'ยังไม่มีข้อมูล')}</strong>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.75rem; font-size: 0.825rem;">
+                <span style="background: white; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px;">คงคลัง: <strong>${itm.on_hand_pieces.toLocaleString()}</strong></span>
+                <span style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 4px 10px; border-radius: 6px;">จอง: <strong>${itm.reserved_pieces.toLocaleString()}</strong></span>
+                <span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; padding: 4px 10px; border-radius: 6px;">พร้อมเบิก: <strong>${available.toLocaleString()} ${escapeHtml(itm.unit_piece_name)}</strong></span>
+              </div>
+            </div>
+            <div style="max-height: 360px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table class="req-table" style="margin: 0; font-size: 0.825rem;">
+                <thead style="position: sticky; top: 0; z-index: 1;">
+                  <tr>
+                    <th>วัน-เวลา</th>
+                    <th style="text-align: center;">ประเภทรายการ</th>
+                    <th style="text-align: right;">จำนวนเปลี่ยนแปลง</th>
+                    <th style="text-align: right;">คงเหลือหลังทำรายการ</th>
+                    <th>เอกสารอ้างอิง / หมายเหตุ</th>
+                    <th>ผู้บันทึก</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `,
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ปิดหน้าต่าง'
+      });
     }
 
     function handleAnalyticsMonthChange() {
@@ -5473,6 +6054,193 @@ staff_template = r'''<!DOCTYPE html>
           </tr>
         `).join('');
       }
+      window.lastMonthlyAnalyticsData = analyticsData;
+    }
+
+    async function exportMonthlyAnalyticsCsv() {
+      if (!window.lastMonthlyAnalyticsData) {
+        await renderMonthlyAnalyticsView();
+      }
+      const data = window.lastMonthlyAnalyticsData;
+      if (!data) return;
+
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const monthLabel = monthSelect ? monthSelect.options[monthSelect.selectedIndex].text : (data.thaiMonth || data.month || 'ทั้งหมด');
+      const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+      const rows = [
+        ['รายงานสรุปยอดและสถิติการเบิกจ่ายพัสดุรายเดือน มหาวิทยาลัยสวนดุสิต'],
+        ['งวดรายงาน', monthLabel],
+        ['วันที่ส่งออกข้อมูล', formatThaiDatetime(new Date())],
+        [],
+        ['สรุปภาพรวมประจำเดือน', 'จำนวน'],
+        ['คำขอเบิกทั้งหมด (คำขอ)', data.totalRequisitions || 0],
+        ['รอคัดกรอง (PENDING)', data.totalPending || 0],
+        ['รอหัวหน้าอนุมัติ (VERIFIED)', data.totalVerified || 0],
+        ['อนุมัติแล้วรอจ่าย (APPROVED)', data.totalApproved || 0],
+        ['จ่ายพัสดุสำเร็จ (COMPLETED)', data.totalCompleted || 0],
+        ['ไม่อนุมัติ/ยกเลิก (REJECTED)', data.totalRejected || 0],
+        ['จำนวนชิ้นพัสดุที่ขอเบิกรวม (ชิ้น)', data.totalPiecesRequested || 0],
+        ['จำนวนชิ้นที่อนุมัติ/จ่ายสำเร็จรวม (ชิ้น)', data.totalPiecesApproved || 0],
+        [],
+        ['5 อันดับพัสดุที่มีการเบิกมากที่สุด (Top 5 Requisitioned Items)'],
+        ['อันดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิก', 'จำนวนคำขอ', 'หน่วยนับ']
+      ];
+
+      (data.topItems || []).forEach((it, idx) => {
+        rows.push([idx + 1, it.name, it.category || '', it.totalPieces || 0, it.requisitionCount || 0, it.unit || 'ชิ้น']);
+      });
+
+      rows.push([]);
+      rows.push(['5 อันดับพัสดุที่มีการเบิกน้อยที่สุด (Least 5 Requisitioned Items)']);
+      rows.push(['อันดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิก', 'จำนวนคำขอ', 'หน่วยนับ']);
+      (data.leastItems || []).forEach((it, idx) => {
+        rows.push([idx + 1, it.name, it.category || '', it.totalPieces || 0, it.requisitionCount || 0, it.unit || 'ชิ้น']);
+      });
+
+      rows.push([]);
+      rows.push(['สรุปยอดการเบิกพัสดุทุกรายการประจำเดือน']);
+      rows.push(['ลำดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิกในเดือน', 'จำนวนคำขอ', 'หน่วยนับ']);
+      (data.allItemUsage || []).forEach((it, idx) => {
+        rows.push([idx + 1, it.name, it.category || '', it.totalPieces || 0, it.requisitionCount || 0, it.unit || 'ชิ้น']);
+      });
+
+      const csvContent = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `SDU_Monthly_Analytics_${data.month || 'ALL'}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ส่งออกไฟล์ CSV สำเร็จ',
+        text: `ดาวน์โหลดไฟล์สรุปยอดประจำเดือน (${monthLabel}) เรียบร้อยแล้ว สามารถเปิดด้วย Microsoft Excel ได้ทันที`,
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ตกลง'
+      });
+    }
+
+    async function printMonthlyAnalyticsPdf() {
+      if (!window.lastMonthlyAnalyticsData) {
+        await renderMonthlyAnalyticsView();
+      }
+      const data = window.lastMonthlyAnalyticsData;
+      if (!data) return;
+
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const monthLabel = monthSelect ? monthSelect.options[monthSelect.selectedIndex].text : (data.thaiMonth || data.month || 'ทั้งหมด');
+      const staffUser = getLoggedInStaff();
+      const printedBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+
+      let iframe = document.getElementById('analyticsPrintIframe');
+      if (iframe) iframe.remove();
+      iframe = document.createElement('iframe');
+      iframe.id = 'analyticsPrintIframe';
+      iframe.style.position = 'fixed';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const topRows = (data.topItems || []).map((it, idx) => `
+        <tr>
+          <td style="text-align:center;">${idx + 1}</td>
+          <td>${escapeHtml(it.name)}</td>
+          <td style="text-align:center;">${escapeHtml(it.category || '-')}</td>
+          <td style="text-align:right; font-weight:700;">${(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unit || 'ชิ้น')}</td>
+          <td style="text-align:center;">${(it.requisitionCount || 0).toLocaleString()}</td>
+        </tr>
+      `).join('');
+
+      const leastRows = (data.leastItems || []).map((it, idx) => `
+        <tr>
+          <td style="text-align:center;">${idx + 1}</td>
+          <td>${escapeHtml(it.name)}</td>
+          <td style="text-align:center;">${escapeHtml(it.category || '-')}</td>
+          <td style="text-align:right;">${(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unit || 'ชิ้น')}</td>
+          <td style="text-align:center;">${(it.requisitionCount || 0).toLocaleString()}</td>
+        </tr>
+      `).join('');
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+          <meta charset="UTF-8">
+          <title>รายงานสรุปยอดการเบิกจ่ายพัสดุประจำเดือน - มหาวิทยาลัยสวนดุสิต</title>
+          <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+          <style>
+            @page { size: A4 portrait; margin: 1.2cm 1.5cm; }
+            body { font-family: 'Sarabun', sans-serif; font-size: 13px; color: #111; margin: 0; padding: 0; line-height: 1.45; }
+            .report-header { text-align: center; margin-bottom: 1rem; }
+            .report-header img { height: 64px; margin-bottom: 4px; }
+            .report-header h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+            .report-header p { margin: 2px 0; font-size: 0.9rem; color: #444; }
+            .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+            .kpi-box { border: 1px solid #333; padding: 8px; text-align: center; border-radius: 4px; }
+            .kpi-box .val { font-size: 1.15rem; font-weight: 700; }
+            h3 { font-size: 0.95rem; margin: 0.85rem 0 0.35rem 0; border-bottom: 1px solid #333; padding-bottom: 3px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 12.5px; }
+            th, td { border: 1px solid #333; padding: 5px 8px; }
+            th { background: #f3f4f6; font-weight: 700; text-align: center; }
+            .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; text-align: center; page-break-inside: avoid; }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <img src="assets/logo_sdu.png" alt="SDU">
+            <h2>รายงานสรุปยอดและสถิติการเบิกจ่ายพัสดุประจำเดือน (Executive Summary)</h2>
+            <p>สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต</p>
+            <p><strong>ประจำงวด:</strong> ${escapeHtml(monthLabel)} | <strong>วันที่พิมพ์รายงาน:</strong> ${escapeHtml(formatThaiDatetime(new Date()))}</p>
+          </div>
+          <div class="kpi-grid">
+            <div class="kpi-box"><div>คำขอเบิกทั้งหมด</div><div class="val">${(data.totalRequisitions || 0).toLocaleString()} คำขอ</div></div>
+            <div class="kpi-box"><div>จ่ายสำเร็จแล้ว</div><div class="val">${(data.totalCompleted || 0).toLocaleString()} คำขอ</div></div>
+            <div class="kpi-box"><div>จำนวนชิ้นที่ขอเบิก</div><div class="val">${(data.totalPiecesRequested || 0).toLocaleString()} ชิ้น</div></div>
+            <div class="kpi-box"><div>จำนวนชิ้นที่จ่ายจริง</div><div class="val">${(data.totalPiecesApproved || 0).toLocaleString()} ชิ้น</div></div>
+          </div>
+          <h3>1. อันดับพัสดุที่มีการเบิกจ่ายสูงสุด 5 อันดับแรก (Top 5 Most Requisitioned Items)</h3>
+          <table>
+            <thead><tr><th style="width:50px;">อันดับ</th><th>ชื่อรายการพัสดุ</th><th style="width:130px;">หมวดหมู่</th><th style="width:120px;">จำนวนที่เบิก</th><th style="width:80px;">คำขอ</th></tr></thead>
+            <tbody>${topRows}</tbody>
+          </table>
+          <h3>2. อันดับพัสดุที่มีการเบิกจ่ายน้อยที่สุด 5 อันดับแรก (Least 5 / Slow-Moving Items)</h3>
+          <table>
+            <thead><tr><th style="width:50px;">อันดับ</th><th>ชื่อรายการพัสดุ</th><th style="width:130px;">หมวดหมู่</th><th style="width:120px;">จำนวนที่เบิก</th><th style="width:80px;">คำขอ</th></tr></thead>
+            <tbody>${leastRows}</tbody>
+          </table>
+          <div class="sig-row">
+            <div>
+              <div style="margin-top: 2.2rem;">ลงชื่อ...........................................................</div>
+              <div>( ${escapeHtml(printedBy)} )</div>
+              <div style="font-size:11.5px; color:#555;">เจ้าหน้าที่พัสดุผู้จัดทำรายงาน</div>
+            </div>
+            <div>
+              <div style="margin-top: 2.2rem;">ลงชื่อ...........................................................</div>
+              <div>( นางสาววาสนา จันทร์จ่าย )</div>
+              <div style="font-size:11.5px; color:#555;">หัวหน้าสำนักงานผู้อำนวยการ สวท. / ผู้รับรองรายงาน</div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+        } catch (e) {
+          window.print();
+        }
+      }, 250);
     }
 
     function readFileAsDataURL(fileInput) {
@@ -6335,3 +7103,19 @@ with open(os.path.join(PROJECT_ROOT, 'staff.html'), 'w', encoding='utf-8') as f:
     f.write(staff_html)
 
 print("Created staff.html (Inventory Staff & Admin Portal)")
+
+# Also synchronize SYSTEM_VERSION in portal.html footer
+portal_path = os.path.join(PROJECT_ROOT, 'portal.html')
+if os.path.exists(portal_path):
+    import re as _re
+    with open(portal_path, 'r', encoding='utf-8') as f:
+        portal_content = f.read()
+    updated_portal = _re.sub(
+        r'Stock Order SDU v[0-9]+\.[0-9]+\.[0-9]+',
+        f'Stock Order SDU v{SYSTEM_VERSION}',
+        portal_content
+    )
+    if updated_portal != portal_content:
+        with open(portal_path, 'w', encoding='utf-8') as f:
+            f.write(updated_portal)
+        print(f"Updated portal.html footer version to v{SYSTEM_VERSION}")

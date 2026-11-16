@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.1.0"
+        assert SYSTEM_VERSION == "3.2.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -822,3 +822,114 @@ class TestSecurityAuditRun2Patches:
                 conn.commit()
             finally:
                 conn.close()
+
+
+class TestPhase8ExtendedRequirements:
+    """Tests for Phase 8 (v3.2.0): RBAC, 4-Party PDF Signatures, Analytics Export, Item History Log, Dynamic Quota, and Reorder Alerts."""
+
+    def test_rbac_role_resolution_and_permissions(self):
+        import server
+        # Role resolution
+        assert server.get_staff_role("admin_staff") == "ADMIN"
+        assert server.get_staff_role("staff") == "STAFF"
+        assert server.get_staff_role("head") == "HEAD"
+        assert server.get_staff_role("wasana.c") == "HEAD"
+
+        # Token username extraction
+        token = server.generate_staff_token("head_approver")
+        assert server.extract_staff_username(token) == "head_approver"
+
+        # Permission matrix checks
+        assert server.check_staff_role_permission("verifyRequisition", "STAFF")[0] is True
+        assert server.check_staff_role_permission("approveRequisition", "STAFF")[0] is False
+        assert server.check_staff_role_permission("approveRequisition", "HEAD")[0] is True
+        assert server.check_staff_role_permission("verifyRequisition", "HEAD")[0] is False
+        assert server.check_staff_role_permission("restockItem", "HEAD")[0] is False
+        assert server.check_staff_role_permission("approveRequisition", "ADMIN")[0] is True
+        assert server.check_staff_role_permission("verifyRequisition", "ADMIN")[0] is True
+
+        # Handler-level RBAC guards
+        res_verify_head = server.handle_verify_requisition({"docNo": "REQ-256911-0001", "caller_role": "HEAD"})
+        assert res_verify_head["status"] == "error"
+        assert res_verify_head["code"] == "FORBIDDEN_ROLE"
+
+        res_approve_staff = server.handle_approve_requisition({"docNo": "REQ-256911-0001", "caller_role": "STAFF"})
+        assert res_approve_staff["status"] == "error"
+        assert res_approve_staff["code"] == "FORBIDDEN_ROLE"
+
+    def test_login_staff_returns_rbac_roles(self):
+        import server
+        res_admin = server.handle_login_staff({"username": "admin_staff", "password": "sdu1234"})
+        assert res_admin["status"] == "success"
+        assert res_admin["role"] == "ADMIN"
+
+        res_staff = server.handle_login_staff({"username": "staff", "password": "sdu1234"})
+        assert res_staff["status"] == "success"
+        assert res_staff["role"] == "STAFF"
+
+        res_head = server.handle_login_staff({"username": "head", "password": "sdu1234"})
+        assert res_head["status"] == "success"
+        assert res_head["role"] == "HEAD"
+
+    def test_handle_get_item_transactions_mock(self):
+        import server
+        from unittest.mock import MagicMock, patch
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = [
+            {
+                "id": 10,
+                "item_id": 3,
+                "item_name": "กระดาษคำตอบ",
+                "unit_piece_name": "ใบ",
+                "transaction_type": "IN",
+                "change_pieces": 2000,
+                "balance_after": 34000,
+                "reference_type": "STOCK_IN",
+                "reference_id": None,
+                "reason": "รับเข้าประจำเดือน",
+                "recorded_by": "เจ้าหน้าที่พัสดุ สวท.",
+                "created_at": datetime(2026, 11, 16, 10, 30, 0),
+            }
+        ]
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_get_item_transactions({"itemId": ["3"]})
+            assert res["status"] == "success"
+            assert res["total"] == 1
+            assert res["data"][0]["itemId"] == 3
+            assert res["data"][0]["transactionType"] == "IN"
+            assert res["data"][0]["changePieces"] == 2000
+            assert res["data"][0]["recordedBy"] == "เจ้าหน้าที่พัสดุ สวท."
+
+    def test_four_party_pdf_signatures_in_portals(self):
+        for portal_name in ["index.html", "staff.html"]:
+            p_path = os.path.join(PROJECT_ROOT, portal_name)
+            with open(p_path, "r", encoding="utf-8") as f:
+                html = f.read()
+            assert "repeat(4, 1fr)" in html
+            assert "ผู้ขอเบิกพัสดุ" in html
+            assert "เจ้าหน้าที่ผู้คัดกรอง" in html
+            assert "หัวหน้าผู้อนุมัติ" in html
+            assert "ผู้รับมอบพัสดุ" in html
+
+    def test_phase8_features_present_in_portals(self):
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            index_html = f.read()
+        assert "getPersonalMonthlyQuotaInfo" in index_html
+        assert "โควตาคงเหลือของท่านในเดือนนี้" in index_html
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            staff_html = f.read()
+        assert "exportMonthlyAnalyticsCsv" in staff_html
+        assert "printMonthlyAnalyticsPdf" in staff_html
+        assert "openItemHistoryModal" in staff_html
+        assert "lowStockAlertBanner" in staff_html
+        assert "switchActiveRole" in staff_html
+
+        with open(os.path.join(PROJECT_ROOT, "portal.html"), "r", encoding="utf-8") as f:
+            portal_html = f.read()
+        assert f"v{SYSTEM_VERSION}" in portal_html
+

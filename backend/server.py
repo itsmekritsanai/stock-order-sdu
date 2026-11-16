@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.1.0"
+SYSTEM_VERSION = "3.2.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -104,6 +104,7 @@ def ensure_database_schema(conn=None):
             if IS_POSTGRES:
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE;")
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '';")
+                cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'REQUESTER';")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);")
                 cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS monthly_limit INT NOT NULL DEFAULT 0;")
                 cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS last_restocked_at TIMESTAMP DEFAULT NULL;")
@@ -507,6 +508,7 @@ def handle_get_users():
                 "id": int(r["id"]),
                 "name": r["name"],
                 "username": r.get("username") or "",
+                "role": r.get("role") or "REQUESTER",
                 "position": r.get("position") or "",
                 "dept": r.get("dept") or "",
                 "phone": r.get("phone") or "",
@@ -514,6 +516,67 @@ def handle_get_users():
             for r in rows
         ]
         return {"status": "success", "data": users, "total": len(users)}
+    finally:
+        conn.close()
+
+
+def handle_get_item_transactions(params):
+    raw_id = params.get("itemId", [""])[0] if isinstance(params.get("itemId"), list) else str(params.get("itemId") or "")
+    raw_id = raw_id.strip()
+    item_id = int(raw_id) if raw_id.isdigit() else 0
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            if item_id > 0:
+                cur.execute(
+                    """
+                    SELECT st.*, i.name AS item_name, i.unit_piece_name
+                    FROM stock_transactions st
+                    LEFT JOIN inventory_items i ON st.item_id = i.id
+                    WHERE st.item_id = %s
+                    ORDER BY st.created_at DESC, st.id DESC
+                    LIMIT 200
+                    """,
+                    (item_id,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT st.*, i.name AS item_name, i.unit_piece_name
+                    FROM stock_transactions st
+                    LEFT JOIN inventory_items i ON st.item_id = i.id
+                    ORDER BY st.created_at DESC, st.id DESC
+                    LIMIT 200
+                    """
+                )
+            rows = cur.fetchall()
+
+        tx_list = []
+        for r in rows:
+            dt_val = r.get("created_at")
+            if isinstance(dt_val, datetime):
+                fmt_date = format_thai_datetime(dt_val)
+                iso_str = dt_val.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                iso_str = str(dt_val or "")
+                fmt_date = iso_str
+            tx_list.append({
+                "id": int(r["id"]),
+                "itemId": int(r["item_id"]),
+                "itemName": r.get("item_name") or f"พัสดุ #{r['item_id']}",
+                "unitPiece": r.get("unit_piece_name") or "ชิ้น",
+                "transactionType": r["transaction_type"],
+                "changePieces": int(r["change_pieces"] or 0),
+                "balanceAfter": int(r["balance_after"] or 0),
+                "referenceType": r.get("reference_type") or "",
+                "referenceId": r.get("reference_id") or "",
+                "reason": r.get("reason") or "",
+                "recordedBy": r.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.",
+                "createdAt": iso_str,
+                "formattedDate": fmt_date,
+            })
+        return {"status": "success", "data": tx_list, "total": len(tx_list)}
     finally:
         conn.close()
 
@@ -838,6 +901,14 @@ def handle_create_requisition(payload):
 def handle_verify_requisition(payload):
     doc_no = str(payload.get("docNo") or payload.get("id") or "").strip()
     verified_by = str(payload.get("verifiedBy") or payload.get("verified_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
+    caller_role = str(payload.get("caller_role") or payload.get("role") or "").strip().upper()
+    if caller_role == "HEAD":
+        return {
+            "status": "error",
+            "code": "FORBIDDEN_ROLE",
+            "message": "สิทธิ์หัวหน้าหน่วยงาน (HEAD) ไม่สามารถทำการคัดกรองขั้นต้นได้ (เฉพาะเจ้าหน้าที่พัสดุ STAFF หรือ ADMIN)",
+        }
+
     approved_overrides = {
         int(i["itemId"]): int(i["approvedPieces"])
         for i in payload.get("items", [])
@@ -910,6 +981,14 @@ def handle_verify_requisition(payload):
 
 
 def handle_approve_requisition(payload):
+    caller_role = str(payload.get("caller_role") or payload.get("role") or "").strip().upper()
+    if caller_role == "STAFF":
+        return {
+            "status": "error",
+            "code": "FORBIDDEN_ROLE",
+            "message": "สิทธิ์เจ้าหน้าที่พัสดุ (STAFF) ไม่สามารถกดอนุมัติคำขอขั้นสุดท้ายได้ กรุณาส่งต่อให้หัวหน้าหน่วยงาน (HEAD) เป็นผู้อนุมัติ",
+        }
+
     for i in payload.get("items", []):
         try:
             if "approvedPieces" in i and int(i["approvedPieces"]) < 0:
@@ -1013,6 +1092,7 @@ def handle_approve_requisition(payload):
 def handle_complete_requisition(payload):
     doc_no = str(payload.get("docNo") or payload.get("id") or "").strip()
     signature = str(payload.get("signature") or "").strip()
+    recorded_by = str(payload.get("recordedBy") or payload.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
 
     if not doc_no:
         return {"status": "error", "message": "กรุณาระบุเลขที่เอกสารคำขอ (docNo)"}
@@ -1063,10 +1143,10 @@ def handle_complete_requisition(payload):
                 )
                 cur.execute(
                     """
-                    INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason)
-                    VALUES (%s, 'OUT', %s, %s, 'REQUISITION', %s, %s)
+                    INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason, recorded_by)
+                    VALUES (%s, 'OUT', %s, %s, 'REQUISITION', %s, %s, %s)
                     """,
-                    (item_id, -approved_qty, new_on_hand, doc_no, f"จ่ายพัสดุตามใบเบิก {doc_no}"),
+                    (item_id, -approved_qty, new_on_hand, doc_no, f"จ่ายพัสดุตามใบเบิก {doc_no}", recorded_by),
                 )
 
             now = datetime.now()
@@ -1217,6 +1297,7 @@ def handle_adjust_stock(payload):
     item_id = int(payload.get("itemId") or 0)
     new_qty = payload.get("newQty") if "newQty" in payload else payload.get("on_hand_pieces")
     reason = str(payload.get("reason") or "ตรวจนับสต๊อกประจำงวดบัญชี").strip()
+    recorded_by = str(payload.get("recordedBy") or payload.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
 
     if not item_id or new_qty is None or int(new_qty) < 0:
         return {"status": "error", "message": "กรุณาระบุรหัสพัสดุ (itemId) และยอดคงคลังจริงตั้งแต่ 0 ขึ้นไป"}
@@ -1240,10 +1321,10 @@ def handle_adjust_stock(payload):
             )
             cur.execute(
                 """
-                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason)
-                VALUES (%s, 'ADJUST', %s, %s, 'ADJUSTMENT', NULL, %s)
+                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason, recorded_by)
+                VALUES (%s, 'ADJUST', %s, %s, 'ADJUSTMENT', NULL, %s, %s)
                 """,
-                (item_id, diff, new_qty, reason),
+                (item_id, diff, new_qty, reason, recorded_by),
             )
 
         conn.commit()
@@ -1787,8 +1868,59 @@ def verify_staff_token(token: str) -> bool:
         return False
 
 
+def extract_staff_username(token: str) -> str:
+    """Extract username from HMAC-SHA256 staff token."""
+    if not token or not isinstance(token, str):
+        return ""
+    parts = token.rsplit(".", 2)
+    return parts[0] if len(parts) == 3 else ""
+
+
+def get_staff_role(username: str) -> str:
+    """Resolve RBAC role ('STAFF', 'HEAD', or 'ADMIN') from staff username."""
+    u = str(username or "").strip().lower()
+    head_user = str(CONFIG.get("HEAD_USERNAME", "head_approver")).strip().lower()
+    staff_screener = str(CONFIG.get("STAFF_SCREENER_USERNAME", "staff")).strip().lower()
+    admin_user = str(CONFIG.get("STAFF_USERNAME", "admin_staff")).strip().lower()
+
+    if u in (admin_user, "admin_staff", "admin"):
+        return "ADMIN"
+    if u in (head_user, "head", "head_approver", "approver", "director", "wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+        return "HEAD"
+    if u in (staff_screener, "staff", "warehouse_staff", "screener", "officer"):
+        return "STAFF"
+    return "STAFF"
+
+
+def get_role_label(role: str) -> str:
+    r = str(role or "").strip().upper()
+    if r == "ADMIN":
+        return "ผู้ดูแลระบบสูงสุด (Admin)"
+    if r == "HEAD":
+        return "หัวหน้าหน่วยงาน (ผู้อนุมัติขั้นสุดท้าย)"
+    return "เจ้าหน้าที่พัสดุ (ผู้คัดกรองและดูแลคลัง)"
+
+
+def check_staff_role_permission(action: str, role: str):
+    """Verify if a staff role ('STAFF', 'HEAD', 'ADMIN') is permitted to execute an API action."""
+    r = str(role or "ADMIN").strip().upper()
+    if r == "ADMIN":
+        return True, ""
+    if r == "STAFF":
+        forbidden_for_staff = {"approveRequisition", "deleteUser", "deleteDepartment"}
+        if action in forbidden_for_staff:
+            return False, "สิทธิ์เจ้าหน้าที่พัสดุ (STAFF) ไม่สามารถกดอนุมัติคำขอขั้นสุดท้ายได้ กรุณาส่งต่อให้หัวหน้าหน่วยงาน (HEAD) อนุมัติ"
+        return True, ""
+    if r == "HEAD":
+        allowed_for_head = {"approveRequisition", "rejectRequisition"}
+        if action in allowed_for_head:
+            return True, ""
+        return False, "สิทธิ์หัวหน้าหน่วยงาน (HEAD) สำหรับพิจารณาอนุมัติคำขอขั้นสุดท้ายเท่านั้น ไม่สามารถคัดกรองขั้นต้นหรือปรับแก้สต๊อกได้"
+    return False, "ไม่มีสิทธิ์ดำเนินการในส่วนนี้"
+
+
 def handle_login_staff(payload):
-    """Authenticate staff and return HMAC signed token."""
+    """Authenticate staff/head/admin and return HMAC signed token with RBAC role."""
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", "")).strip()
     if not username or not password:
@@ -1796,20 +1928,41 @@ def handle_login_staff(payload):
 
     staff_user = CONFIG.get("STAFF_USERNAME", "admin_staff")
     staff_pass = CONFIG.get("STAFF_PASSWORD", "sdu1234")
+    head_pass = CONFIG.get("HEAD_PASSWORD", staff_pass)
     is_valid = False
-    if username in (staff_user, "admin_staff", "admin", "staff") and (password in (staff_pass, "sdu1234")):
+    resolved_role = None
+    display_name = username
+
+    u_lower = username.lower()
+    if u_lower in (staff_user.lower(), "admin_staff", "admin") and password in (staff_pass, "sdu1234"):
         is_valid = True
+        resolved_role = "ADMIN"
+        display_name = "ผู้ดูแลระบบคลังพัสดุ (Admin)"
+    elif u_lower in ("staff", "warehouse_staff", "screener") and password in (staff_pass, "sdu1234"):
+        is_valid = True
+        resolved_role = "STAFF"
+        display_name = "เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)"
+    elif u_lower in ("head", "head_approver", "approver", "director") and password in (head_pass, staff_pass, "sdu1234"):
+        is_valid = True
+        resolved_role = "HEAD"
+        display_name = "หัวหน้าสำนักงานผู้อำนวยการ สวท. (ผู้อนุมัติ)"
     else:
         try:
             conn = get_db_connection()
             with dict_cursor(conn) as cur:
                 cur.execute(
-                    "SELECT id, name, username, password FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                    "SELECT id, name, username, password, role, position FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
                     (username, username)
                 )
                 row = cur.fetchone()
                 if row and verify_password(str(row.get("password") or ""), password):
                     is_valid = True
+                    display_name = row.get("name") or username
+                    db_role = str(row.get("role") or "").strip().upper()
+                    if db_role in ("ADMIN", "HEAD", "STAFF"):
+                        resolved_role = db_role
+                    else:
+                        resolved_role = get_staff_role(row.get("username") or username)
             conn.close()
         except Exception:
             pass
@@ -1817,12 +1970,16 @@ def handle_login_staff(payload):
     if not is_valid:
         return {"status": "error", "message": "ชื่อผู้ใช้หรือรหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง"}
 
+    final_role = resolved_role or get_staff_role(username)
     token = generate_staff_token(username)
     return {
         "status": "success",
         "message": "เข้าสู่ระบบเจ้าหน้าที่สำเร็จ",
         "token": token,
-        "username": username
+        "username": username,
+        "name": display_name,
+        "role": final_role,
+        "role_label": get_role_label(final_role),
     }
 
 
@@ -1897,7 +2054,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 self.send_header("Access-Control-Allow-Origin", origin)
                 self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Staff-Token")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Staff-Token, X-Staff-Role")
 
     def send_json(self, data, status_code=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -1931,6 +2088,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json(handle_get_users())
                 elif action == "getMonthlyAnalytics":
                     return self.send_json(handle_get_monthly_analytics(params))
+                elif action == "getItemTransactions":
+                    return self.send_json(handle_get_item_transactions(params))
                 elif action in ("health", "ping"):
                     db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
                     try:
@@ -2021,6 +2180,20 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     "code": "UNAUTHORIZED",
                     "message": "ต้องเข้าสู่ระบบในฐานะเจ้าหน้าที่พัสดุ (Unauthorized: Invalid or missing staff token)"
                 }, status_code=401)
+
+            token_user = extract_staff_username(str(token))
+            token_role = get_staff_role(token_user)
+            override_role = self.headers.get("X-Staff-Role", "").strip().upper()
+            effective_role = override_role if (token_role == "ADMIN" and override_role in ("STAFF", "HEAD", "ADMIN")) else token_role
+            allowed, reason_msg = check_staff_role_permission(action, effective_role)
+            if not allowed:
+                return self.send_json({
+                    "status": "error",
+                    "code": "FORBIDDEN_ROLE",
+                    "message": reason_msg
+                }, status_code=403)
+            if isinstance(payload, dict) and "caller_role" not in payload:
+                payload["caller_role"] = effective_role
 
         try:
             if action == "createRequisition":

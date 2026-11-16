@@ -305,7 +305,7 @@
     .pdf-items-table th { background: #f3f4f6; font-weight: 600; text-align: center; }
     .pdf-footer-section { margin-top: auto; width: 100%; page-break-inside: avoid; break-inside: avoid; }
     .pdf-ack-note { font-size: 0.85rem; margin-bottom: 0.75rem; }
-    .pdf-signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: auto; text-align: center; font-size: 0.875rem; page-break-inside: avoid; break-inside: avoid; }
+    .pdf-signatures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: auto; text-align: center; font-size: 0.825rem; page-break-inside: avoid; break-inside: avoid; }
     .pdf-footer-section .pdf-signatures { margin-top: 0.75rem; }
     .sig-box { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 140px; }
     .sig-img-preview { max-height: 60px; max-width: 130px; margin-bottom: 4px; }
@@ -1053,28 +1053,39 @@
           </table>
 
           <div class="pdf-footer-section">
+            <div class="pdf-ack-note">
+              * ข้าพเจ้าได้รับมอบพัสดุตามรายการและจำนวนที่ระบุข้างต้นไว้ในสภาพเรียบร้อยครบถ้วนแล้ว
+            </div>
             <div class="pdf-signatures">
               <div class="sig-box">
                 <div class="sig-line"></div>
-                <div>ลงชื่อ.......................................................</div>
                 <div style="margin-top: 4px;">(<span id="pdfSigRequester">-</span>)</div>
-                <div style="font-size: 0.8rem; color: #555;">ผู้ขอเบิก</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้ขอเบิกพัสดุ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigReqDate">-</div>
               </div>
 
               <div class="sig-box">
+                <div id="pdfSigVerifierStamp" style="font-size: 0.75rem; color: #0369a1; font-weight: 700; margin-bottom: 6px;"></div>
                 <div class="sig-line"></div>
-                <div>ลงชื่อ.......................................................</div>
-                <div style="margin-top: 4px;">(.......................................................)</div>
-                <div style="font-size: 0.8rem; color: #555;">หัวหน้าหน่วยงาน / ผู้เห็นชอบ</div>
+                <div style="margin-top: 4px;">(<span id="pdfSigVerifier">เจ้าหน้าที่พัสดุ</span>)</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">เจ้าหน้าที่ผู้คัดกรอง</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigVerifiedDate">-</div>
               </div>
 
               <div class="sig-box">
+                <div id="pdfSigApproverStamp" style="font-size: 0.75rem; color: #15803d; font-weight: 700; margin-bottom: 6px;"></div>
                 <div class="sig-line"></div>
-                <div id="pdfSigOfficerBox">
-                  <div>ลงชื่อ.......................................................</div>
-                </div>
+                <div style="margin-top: 4px;">(<span id="pdfSigApprover">หัวหน้าหน่วยงาน</span>)</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">หัวหน้าผู้อนุมัติ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigApprovedDate">-</div>
+              </div>
+
+              <div class="sig-box">
+                <div id="pdfSigOfficerBox"></div>
+                <div class="sig-line"></div>
                 <div style="margin-top: 4px;">(<span id="pdfSigRecipient">-</span>)</div>
-                <div style="font-size: 0.8rem; color: #555;">ผู้รับพัสดุ / เจ้าหน้าที่จ่ายของ</div>
+                <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้รับมอบพัสดุ</div>
+                <div style="font-size: 0.72rem; color: #666;" id="pdfSigReceiveDate">-</div>
               </div>
             </div>
           </div>
@@ -1092,7 +1103,7 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.1.0) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.0) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -1584,6 +1595,37 @@
       return `${pieces} ${safePiece}`;
     }
 
+    function getPersonalMonthlyQuotaInfo(item) {
+      const limit = Number(item.monthly_limit || 0);
+      if (limit <= 0) return { limit: 0, used: 0, remaining: Infinity };
+      const curDate = new Date();
+      const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+      const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+      const reqs = getReqsDB();
+      let used = 0;
+      reqs.forEach(r => {
+        if (r.status !== 'REJECTED') {
+          const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+          if (isThisMonth && Array.isArray(r.items)) {
+            r.items.forEach(ri => {
+              if (Number(ri.itemId) === Number(item.id)) {
+                used += Number(ri.totalPieces || 0);
+              }
+            });
+          }
+        }
+      });
+      if (typeof cart !== 'undefined' && Array.isArray(cart)) {
+        const inCart = cart.find(c => Number(c.itemId) === Number(item.id));
+        if (inCart) used += Number(inCart.totalPieces || 0);
+      }
+      return {
+        limit,
+        used,
+        remaining: Math.max(0, limit - used)
+      };
+    }
+
     function renderCatalog() {
       const items = getItemsDB();
       const grid = document.getElementById('catalogGrid');
@@ -1643,11 +1685,20 @@
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
-              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? `
-                <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 6px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;">
-                  ${vIcons.shield} จำกัดการเบิก: ${Number(item.monthly_limit).toLocaleString()} ${safePieceName}/เดือน
-                </div>
-              ` : ''}
+              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? (() => {
+                const qInfo = getPersonalMonthlyQuotaInfo(item);
+                const isQuotaEmpty = qInfo.remaining <= 0;
+                return `
+                  <div style="font-size: 0.75rem; color: ${isQuotaEmpty ? '#991b1b' : '#b45309'}; background: ${isQuotaEmpty ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isQuotaEmpty ? '#fecaca' : '#fde68a'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                      ${vIcons.shield} จำกัดการเบิก: ${qInfo.limit.toLocaleString()} ${safePieceName}/เดือน
+                    </span>
+                    <span style="font-size: 0.72rem; color: ${isQuotaEmpty ? '#dc2626' : '#92400e'};">
+                      โควตาคงเหลือของท่านในเดือนนี้: <strong>${qInfo.remaining.toLocaleString()} ${safePieceName}</strong> (เบิกแล้ว ${qInfo.used.toLocaleString()})
+                    </span>
+                  </div>
+                `;
+              })() : ''}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
@@ -1799,6 +1850,7 @@
 
     function updateCartBadge() {
       document.getElementById('cartCount').innerText = cart.length;
+      renderCatalog();
     }
 
     function toggleCartDrawer(forceOpen) {
@@ -2277,6 +2329,25 @@
       document.getElementById('pdfSigRequester').innerText = req.requester;
       document.getElementById('pdfSigRecipient').innerText = req.requester;
 
+      const reqDateEl = document.getElementById('pdfSigReqDate');
+      if (reqDateEl) reqDateEl.innerText = req.date || '-';
+
+      const verifierEl = document.getElementById('pdfSigVerifier');
+      const verifiedDateEl = document.getElementById('pdfSigVerifiedDate');
+      const verifierStampEl = document.getElementById('pdfSigVerifierStamp');
+      const isVerifiedOrLater = ['VERIFIED', 'APPROVED', 'COMPLETED'].includes(req.status);
+      if (verifierEl) verifierEl.innerText = req.verified_by || (isVerifiedOrLater ? 'เจ้าหน้าที่พัสดุ สวท.' : '.........................................');
+      if (verifiedDateEl) verifiedDateEl.innerText = req.verified_date || req.verified_at || (isVerifiedOrLater ? (req.date || '-') : 'วันที่ ....../....../......');
+      if (verifierStampEl) verifierStampEl.innerText = isVerifiedOrLater ? '[ ผ่านการคัดกรอง ]' : '';
+
+      const approverEl = document.getElementById('pdfSigApprover');
+      const approvedDateEl = document.getElementById('pdfSigApprovedDate');
+      const approverStampEl = document.getElementById('pdfSigApproverStamp');
+      const isApprovedOrCompleted = ['APPROVED', 'COMPLETED'].includes(req.status);
+      if (approverEl) approverEl.innerText = req.approved_by || (isApprovedOrCompleted ? 'หัวหน้าสำนักงานผู้อำนวยการ สวท.' : '.........................................');
+      if (approvedDateEl) approvedDateEl.innerText = req.approved_date || req.approved_at || (isApprovedOrCompleted ? (req.completed_date || req.date || '-') : 'วันที่ ....../....../......');
+      if (approverStampEl) approverStampEl.innerText = isApprovedOrCompleted ? '[ อนุมัติขั้นสุดท้าย ]' : '';
+
       const tbody = document.getElementById('pdfItemsTbody');
       tbody.innerHTML = (req.items || []).map((it, idx) => {
         let reqQty = it.qtyBoxes > 0 && it.qtyPieces > 0 ?
@@ -2285,8 +2356,9 @@
         
         let approvedQty = it.approvedPieces !== undefined ? `${it.approvedPieces.toLocaleString()} ${it.unitPiece}` : (req.status === 'COMPLETED' ? reqQty : '-');
 
-        let noteText = 'รออนุมัติ';
-        if (req.status === 'APPROVED') noteText = 'อนุมัติแล้ว';
+        let noteText = 'รอคัดกรอง';
+        if (req.status === 'VERIFIED') noteText = 'ผ่านการคัดกรอง';
+        else if (req.status === 'APPROVED') noteText = 'อนุมัติแล้ว';
         else if (req.status === 'COMPLETED') noteText = 'จ่ายพัสดุครบถ้วน';
         else if (req.status === 'REJECTED') noteText = 'ไม่อนุมัติ';
 
@@ -2302,11 +2374,17 @@
       }).join('');
 
       const sigBox = document.getElementById('pdfSigOfficerBox');
+      const recDateEl = document.getElementById('pdfSigReceiveDate');
       const payDate = req.completed_date || req.completedDate || (req.status === 'COMPLETED' ? req.date : '');
-      if (req.signature) {
-        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">${payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
+      if (req.signature && req.signature.startsWith('data:image')) {
+        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
+      } else if (req.status === 'COMPLETED') {
+        sigBox.innerHTML = `<div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-bottom: 6px;">[ รับมอบพัสดุแล้ว ]</div>`;
       } else {
-        sigBox.innerHTML = `<div>ลงชื่อ.......................................................</div>${req.status === 'COMPLETED' && payDate ? `<div style="font-size: 0.75rem; color: #666; margin-top: 4px;">วันที่จ่ายของ: ${payDate}</div>` : ''}`;
+        sigBox.innerHTML = '';
+      }
+      if (recDateEl) {
+        recDateEl.innerText = (req.status === 'COMPLETED' && payDate) ? `วันที่รับของ: ${payDate}` : 'วันที่ ....../....../......';
       }
 
       const modal = document.getElementById('requisitionPdfModal');
@@ -2444,11 +2522,11 @@
             }
             .pdf-signatures {
               display: grid;
-              grid-template-columns: 1fr 1fr 1fr;
-              gap: 1rem;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 0.75rem;
               margin-top: auto;
               text-align: center;
-              font-size: 0.85rem;
+              font-size: 0.82rem;
               page-break-inside: avoid;
               break-inside: avoid;
             }

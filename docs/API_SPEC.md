@@ -29,8 +29,11 @@
 | `GET` | `?action=trackRequisition&docNo=...`| `trackRequisition` | สาธารณะ | ติดตามสถานะคำขอรายเอกสาร |
 | `GET` | `?action=getDepartments` | `getDepartments` | สาธารณะ | ดึงรายชื่อกลุ่มงาน/หน่วยงานภายใน สวท. |
 | `GET` | `?action=getUsers` | `getUsers` | สาธารณะ | ดึงรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (เริ่มต้นด้วยหัวหน้าหน่วยงาน 4 ท่าน) |
-| `POST`| Payload `action: "createRequisition"`| `createRequisition` | สาธารณะ | ส่งคำขอเบิกพัสดุใหม่ |
-| `POST`| Payload `action: "approveRequisition"`| `approveRequisition` | เจ้าหน้าที่ | อนุมัติคำขอและล็อกยอดติดจอง |
+| `GET` | `?action=getMonthlyAnalytics&month=...` | `getMonthlyAnalytics` | เจ้าหน้าที่ | ดึงข้อมูลสรุปยอดและสถิติการเบิกจ่ายประจำเดือน (Top 5 / Least 5) |
+| `GET` | `?action=getItemTransactions&itemId=...` | `getItemTransactions` | เจ้าหน้าที่ | ดึงประวัติความเคลื่อนไหวสต๊อกย้อนหลังรายพัสดุ (`IN`, `OUT`, `ADJUST`) |
+| `POST`| Payload `action: "createRequisition"`| `createRequisition` | สาธารณะ | ส่งคำขอเบิกพัสดุใหม่ (พร้อมตรวจสอบโควตา `monthly_limit`) |
+| `POST`| Payload `action: "verifyRequisition"`| `verifyRequisition` | เจ้าหน้าที่ (`STAFF`/`ADMIN`) | คัดกรองคำขอเบื้องต้น (`PENDING` ➔ `VERIFIED`) เพื่อส่งต่อหัวหน้า |
+| `POST`| Payload `action: "approveRequisition"`| `approveRequisition` | หัวหน้า (`HEAD`/`ADMIN`) | อนุมัติคำขอขั้นสุดท้าย (`VERIFIED` ➔ `APPROVED`) และล็อกยอดติดจอง |
 | `POST`| Payload `action: "completeRequisition"`| `completeRequisition`| เจ้าหน้าที่ | บันทึกลายเซ็นและตัดยอดสต๊อกจริง |
 | `POST`| Payload `action: "rejectRequisition"` | `rejectRequisition` | เจ้าหน้าที่ | ไม่อนุมัติคำขอและคืนสิทธิ์ |
 | `POST`| Payload `action: "restockItem"` | `restockItem` | เจ้าหน้าที่ | รับพัสดุเข้าคลัง |
