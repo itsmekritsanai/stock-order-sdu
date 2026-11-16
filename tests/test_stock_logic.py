@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.2"
+        assert SYSTEM_VERSION == "3.2.3"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1046,6 +1046,15 @@ class TestPhase8ExtendedRequirements:
         assert "staff.html?role=STAFF" in ptl_html
         assert "staff.html?role=HEAD" in ptl_html
         assert "staff.html?role=ADMIN" in ptl_html
+
+    def test_portal_datetime_helpers_defined(self):
+        """Regression test: verify getThaiDatetime and formatThaiDatetime are defined in both index.html and staff.html."""
+        for fname in ["index.html", "staff.html"]:
+            with open(os.path.join(PROJECT_ROOT, fname), "r", encoding="utf-8") as f:
+                html = f.read()
+            assert "function getThaiDatetime(" in html, f"{fname} missing getThaiDatetime"
+            assert "function formatThaiDatetime(" in html, f"{fname} missing formatThaiDatetime"
+
 
 
 

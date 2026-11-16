@@ -48,6 +48,10 @@
       return `${day} ${month} ${thaiYear} ${hours}:${minutes} น.`;
     }
 
+    function formatThaiDatetime(dateObj = new Date()) {
+      return getThaiDatetime(dateObj);
+    }
+
     if (typeof Swal === 'undefined') {
       document.write('<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"><\/script>');
     }
@@ -970,13 +974,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.2) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.3) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.2.2';
+    const APP_VERSION = '3.2.3';
     const MYSQL_API_URL = '/api';
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
@@ -1889,7 +1893,7 @@
       const req = reqs.find(r => r.id === docNo);
       if (!req) return;
 
-      const updatedItems = req.items.map(i => {
+      const updatedItems = (req.items || []).map(i => {
         const inputEl = document.getElementById(`approve-qty-${docNo}-${i.itemId}`);
         const val = inputEl ? parseInt(inputEl.value, 10) : (i.approvedPieces ?? i.totalPieces);
         const cleanVal = isNaN(val) || val < 0 ? 0 : val;
@@ -1905,28 +1909,45 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'คัดกรองและส่งต่อหัวหน้า',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
+          const now = new Date();
+          const staffUser = getLoggedInStaff();
+          const verifiedBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+          const verifiedDate = formatThaiDatetime(now);
+
+          const apiRes = await postToMySQLAPI('verifyRequisition', {
+            docNo: docNo,
+            verifiedBy: verifiedBy,
+            verifiedDate: verifiedDate,
+            items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
+          });
+          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ไม่สามารถคัดกรองคำขอได้',
+              text: apiRes.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
           req.status = 'VERIFIED';
           req.items = updatedItems;
-          const staffUser = getLoggedInStaff();
-          req.verified_by = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
-          req.verified_date = formatThaiDatetime(new Date());
+          req.verified_by = verifiedBy;
+          req.verified_at = now.toISOString();
+          req.verified_date = verifiedDate;
+          req.updated_at = now.toISOString();
           saveReqsDB(reqs);
-
-          postToMySQLAPI('verifyRequisition', {
-            docNo: docNo,
-            verifiedBy: req.verified_by,
-            verifiedDate: req.verified_date,
-            items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
-          });
 
           renderStaffRequisitions(currentStaffStatus);
           Swal.fire({
             icon: 'success',
             title: 'คัดกรองสำเร็จ',
             text: `ส่งคำขอ ${docNo} ให้หัวหน้าพิจารณาอนุมัติแล้ว`,
-            confirmButtonColor: '#1e40af'
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง'
           });
         }
       });
@@ -1992,26 +2013,42 @@
         cancelButtonColor: '#64748b',
         confirmButtonText: 'อนุมัติขั้นสุดท้าย (กันสต๊อก)',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
-          req.status = 'APPROVED';
-          req.updated_at = new Date().toISOString();
-          req.items = updatedItems;
+          const now = new Date();
           const staffUser = getLoggedInStaff();
-          req.approved_by = staffUser ? (staffUser.name || staffUser.username) : 'หัวหน้า/ผู้อำนวยการ สวท.';
-          req.approved_date = formatThaiDatetime(new Date());
+          const approvedBy = staffUser ? (staffUser.name || staffUser.username) : 'หัวหน้า/ผู้อำนวยการ สวท.';
+          const approvedDate = formatThaiDatetime(now);
+
+          const apiRes = await postToMySQLAPI('approveRequisition', {
+            docNo: docNo,
+            approvedBy: approvedBy,
+            approvedDate: approvedDate,
+            items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
+          });
+          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ไม่สามารถอนุมัติคำขอได้',
+              text: apiRes.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
+          req.status = 'APPROVED';
+          req.updated_at = now.toISOString();
+          req.approved_at = now.toISOString();
+          req.items = updatedItems;
+          req.approved_by = approvedBy;
+          req.approved_date = approvedDate;
           req.items.forEach(i => {
             const itm = items.find(si => si.id === i.itemId);
             if (itm) itm.reserved_pieces += i.approvedPieces;
           });
           saveReqsDB(reqs);
           saveItemsDB(items);
-          postToMySQLAPI('approveRequisition', {
-            docNo: docNo,
-            approvedBy: req.approved_by,
-            approvedDate: req.approved_date,
-            items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
-          });
           renderStaffRequisitions(currentStaffStatus);
           renderInventoryTable();
 

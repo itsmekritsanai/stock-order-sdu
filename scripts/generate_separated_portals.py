@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.2"
+SYSTEM_VERSION = "3.2.3"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -342,6 +342,10 @@ requester_template = r'''<!DOCTYPE html>
       const hours = String(dateObj.getHours()).padStart(2, '0');
       const minutes = String(dateObj.getMinutes()).padStart(2, '0');
       return `${day} ${month} ${thaiYear} ${hours}:${minutes} น.`;
+    }
+
+    function formatThaiDatetime(dateObj = new Date()) {
+      return getThaiDatetime(dateObj);
     }
 
     if (typeof Swal === 'undefined') {
@@ -1700,22 +1704,29 @@ requester_template = r'''<!DOCTYPE html>
 
     function openDeptDropdown() {
       closeUserDropdown();
-      document.getElementById('deptDropdownList').classList.add('open');
-      document.getElementById('deptComboboxControl').classList.add('open');
+      const dd = document.getElementById('deptDropdownList');
+      const ctrl = document.getElementById('deptComboboxControl');
+      if (!dd) return;
+      dd.classList.add('open');
+      if (ctrl) ctrl.classList.add('open');
       renderDeptDropdown("");
     }
 
     function closeDeptDropdown() {
-      document.getElementById('deptDropdownList').classList.remove('open');
-      document.getElementById('deptComboboxControl').classList.remove('open');
+      const dd = document.getElementById('deptDropdownList');
+      const ctrl = document.getElementById('deptComboboxControl');
+      if (dd) dd.classList.remove('open');
+      if (ctrl) ctrl.classList.remove('open');
     }
 
     function toggleDeptDropdown(e) {
       e.stopPropagation();
       const dropdown = document.getElementById('deptDropdownList');
+      if (!dropdown) return;
       if (dropdown.classList.contains('open')) closeDeptDropdown();
       else {
-        document.getElementById('deptSearchInput').focus();
+        const searchIn = document.getElementById('deptSearchInput');
+        if (searchIn) searchIn.focus();
         openDeptDropdown();
       }
     }
@@ -1792,8 +1803,11 @@ requester_template = r'''<!DOCTYPE html>
 
     function openUserDropdown() {
       closeDeptDropdown();
-      document.getElementById('userDropdownList').classList.add('open');
-      document.getElementById('userComboboxControl').classList.add('open');
+      const dd = document.getElementById('userDropdownList');
+      const ctrl = document.getElementById('userComboboxControl');
+      if (!dd) return;
+      dd.classList.add('open');
+      if (ctrl) ctrl.classList.add('open');
       renderUserDropdown(document.getElementById('requesterName').value);
     }
 
@@ -1807,9 +1821,11 @@ requester_template = r'''<!DOCTYPE html>
     function toggleUserDropdown(e) {
       e.stopPropagation();
       const dropdown = document.getElementById('userDropdownList');
+      if (!dropdown) return;
       if (dropdown.classList.contains('open')) closeUserDropdown();
       else {
-        document.getElementById('requesterName').focus();
+        const nameIn = document.getElementById('requesterName');
+        if (nameIn) nameIn.focus();
         openUserDropdown();
       }
     }
@@ -3246,6 +3262,10 @@ staff_template = r'''<!DOCTYPE html>
       const hours = String(dateObj.getHours()).padStart(2, '0');
       const minutes = String(dateObj.getMinutes()).padStart(2, '0');
       return `${day} ${month} ${thaiYear} ${hours}:${minutes} น.`;
+    }
+
+    function formatThaiDatetime(dateObj = new Date()) {
+      return getThaiDatetime(dateObj);
     }
 
     if (typeof Swal === 'undefined') {
@@ -5012,7 +5032,7 @@ staff_template = r'''<!DOCTYPE html>
       const req = reqs.find(r => r.id === docNo);
       if (!req) return;
 
-      const updatedItems = req.items.map(i => {
+      const updatedItems = (req.items || []).map(i => {
         const inputEl = document.getElementById(`approve-qty-${docNo}-${i.itemId}`);
         const val = inputEl ? parseInt(inputEl.value, 10) : (i.approvedPieces ?? i.totalPieces);
         const cleanVal = isNaN(val) || val < 0 ? 0 : val;
@@ -5028,28 +5048,45 @@ staff_template = r'''<!DOCTYPE html>
         cancelButtonColor: '#64748b',
         confirmButtonText: 'คัดกรองและส่งต่อหัวหน้า',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
+          const now = new Date();
+          const staffUser = getLoggedInStaff();
+          const verifiedBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+          const verifiedDate = formatThaiDatetime(now);
+
+          const apiRes = await postToMySQLAPI('verifyRequisition', {
+            docNo: docNo,
+            verifiedBy: verifiedBy,
+            verifiedDate: verifiedDate,
+            items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
+          });
+          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ไม่สามารถคัดกรองคำขอได้',
+              text: apiRes.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
           req.status = 'VERIFIED';
           req.items = updatedItems;
-          const staffUser = getLoggedInStaff();
-          req.verified_by = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
-          req.verified_date = formatThaiDatetime(new Date());
+          req.verified_by = verifiedBy;
+          req.verified_at = now.toISOString();
+          req.verified_date = verifiedDate;
+          req.updated_at = now.toISOString();
           saveReqsDB(reqs);
-
-          postToMySQLAPI('verifyRequisition', {
-            docNo: docNo,
-            verifiedBy: req.verified_by,
-            verifiedDate: req.verified_date,
-            items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
-          });
 
           renderStaffRequisitions(currentStaffStatus);
           Swal.fire({
             icon: 'success',
             title: 'คัดกรองสำเร็จ',
             text: `ส่งคำขอ ${docNo} ให้หัวหน้าพิจารณาอนุมัติแล้ว`,
-            confirmButtonColor: '#1e40af'
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง'
           });
         }
       });
@@ -5115,26 +5152,42 @@ staff_template = r'''<!DOCTYPE html>
         cancelButtonColor: '#64748b',
         confirmButtonText: 'อนุมัติขั้นสุดท้าย (กันสต๊อก)',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
-          req.status = 'APPROVED';
-          req.updated_at = new Date().toISOString();
-          req.items = updatedItems;
+          const now = new Date();
           const staffUser = getLoggedInStaff();
-          req.approved_by = staffUser ? (staffUser.name || staffUser.username) : 'หัวหน้า/ผู้อำนวยการ สวท.';
-          req.approved_date = formatThaiDatetime(new Date());
+          const approvedBy = staffUser ? (staffUser.name || staffUser.username) : 'หัวหน้า/ผู้อำนวยการ สวท.';
+          const approvedDate = formatThaiDatetime(now);
+
+          const apiRes = await postToMySQLAPI('approveRequisition', {
+            docNo: docNo,
+            approvedBy: approvedBy,
+            approvedDate: approvedDate,
+            items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
+          });
+          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+            Swal.fire({
+              icon: 'error',
+              title: 'ไม่สามารถอนุมัติคำขอได้',
+              text: apiRes.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+
+          req.status = 'APPROVED';
+          req.updated_at = now.toISOString();
+          req.approved_at = now.toISOString();
+          req.items = updatedItems;
+          req.approved_by = approvedBy;
+          req.approved_date = approvedDate;
           req.items.forEach(i => {
             const itm = items.find(si => si.id === i.itemId);
             if (itm) itm.reserved_pieces += i.approvedPieces;
           });
           saveReqsDB(reqs);
           saveItemsDB(items);
-          postToMySQLAPI('approveRequisition', {
-            docNo: docNo,
-            approvedBy: req.approved_by,
-            approvedDate: req.approved_date,
-            items: req.items.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
-          });
           renderStaffRequisitions(currentStaffStatus);
           renderInventoryTable();
 
