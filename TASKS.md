@@ -10,7 +10,8 @@
 - [x] **Phase 4: การออกแบบฐานข้อมูล PostgreSQL 17 / Docker Compose & pgAdmin 4 (Completed)**
 - [x] **Phase 5: พัฒนา Python PostgreSQL REST API Server & เชื่อมต่อ Frontend พร้อม Offline Fallback (Completed)**
 - [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
-- [ ] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (In Progress)**
+- [x] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (Completed)**
+- [ ] **Phase 8: การควบคุมสิทธิ์ RBAC, แบบฟอร์มใบเบิก 4 ฝ่าย, การส่งออกสถิติ และ Audit Trail (Planned)**
 
 ---
 
@@ -86,32 +87,59 @@
 
 ---
 
-## Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (In Progress)
-- [ ] **Task 7.1:** อัปเดตสคีมาฐานข้อมูล PostgreSQL 17 (`backend/schema_postgres.sql` และ `backend/server.py` auto-migration):
+## Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (Completed)
+- [x] **Task 7.1:** อัปเดตสคีมาฐานข้อมูล PostgreSQL 17 (`backend/schema_postgres.sql` และ `backend/server.py` auto-migration):
   - เพิ่มคอลัมน์ `monthly_limit INT DEFAULT 0` ในตาราง `inventory_items`
   - เพิ่มคอลัมน์ `last_restocked_at TIMESTAMP DEFAULT NULL` ในตาราง `inventory_items`
   - ขยายสถานะคำขอใน `requisitions.status` รองรับ `VERIFIED` (`PENDING`, `VERIFIED`, `APPROVED`, `COMPLETED`, `REJECTED`)
   - เพิ่มคอลัมน์ `verified_by VARCHAR(150)`, `verified_at TIMESTAMP`, `approved_by VARCHAR(150)`, `approved_at TIMESTAMP` ในตาราง `requisitions`
   - เพิ่มคอลัมน์ `recorded_by VARCHAR(150)` ในตาราง `stock_transactions`
-- [ ] **Task 7.2:** พัฒนาระบบจำกัดจำนวนการเบิกต่อเดือน (Monthly Quota Limit Enforcement):
+- [x] **Task 7.2:** พัฒนาระบบจำกัดจำนวนการเบิกต่อเดือน (Monthly Quota Limit Enforcement):
   - ตรวจสอบผลรวมยอดเบิกสะสมในงวดเดือนปัจจุบันก่อนสร้างคำขอใน `handle_create_requisition`
   - ปฏิเสธคำขอหากผลรวมเกิน `monthly_limit`
   - แสดงป้ายแจ้งเตือนโควตารายเดือนและยอดโควตาคงเหลือในแคตตาล็อกหน้าผู้เบิก (`index.html`)
   - หน้าต่างปรับตั้งค่าโควตาประจำเดือนในหน้าคลังพัสดุเจ้าหน้าที่ (`staff.html`)
-- [ ] **Task 7.3:** ปรับปรุงวงจรคำขอเบิก 2 ขั้นตอน (Staff Screening -> Head Final Approval):
+- [x] **Task 7.3:** ปรับปรุงวงจรคำขอเบิก 2 ขั้นตอน (Staff Screening -> Head Final Approval):
   - เจ้าหน้าที่พัสดุกดปุ่ม "ผ่านการคัดกรอง (ส่งต่อหัวหน้า)" เปลี่ยนสถานะเป็น `VERIFIED`
   - เพิ่มแท็บ "รอหัวหน้าอนุมัติ (`VERIFIED`)" ในหน้า `staff.html`
   - หัวหน้าหน่วยงานกดยืนยันอนุมัติขั้นสุดท้าย เปลี่ยนสถานะเป็น `APPROVED` (ล็อกยอด `reserved_pieces`)
   - อัปเดต REST API: `verifyRequisition`, `approveRequisition`, `rejectRequisition`
-- [ ] **Task 7.4:** ระบบประทับเวลาการรับเข้าพัสดุ (Incoming Stock Timestamp):
+- [x] **Task 7.4:** ระบบประทับเวลาการรับเข้าพัสดุ (Incoming Stock Timestamp):
   - บันทึก Timestamp ละเอียดระดับวินาทีใน `stock_transactions` เมื่อรับเข้าพัสดุ (`restockItem`)
   - แสดงคอลัมน์ "วันเวลารับเข้าล่าสุด" ในตารางคลังพัสดุ และแสดงตารางประวัติการรับเข้าย้อนหลัง
-- [ ] **Task 7.5:** ระบบจัดเก็บข้อมูลระยะยาวและตัวกรองเรียกดูย้อนหลังรายเดือน (Monthly Historical Filter):
+- [x] **Task 7.5:** ระบบจัดเก็บข้อมูลระยะยาวและตัวกรองเรียกดูย้อนหลังรายเดือน (Monthly Historical Filter):
   - เพิ่ม Dropdown กรองเดือน/ปี พ.ศ. ในหน้าคำขอเบิก (`renderStaffRequisitions`, `myRequisitionsModal`)
   - เพิ่มตัวกรองงวดเดือนในตารางประวัติความเคลื่อนไหวสต๊อก
-- [ ] **Task 7.6:** แดชบอร์ดสรุปยอดสถิติและการวิเคราะห์การเบิกรายเดือน (Monthly Analytics Dashboard):
+- [x] **Task 7.6:** แดชบอร์ดสรุปยอดสถิติและการวิเคราะห์การเบิกรายเดือน (Monthly Analytics Dashboard):
   - สร้าง Endpoint `getMonthlyAnalytics` สรุปภาพรวมประจำเดือน
   - แสดงอันดับพัสดุที่ถูกเบิกมากที่สุด (Top Requisitioned Items)
   - แสดงอันดับพัสดุที่ถูกเบิกน้อยที่สุด / ไม่มีการเบิก (Least Requisitioned / Slow-Moving Items)
-- [ ] **Task 7.7:** อัปเดตแบบฟอร์มใบเบิกพัสดุทางการ (Official PDF) รองรับการลงนาม 3 ฝ่าย (ผู้เบิก, เจ้าหน้าที่ผู้คัดกรอง, หัวหน้าผู้อนุมัติ)
-- [ ] **Task 7.8:** อัปเดตชุดทดสอบอัตโนมัติ `tests/test_stock_logic.py` ครอบคลุม State Machine 2 ชั้น และ Quota Validation
+- [x] **Task 7.7:** อัปเดตแบบฟอร์มใบเบิกพัสดุทางการ (Official PDF) รองรับการแสดงผลลายมือชื่อและการอนุมัติ
+- [x] **Task 7.8:** อัปเดตชุดทดสอบอัตโนมัติ `tests/test_stock_logic.py` ครอบคลุม State Machine 2 ชั้น และ Quota Validation
+
+---
+
+## Phase 8: การควบคุมสิทธิ์ RBAC, แบบฟอร์มใบเบิก 4 ฝ่าย, การส่งออกสถิติ และ Audit Trail ย้อนหลัง (Planned / Backlog)
+- [ ] **Task 8.1:** ระบบจัดการสิทธิ์การใช้งานตามบทบาท (Role-Based Access Control - RBAC):
+  - แยกสิทธิ์และบัญชีผู้ใช้งานระหว่าง เจ้าหน้าที่พัสดุ (`STAFF`), หัวหน้าหน่วยงานผู้อนุมัติ (`HEAD`), และผู้ดูแลระบบ (`ADMIN`)
+  - สิทธิ์ `STAFF`: จัดการสต๊อก, รับของเข้าคลัง, ตรวจสอบคำขอ, และกดยืนยันผ่านการคัดกรอง (`Verify`)
+  - สิทธิ์ `HEAD`: เข้าสู่ระบบเพื่อพิจารณาอนุมัติขั้นสุดท้าย (`Approve`) หรือส่งกลับแก้ไขคำขอสถานะ `VERIFIED`
+  - บังคับใช้สิทธิ์ทั้งในระดับ Backend API และการควบคุมการแสดงผลปุ่มบน Frontend
+- [ ] **Task 8.2:** ยกระดับแบบฟอร์มใบเบิกพัสดุทางการ (Official PDF Printable Form) เป็น 4 ฝ่าย:
+  - ปรับปรุงบล็อกท้ายเอกสาร A4 PDF แสดงช่องลงนาม 4 ฝ่ายครบถ้วน:
+    1. ผู้ขอเบิกพัสดุ (Requester - ชื่อตัวบรรจงและวันที่ขอเบิก)
+    2. เจ้าหน้าที่พัสดุผู้คัดกรอง (Staff Verifier - ดึงชื่อและวันเวลาคัดกรองจริง)
+    3. หัวหน้าหน่วยงานผู้อนุมัติ (Head Approver - ดึงชื่อและวันเวลาอนุมัติจริง)
+    4. ผู้รับมอบพัสดุ (Receiver - ประทับรูปลายเซ็นดิจิทัลจริงและวันที่รับมอบ)
+- [ ] **Task 8.3:** ระบบส่งออกรายงานสรุปยอดและสถิติรายเดือน (Monthly Analytics Export):
+  - เพิ่มปุ่มส่งออกรายงานสถิติประจำเดือนเป็นไฟล์ CSV / Excel
+  - พัฒนาแบบฟอร์มพิมพ์รายงานสรุปประจำเดือนสำหรับผู้บริหาร (Executive Monthly Summary PDF)
+- [ ] **Task 8.4:** หน้าต่างตรวจสอบประวัติความเคลื่อนไหวสต๊อกย้อนหลังรายพัสดุ (Item Transaction Audit Trail Modal):
+  - เพิ่มปุ่ม "ดูประวัติความเคลื่อนไหว" ในแต่ละแถวของตารางคลังพัสดุ
+  - แสดงตารางประวัติย้อนหลังทุกรายการจาก `stock_transactions` (รับเข้า, จ่ายออกตามใบเบิก, ปรับยอดตรวจนับ พร้อมวันเวลาและผู้บันทึก)
+- [ ] **Task 8.5:** แสดงผลโควตาคงเหลือของผู้ขอเบิกแบบ Dynamic (Personal Monthly Quota Tracking):
+  - คำนวณยอดที่ผู้ขอเบิกท่านนั้นๆ เคยขอเบิกไปแล้วในเดือนปัจจุบันเทียบกับ `monthly_limit`
+  - แสดงผล "โควตาคงเหลือของท่านในเดือนนี้" บนการ์ดพัสดุในหน้าแคตตาล็อกผู้ขอเบิก
+- [ ] **Task 8.6:** ระบบแจ้งเตือนพัสดุถึงจุดสั่งซื้อใหม่ (Low Stock Reorder Point Alert):
+  - เพิ่มการ์ดสรุปรายการพัสดุที่คงเหลือต่ำกว่าเกณฑ์แจ้งเตือนขั้นต่ำ (`min_alert`) บนแท็บคลังพัสดุ
+  - แสดงป้ายแจ้งเตือนสถานะสต๊อกใกล้หมดเพื่อการวางแผนจัดซื้อล่วงหน้า
