@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.6.0"
+        assert SYSTEM_VERSION == "3.6.1"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1457,6 +1457,19 @@ class TestPhase8ExtendedRequirements:
             "renderAnalyticsPurchaseSection",
         ):
             assert token in stf_html
+
+    def test_all_vicons_keys_defined_in_portals(self):
+        """Ensure every vIcons.<key> referenced in index.html and staff.html is defined in its vIcons map."""
+        import re
+        for fn in ("index.html", "staff.html"):
+            with open(os.path.join(PROJECT_ROOT, fn), "r", encoding="utf-8") as f:
+                txt = f.read()
+            m = re.search(r"const vIcons\s*=\s*\{(.*?)\};", txt, re.S)
+            assert m, f"vIcons map must exist in {fn}"
+            defined = set(re.findall(r"(\w+)\s*:", m.group(1)))
+            used = set(re.findall(r"vIcons\.(\w+)", txt))
+            missing = sorted(used - defined)
+            assert missing == [], f"{fn} references undefined vIcons keys: {missing}"
 
 
 
