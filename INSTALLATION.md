@@ -1,192 +1,128 @@
-# คู่มือการติดตั้งและย้ายระบบไปเครื่องอื่น (Installation & Migration Guide)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.0.3)
+# คู่มือการติดตั้งและนำระบบขึ้นใช้งาน (Installation & Deployment Guide)
+### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.7.0)
 
-คู่มือนี้จัดทำขึ้นเพื่อให้คุณสามารถนำโปรเจกต์นี้ไปติดตั้งและเปิดใช้งานบนเครื่องคอมพิวเตอร์เครื่องอื่น (ทั้ง Windows, macOS และ Linux) ได้อย่างราบรื่น ถูกต้อง และรวดเร็ว
-
----
-
-## 📋 1. สิ่งที่ต้องมีในเครื่องใหม่ (Prerequisites)
-
-ก่อนเริ่มการติดตั้ง ให้ตรวจสอบว่าเครื่องใหม่มีโปรแกรมเหล่านี้ติดตั้งอยู่เรียบร้อยแล้ว:
-
-1. **Git:** สำหรับ Clone โค้ดลงเครื่อง ([ดาวน์โหลด Git](https://git-scm.com/)) *(หรือดาวน์โหลดโปรเจกต์เป็นไฟล์ .ZIP ก็ได้)*
-2. **Python 3.10 ขึ้นไป:** แนะนำเวอร์ชัน 3.11 หรือใหม่กว่า ([ดาวน์โหลด Python](https://www.python.org/downloads/))  
-   > ⚠️ **ข้อสำคัญบน Windows:** ในขั้นตอนติดตั้ง Python ต้อง **ติ๊กถูกที่ช่อง "Add python.exe to PATH"** เสมอ
-3. **Docker Desktop:** สำหรับรัน PostgreSQL 17 และ pgAdmin 4 ([ดาวน์โหลด Docker Desktop](https://www.docker.com/products/docker-desktop/))
-   * บน Windows: ตรวจสอบว่าเปิดฟีเจอร์ WSL 2 (Windows Subsystem for Linux) เรียบร้อยแล้ว
-   * เปิดโปรแกรม Docker Desktop ให้ขึ้นสถานะสีเขียว (Engine running)
-4. **Web Browser:** Google Chrome, Microsoft Edge, Firefox หรือ Safari
+คู่มือนี้รองรับการนำไปติดตั้งและ Deploy ได้ทั้งบนเซิร์ฟเวอร์จริง (Linux / Windows Server) และเครื่องพัฒนา
 
 ---
 
-## 🚀 2. ขั้นตอนการติดตั้งทีละสเต็ป (Step-by-Step Installation)
+## วิธีที่ 1: Deploy แบบ 1 คำสั่งด้วย Docker (แนะนำที่สุด — ง่ายที่สุด)
 
-```mermaid
-flowchart TD
-    A["1. คัดลอกโปรเจกต์มาที่เครื่องใหม่ (Git Clone / แตกไฟล์ ZIP)"] --> B["2. สร้างไฟล์การตั้งค่า (.env)"]
-    B --> C["3. สร้าง Virtual Environment (.venv) & ติดตั้ง Dependencies"]
-    C --> D["4. สตาร์ท PostgreSQL 17 & pgAdmin 4 (docker compose up -d)"]
-    D --> E["5. รันเซิร์ฟเวอร์ (start.bat หรือ python backend/server.py)"]
-    E --> F["6. เข้าใช้งานผ่านเว็บเบราว์เซอร์ (localhost:8080)"]
-```
+วิธีนี้ไม่จำเป็นต้องติดตั้ง Python หรือ PostgreSQL บนเครื่องเป้าหมาย ใช้แค่ **Docker** อย่างเดียว:
 
-### ขั้นตอนที่ 1: เตรียมโฟลเดอร์โปรเจกต์
-เปิด Terminal (PowerShell หรือ Command Prompt) แล้วเข้าไปที่โฟลเดอร์โปรเจกต์:
-```powershell
-cd "c:\Users\<ชื่อผู้ใช้>\Downloads\Project\project stock"
-# หรือหากใช้ Git Clone:
-# git clone https://github.com/itsmekritsanai/stock-order-sdu.git
-# cd stock-order-sdu
-```
-
----
-
-### ขั้นตอนที่ 2: สร้างไฟล์การตั้งค่าสภาพแวดล้อม (`.env`)
-คัดลอกไฟล์เทมเพลต `.env.example` มาเป็น `.env`:
-
-* **บน Windows (PowerShell):**
-  ```powershell
-  Copy-Item .env.example .env
-  ```
-* **บน Windows (CMD):**
-  ```cmd
-  copy .env.example .env
-  ```
-* **บน macOS / Linux:**
-  ```bash
-  cp .env.example .env
-  ```
-
-> [!NOTE]
-> ค่าเริ่มต้นใน `.env` ถูกตั้งค่าให้พร้อมใช้งานกับ Docker Compose ทันที:
-> * `DB_TYPE="postgres"`
-> * `DB_HOST="127.0.0.1"`
-> * `DB_PORT=5433` (พอร์ต PostgreSQL 17)
-> * `DB_USER="postgres"`
-> * `DB_PASSWORD="postgrespassword"`
-> * `DB_NAME="sdu_inventory"`
-> * `PGADMIN_PORT=5051`
-
----
-
-### ขั้นตอนที่ 3: ติดตั้งไลบรารี Python ใน Virtual Environment
-
-1. สร้าง Virtual Environment ชื่อ `.venv`:
-   ```powershell
-   python -m venv .venv
+1. **โคลนโปรเจกต์ลงเครื่องปลายทาง:**
+   ```bash
+   git clone https://github.com/itsmekritsanai/stock-order-sdu.git
+   cd stock-order-sdu
    ```
-2. เปิดใช้งาน Virtual Environment:
-   * **Windows (PowerShell):**
-     ```powershell
-     .venv\Scripts\activate
-     ```
-   * **Windows (CMD):**
-     ```cmd
-     .venv\Scripts\activate.bat
-     ```
-   * **macOS / Linux:**
-     ```bash
-     source .venv/bin/activate
-     ```
-3. ติดตั้งแพ็กเกจที่จำเป็น:
-   ```powershell
-   pip install -r requirements.txt
+
+2. **(แนะนำสำหรับ Production) คัดลอกไฟล์ตั้งค่า `.env` และเปลี่ยนรหัสผ่าน/คีย์ลับ:**
+   ```bash
+   cp .env.example .env
    ```
-   *(ระบบจะติดตั้ง `psycopg2-binary`, `PyMySQL`, `pytest`, `pytest-cov`)*
+   แก้ไขค่าสำคัญใน `.env` ก่อนเปิดใช้งานจริง:
+   - `DB_PASSWORD`, `PGADMIN_DEFAULT_PASSWORD` — เปลี่ยนจากค่าเริ่มต้น
+   - `STAFF_PASSWORD`, `DEFAULT_USER_PASSWORD` — ตั้งรหัสผ่านเจ้าหน้าที่และผู้ใช้
+   - `STAFF_AUTH_SECRET`, `REQUESTER_AUTH_SECRET` — ตั้งสตริงสุ่มความยาว >= 32 ตัวอักษร
+   - `AUTH_BYPASS="false"` — บังคับให้ระบบยืนยันตัวตน Login เสมอ
+   - `ALLOWED_ORIGINS` / `BASE_URL` — ใส่ URL หรือโดเมนจริงที่ใช้เข้างาน (หากมี)
 
----
-
-### ขั้นตอนที่ 4: สตาร์ทฐานข้อมูล PostgreSQL 17 & pgAdmin 4 ผ่าน Docker
-
-1. ตรวจสอบว่าเปิดโปรแกรม **Docker Desktop** ขึ้นมาแล้ว
-2. สั่งรันคอนเทนเนอร์ด้วย Docker Compose:
-   ```powershell
-   docker compose up -d
+3. **สั่งสร้างและเปิดใช้งานครบทั้งเว็บ + ฐานข้อมูลในคำสั่งเดียว:**
+   ```bash
+   docker compose up -d --build
    ```
-3. ตรวจสอบสถานะการทำงาน:
-   ```powershell
+
+4. **ตรวจสอบสถานะความพร้อม:**
+   ```bash
    docker compose ps
    ```
-   > ฐานข้อมูลจะสร้าง Volume `postgres-stock-data` และรันสคริปต์ `backend/schema_postgres.sql` ให้นำเข้าข้อมูลกลุ่มงาน สวท., รายชื่อหัวหน้างาน, และรายการพัสดุ 34 รายการโดยอัตโนมัติทันที
+   ระบบจะรันคอนเทนเนอร์ทั้ง 3 ตัวให้โดยอัตโนมัติ:
+   - `sdu_stock_postgres`: ฐานข้อมูล PostgreSQL 17 (อิมพอร์ต `backend/schema_postgres.sql` + ข้อมูลตั้งต้น 34 รายการให้อัตโนมัติ)
+   - `sdu_stock_app`: เว็บพอร์ทัล + REST API บนพอร์ต `8080`
+   - `sdu_stock_pgadmin`: pgAdmin 4 Web GUI บนพอร์ต `5051`
+
+5. **เข้าใช้งานผ่านเว็บเบราว์เซอร์:**
+   - ศูนย์กลางพอร์ทัล: `http://localhost:8080/portal.html`
+   - หน้าผู้ขอเบิก: `http://localhost:8080/index.html`
+   - หน้าเจ้าหน้าที่/ผู้ดูแล: `http://localhost:8080/staff.html`
+   - ตรวจสอบ Health API: `http://localhost:8080/api?action=health`
 
 ---
 
-### ขั้นตอนที่ 5: เปิดใช้งานระบบ (Start Server)
+## วิธีที่ 2: ติดตั้งแบบรัน Python บนเครื่อง Host (พัฒนา / ไม่มี Docker สำหรับ App)
 
-* **วิธีที่ 1 (บน Windows):**  
-  ดับเบิลคลิกที่ไฟล์ **`start.bat`**
-* **วิธีที่ 2 (ผ่าน Terminal):**  
-  ```powershell
-  .venv\Scripts\python.exe backend\server.py
-  # หรือถ้า activate venv แล้ว:
-  # python backend\server.py
-  ```
+1. คัดลอกโปรเจกต์และสร้างไฟล์ `.env`:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+2. สร้าง Virtual Environment และติดตั้งแพ็กเกจ:
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+   *(บน macOS/Linux ใช้ `source .venv/bin/activate`)*
+3. สตาร์ทเฉพาะฐานข้อมูลและ pgAdmin ด้วย Docker Compose:
+   ```powershell
+   docker compose up -d postgres pgadmin
+   ```
+4. เปิดใช้งานเว็บเซิร์ฟเวอร์:
+   - บน Windows ดับเบิลคลิก `start.bat` หรือรัน:
+     ```powershell
+     .venv\Scripts\python.exe backend\server.py
+     ```
 
-เมื่อเซิร์ฟเวอร์เริ่มทำงาน จะแสดงข้อความว่า:
-```text
-=================================================================
-  SDU Stock & Requisition REST API Server (PostgreSQL Edition)
-  Serving at http://127.0.0.1:8080 (Port 8080)
-=================================================================
+---
+
+## การตั้งค่า HTTPS (Reverse Proxy สำหรับขึ้นเซิร์ฟเวอร์จริง)
+
+หากเปิดใช้งานผ่านโดเมนมหาลัยหรืออินเทอร์เน็ต แนะนำให้วาง Nginx หรือ Caddy ไว้ด้านหน้าแล้ว Proxy มายังพอร์ต `8080`:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name stock.example.ac.th;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 ---
 
-### ขั้นตอนที่ 6: เข้าใช้งานผ่านเว็บเบราว์เซอร์
+## การทดสอบระบบ (Automated Tests & Rules Verification)
 
-| บริการ | URL สำหรับเข้าใช้งาน | ข้อมูลเข้าสู่ระบบ (Credentials) |
-| :--- | :--- | :--- |
-| **ศูนย์กลางพอร์ทัล (Portal Gateway)** | [http://localhost:8080/portal.html](http://localhost:8080/portal.html) | เลือกระหว่างหน้าผู้ขอเบิก หรือ เจ้าหน้าที่ |
-| **หน้าสำหรับผู้ขอเบิก (Requester)** | [http://localhost:8080/index.html](http://localhost:8080/index.html) | ไม่ต้องล็อกอิน (เลือกชื่อตนเองแล้วเบิกได้ทันที) |
-| **หน้าสำหรับเจ้าหน้าที่พัสดุ (Staff)** | [http://localhost:8080/staff.html](http://localhost:8080/staff.html) | จัดการสต๊อก, อนุมัติ, จ่ายของ, เซ็นรับ |
-| **จัดการฐานข้อมูล (pgAdmin 4)** | [http://localhost:5051](http://localhost:5051) | **Email:** `admin@admin.com`<br>**Password:** `root`<br>*(DB Password: `postgrespassword`)* |
-
----
-
-## 🧪 3. การทดสอบความถูกต้องของระบบ (Automated Tests)
-
-คุณสามารถรันชุดทดสอบ 32 รายการเพื่อยืนยันว่าเครื่องใหม่ทำงานได้ถูกต้อง 100%:
 ```powershell
-pytest tests/ -v
+.venv\Scripts\python .agents/skills/stock-order-rules/scripts/verify_rules.py
+.venv\Scripts\python -m pytest tests -v
 ```
-ผลลัพธ์ที่ถูกต้องจะต้องขึ้น **`32 passed`** ทั้งหมด
 
 ---
 
-## 🛠️ 4. การแก้ปัญหาที่พบบ่อย (Troubleshooting & FAQs)
+## การสำรองข้อมูลและการกู้คืน (Database Backup & Restore)
 
-### Q1: รัน `docker compose up -d` แล้วขึ้น `'docker' is not recognized`
-* **สาเหตุ:** Terminal เปิดค้างไว้ก่อนติดตั้ง Docker Desktop ทำให้ยังไม่โหลด Path ของ Docker
-* **วิธีแก้:** ปิดหน้าต่าง PowerShell/Terminal ทั้งหมดแล้วเปิดใหม่ หรือเปิด Docker Desktop ก่อนรัน
-
-### Q2: Docker แจ้งเตือนข้อผิดพลาดเกี่ยวกับ WSL (The system cannot find the path specified)
-* **วิธีแก้:** ดาวน์โหลดและรันตัวติดตั้งซ่อมแซม WSL ของ Microsoft:
-  * ลิงก์ดาวน์โหลด: [Microsoft WSL GitHub Releases](https://github.com/microsoft/WSL/releases/latest/download/wsl.x64.msi)
-  * ดับเบิลคลิกติดตั้งไฟล์ `wsl.x64.msi` แล้ว Restart Docker Desktop
-
-### Q3: พอร์ต 5433 หรือ 5051 ชนกับโปรแกรมอื่นในเครื่อง
-* **วิธีแก้:** เปิดไฟล์ `.env` แล้วเปลี่ยนเลขพอร์ต:
-  * เช่น เปลี่ยน `DB_PORT=5434` และ `PGADMIN_PORT=5052`
-  * จากนั้นรัน `docker compose down` แล้วรัน `docker compose up -d` ใหม่อีกครั้ง
-
-### Q4: ต้องการให้คอมพิวเตอร์/แท็บเล็ต/มือถือ เครื่องอื่นในวง LAN เข้าใช้งานได้
-1. ดูเลข IP ของเครื่องเซิร์ฟเวอร์หลัก (เปิด CMD พิมพ์ `ipconfig` เช่น `192.168.1.50`)
-2. เปิดไฟล์ `.env` แก้ไข `HOST="127.0.0.1"` เป็น `HOST="0.0.0.0"`
-3. รีสตาร์ทเซิร์ฟเวอร์ `backend/server.py`
-4. เครื่องอื่นในวง Wi-Fi เดียวกันจะสามารถเข้าผ่าน:
-   * ผู้ขอเบิก: `http://192.168.1.50:8080/index.html`
-   * เจ้าหน้าที่: `http://192.168.1.50:8080/staff.html`
-
----
-
-## 📦 5. การสำรองข้อมูล (Database Backup & Restore)
-
-* **สำรองข้อมูลฐานข้อมูล PostgreSQL ออกมาเป็นไฟล์ SQL:**
-  ```powershell
+- **สำรองข้อมูล PostgreSQL เป็นไฟล์ SQL:**
+  ```bash
   docker exec -t sdu_stock_postgres pg_dump -U postgres sdu_inventory > backup_sdu_inventory.sql
   ```
-* **กู้คืนข้อมูลจากไฟล์สำรอง:**
-  ```powershell
+- **กู้คืนข้อมูลจากไฟล์สำรอง:**
+  ```bash
   docker exec -i sdu_stock_postgres psql -U postgres sdu_inventory < backup_sdu_inventory.sql
   ```
 
+---
+
+## การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+1. **พอร์ต 8080, 5433 หรือ 5051 ชนกับบริการอื่นในเครื่อง:**
+   แก้ค่า `PORT`, `DB_PORT`, หรือ `PGADMIN_PORT` ในไฟล์ `.env` แล้วรัน `docker compose up -d` ใหม่
+2. **ต้องการอัปเดตโค้ดเวอร์ชันใหม่หลัง `git pull`:**
+   ```bash
+   git pull origin main
+   docker compose up -d --build
+   ```
+   *(ข้อมูลใน Volume `postgres-stock-data` จะยังคงอยู่ครบ และ `backend/server.py` จะทำ Schema Auto-Migration ให้อัตโนมัติ)*

@@ -25,7 +25,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.6.2"
+SYSTEM_VERSION = "3.7.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -77,6 +77,18 @@ def load_env_config():
                         pass
                 else:
                     config[k] = v
+
+    # Real process/container environment variables override .env file defaults
+    for k in list(config.keys()):
+        if k in os.environ and os.environ[k] != "":
+            val = os.environ[k]
+            if k in ("DB_PORT", "PORT", "PGADMIN_PORT"):
+                try:
+                    config[k] = int(val)
+                except ValueError:
+                    pass
+            else:
+                config[k] = val
     return config
 
 

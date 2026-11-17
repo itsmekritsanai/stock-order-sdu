@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.6.2"
+        assert SYSTEM_VERSION == "3.7.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1481,6 +1481,35 @@ class TestPhase8ExtendedRequirements:
         assert "requirements.txt" in ci_txt
         assert "pytest tests" in ci_txt
         assert "verify_rules.py" in ci_txt
+
+    def test_container_deploy_and_env_precedence(self):
+        """Verify 1-command Docker deployment files and os.environ precedence over .env."""
+        import server
+
+        dockerfile = os.path.join(PROJECT_ROOT, "Dockerfile")
+        dockerignore = os.path.join(PROJECT_ROOT, ".dockerignore")
+        compose = os.path.join(PROJECT_ROOT, "docker-compose.yml")
+        env_example = os.path.join(PROJECT_ROOT, ".env.example")
+        for p in (dockerfile, dockerignore, compose, env_example):
+            assert os.path.exists(p), f"Missing deploy artifact: {p}"
+
+        with open(compose, "r", encoding="utf-8") as f:
+            c_txt = f.read()
+        assert "app:" in c_txt
+        assert "DB_HOST: postgres" in c_txt
+        assert "AUTH_BYPASS: ${AUTH_BYPASS:-false}" in c_txt
+        assert "postgres:" in c_txt
+
+        with open(env_example, "r", encoding="utf-8") as f:
+            ex_txt = f.read()
+        assert 'AUTH_BYPASS="false"' in ex_txt
+
+        # Real process env must take precedence over .env file values
+        with patch.dict(os.environ, {"DB_HOST": "postgres", "DB_PORT": "5432", "AUTH_BYPASS": "false"}, clear=False):
+            cfg = server.load_env_config()
+            assert cfg["DB_HOST"] == "postgres"
+            assert cfg["DB_PORT"] == 5432
+            assert cfg["AUTH_BYPASS"] == "false"
 
 
 

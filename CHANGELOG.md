@@ -18,6 +18,13 @@
 
 ---
 
+## [3.7.0] - 2026-11-17
+### Added
+- เพิ่มชุด **Containerized 1-Command Deploy (`Dockerfile`, `.dockerignore`, และ service `app` ใน `docker-compose.yml`)** เพื่อให้สามารถนำโปรเจกต์ไป Deploy พร้อมฐานข้อมูล PostgreSQL 17 และ pgAdmin 4 ได้ทันทีด้วยคำสั่งเดียว (`docker compose up -d --build`)
+- ปรับปรุง `load_env_config()` ใน `backend/server.py` และ `scripts/generate_separated_portals.py` ให้ค่า Environment Variables ของคอนเทนเนอร์/ระบบมีลำดับความสำคัญเหนือไฟล์ `.env` พร้อมเพิ่ม `AUTH_BYPASS="false"` ใน `.env.example` และอัปเดตคู่มือ [INSTALLATION.md](INSTALLATION.md)
+
+---
+
 ## [3.6.2] - 2026-11-17
 ### Fixed
 - แก้ไข path ใน GitHub Actions CI ([ci.yml](.github/workflows/ci.yml)) จาก `"project stock/requirements.txt"` และ `"project stock/tests"` เป็น `requirements.txt` และ `tests` พร้อมเพิ่มขั้นตอนตรวจ `verify_rules.py` อัตโนมัติเพื่อให้ CI รันผ่านบน GitHub และเพิ่มการทดสอบ `test_github_ci_workflow_paths_valid`

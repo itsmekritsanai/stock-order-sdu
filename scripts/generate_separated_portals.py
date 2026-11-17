@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.6.2"
+SYSTEM_VERSION = "3.7.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -32,6 +32,18 @@ if os.path.exists(env_path):
                 STAFF_USERNAME = v
             elif k == 'AUTH_BYPASS':
                 AUTH_BYPASS = v.lower() in ('true', '1', 'yes', 'on')
+
+# Real process/container environment variables override .env file defaults
+if os.environ.get('API_BASE_URL'):
+    MYSQL_API_URL = os.environ['API_BASE_URL']
+if os.environ.get('DEFAULT_USER_PASSWORD'):
+    DEFAULT_USER_PASSWORD = os.environ['DEFAULT_USER_PASSWORD']
+if os.environ.get('STAFF_PASSWORD'):
+    STAFF_PASSWORD = os.environ['STAFF_PASSWORD']
+if os.environ.get('STAFF_USERNAME'):
+    STAFF_USERNAME = os.environ['STAFF_USERNAME']
+if 'AUTH_BYPASS' in os.environ and os.environ['AUTH_BYPASS'] != '':
+    AUTH_BYPASS = os.environ['AUTH_BYPASS'].strip().lower() in ('true', '1', 'yes', 'on')
 
 def parse_docx_depts_and_users(docx_path):
     import zipfile

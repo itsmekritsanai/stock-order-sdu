@@ -35,6 +35,34 @@ services:
       postgres:
         condition: service_healthy
 
+  app:
+    build: .
+    container_name: sdu_stock_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgrespassword}
+      DB_NAME: ${DB_NAME:-sdu_inventory}
+      PORT: 8080
+      HOST: 0.0.0.0
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      API_BASE_URL: ${API_BASE_URL:-/api}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      STAFF_USERNAME: ${STAFF_USERNAME:-admin_staff}
+      STAFF_PASSWORD: ${STAFF_PASSWORD:-sdu1234}
+      STAFF_AUTH_SECRET: ${STAFF_AUTH_SECRET:-sdu_inventory_staff_secret_token_change_in_production}
+      DEFAULT_USER_PASSWORD: ${DEFAULT_USER_PASSWORD:-sdu1234}
+      REQUESTER_AUTH_SECRET: ${REQUESTER_AUTH_SECRET:-sdu_inventory_requester_secret_token_change_in_production}
+      AUTH_BYPASS: ${AUTH_BYPASS:-false}
+
 volumes:
   postgres-stock-data:
 
