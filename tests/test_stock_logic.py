@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.6.1"
+        assert SYSTEM_VERSION == "3.6.2"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1470,6 +1470,17 @@ class TestPhase8ExtendedRequirements:
             used = set(re.findall(r"vIcons\.(\w+)", txt))
             missing = sorted(used - defined)
             assert missing == [], f"{fn} references undefined vIcons keys: {missing}"
+
+    def test_github_ci_workflow_paths_valid(self):
+        """Ensure GitHub Actions workflow uses repository-root paths rather than stale subfolder prefix."""
+        ci_path = os.path.join(PROJECT_ROOT, ".github", "workflows", "ci.yml")
+        assert os.path.exists(ci_path)
+        with open(ci_path, "r", encoding="utf-8") as f:
+            ci_txt = f.read()
+        assert "project stock/" not in ci_txt
+        assert "requirements.txt" in ci_txt
+        assert "pytest tests" in ci_txt
+        assert "verify_rules.py" in ci_txt
 
 
 

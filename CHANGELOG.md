@@ -18,6 +18,12 @@
 
 ---
 
+## [3.6.2] - 2026-11-17
+### Fixed
+- แก้ไข path ใน GitHub Actions CI ([ci.yml](.github/workflows/ci.yml)) จาก `"project stock/requirements.txt"` และ `"project stock/tests"` เป็น `requirements.txt` และ `tests` พร้อมเพิ่มขั้นตอนตรวจ `verify_rules.py` อัตโนมัติเพื่อให้ CI รันผ่านบน GitHub และเพิ่มการทดสอบ `test_github_ci_workflow_paths_valid`
+
+---
+
 ## [3.6.1] - 2026-11-17
 ### Fixed
 - เพิ่มไอคอน `clock` ในออบเจ็กต์ `vIcons` ของฝั่งเจ้าหน้าที่ ([staff.html](staff.html)) เพื่อแก้ปัญหาปุ่ม `ประวัติ` และข้อความสถานะคำขอบางจุดแสดงคำว่า `undefined` แทนไอคอนนาฬิกา SVG พร้อมเพิ่มการทดสอบ `test_all_vicons_keys_defined_in_portals`

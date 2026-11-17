@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.6.1"
+SYSTEM_VERSION = "3.6.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
