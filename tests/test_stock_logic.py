@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.3.0"
+        assert SYSTEM_VERSION == "3.3.1"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1187,6 +1187,15 @@ class TestPhase8ExtendedRequirements:
             idx_html = f.read()
         assert "getQuotas" in idx_html
         assert "qInfo.deptLimit" in idx_html
+
+    def test_universal_searchable_dropdowns_in_portals(self):
+        """Verify all <select> dropdowns across index.html and staff.html are enhanced with search capability."""
+        for fname in ["index.html", "staff.html"]:
+            with open(os.path.join(PROJECT_ROOT, fname), "r", encoding="utf-8") as f:
+                html = f.read()
+            assert "function enhanceSearchableSelect(" in html, f"{fname} missing enhanceSearchableSelect"
+            assert "function enhanceAllSearchableSelects(" in html, f"{fname} missing enhanceAllSearchableSelects"
+            assert "sdu-ss-search-input" in html, f"{fname} missing searchable select input styling/markup"
 
 
 

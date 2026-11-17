@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.3.0"
+SYSTEM_VERSION = "3.3.1"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -161,6 +161,371 @@ svg_icons = {
     "info": '<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>',
     "list": '<svg class="svg-icon" viewBox="0 0 24 24"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>'
 }
+
+SEARCHABLE_SELECT_CSS = r'''
+    /* Universal Searchable Dropdown Widget */
+    .sdu-ss-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      font-family: inherit;
+      text-align: left;
+    }
+    .sdu-ss-wrapper.sdu-ss-auto {
+      width: auto;
+      min-width: 160px;
+    }
+    .sdu-ss-trigger {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.45rem 0.7rem;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      color: #1e293b;
+      font-family: inherit;
+      font-size: 0.875rem;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
+    }
+    .sdu-ss-trigger:hover { border-color: #94a3b8; }
+    .sdu-ss-trigger.open, .sdu-ss-trigger:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+    }
+    .sdu-ss-trigger-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+    .sdu-ss-chevron {
+      width: 15px;
+      height: 15px;
+      color: #64748b;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .sdu-ss-trigger.open .sdu-ss-chevron {
+      transform: rotate(180deg);
+      color: #1e40af;
+    }
+    .sdu-ss-panel {
+      position: fixed;
+      z-index: 99999;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.22), 0 4px 10px rgba(15, 23, 42, 0.08);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+      box-sizing: border-box;
+    }
+    .sdu-ss-panel.open { display: flex; }
+    .sdu-ss-search-wrap {
+      padding: 8px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .sdu-ss-search-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: #0f172a;
+      background: white;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .sdu-ss-search-input:focus {
+      border-color: #1e40af;
+      box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.12);
+    }
+    .sdu-ss-list {
+      max-height: 230px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .sdu-ss-item {
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #1e293b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .sdu-ss-item:hover, .sdu-ss-item.highlighted {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+    .sdu-ss-item.selected {
+      background: #dbeafe;
+      color: #1e40af;
+      font-weight: 600;
+    }
+    .sdu-ss-empty {
+      padding: 14px 10px;
+      text-align: center;
+      font-size: 0.825rem;
+      color: #94a3b8;
+    }
+'''
+
+SEARCHABLE_SELECT_JS = r'''
+    // Universal Searchable Dropdown Enhancer (Zero-Build Vanilla JS)
+    let _activeSearchablePanel = null;
+    let _activeSearchableTrigger = null;
+
+    function closeActiveSearchableSelect() {
+      if (_activeSearchablePanel) {
+        _activeSearchablePanel.classList.remove('open');
+        if (_activeSearchablePanel.parentNode) {
+          _activeSearchablePanel.parentNode.removeChild(_activeSearchablePanel);
+        }
+        _activeSearchablePanel = null;
+      }
+      if (_activeSearchableTrigger) {
+        _activeSearchableTrigger.classList.remove('open');
+        _activeSearchableTrigger = null;
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      if (_activeSearchableTrigger && !document.body.contains(_activeSearchableTrigger)) {
+        closeActiveSearchableSelect();
+        return;
+      }
+      if (_activeSearchablePanel && !_activeSearchablePanel.contains(e.target) && (!_activeSearchableTrigger || !_activeSearchableTrigger.contains(e.target))) {
+        closeActiveSearchableSelect();
+      }
+    });
+
+    document.addEventListener('scroll', (e) => {
+      if (_activeSearchablePanel && !_activeSearchablePanel.contains(e.target)) {
+        closeActiveSearchableSelect();
+      }
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && _activeSearchablePanel) {
+        closeActiveSearchableSelect();
+      }
+    });
+
+    window.addEventListener('resize', closeActiveSearchableSelect);
+
+    function enhanceSearchableSelect(selectEl) {
+      if (!selectEl || selectEl.tagName !== 'SELECT') return;
+      if (selectEl.getAttribute('data-searchable-enhanced') === 'true') {
+        if (typeof selectEl._syncSearchableLabel === 'function') selectEl._syncSearchableLabel();
+        return;
+      }
+      if (selectEl.getAttribute('data-no-search') === 'true' || selectEl.multiple) return;
+      selectEl.setAttribute('data-searchable-enhanced', 'true');
+
+      const wrapper = document.createElement('div');
+      const isAutoWidth = selectEl.style.width === 'auto' || selectEl.id === 'staffRoleSelect' || selectEl.id === 'staffReqMonthFilter' || selectEl.id === 'analyticsMonthSelect' || selectEl.id === 'myReqsMonthSelect';
+      wrapper.className = 'sdu-ss-wrapper' + (isAutoWidth ? ' sdu-ss-auto' : '');
+      if (selectEl.style.minWidth) wrapper.style.minWidth = selectEl.style.minWidth;
+
+      const trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'sdu-ss-trigger';
+      if (selectEl.id) trigger.setAttribute('data-for-select', selectEl.id);
+      if (selectEl.style.height) trigger.style.minHeight = selectEl.style.height;
+      if (selectEl.style.fontSize) trigger.style.fontSize = selectEl.style.fontSize;
+      if (selectEl.style.padding) trigger.style.padding = selectEl.style.padding;
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'sdu-ss-trigger-label';
+      const chevronSvg = `<svg class="sdu-ss-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+      trigger.appendChild(labelSpan);
+      trigger.insertAdjacentHTML('beforeend', chevronSvg);
+
+      const protoDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+      const syncLabel = () => {
+        const opts = Array.from(selectEl.options || []);
+        const currentVal = protoDesc && protoDesc.get ? protoDesc.get.call(selectEl) : selectEl.value;
+        const selectedOpt = opts.find(o => o.value === currentVal) || opts[selectEl.selectedIndex] || opts[0];
+        labelSpan.textContent = selectedOpt ? selectedOpt.textContent : 'เลือกรายการ...';
+        trigger.title = labelSpan.textContent;
+      };
+      selectEl._syncSearchableLabel = syncLabel;
+
+      if (protoDesc && protoDesc.get && protoDesc.set) {
+        Object.defineProperty(selectEl, 'value', {
+          configurable: true,
+          get() { return protoDesc.get.call(this); },
+          set(v) {
+            protoDesc.set.call(this, v);
+            syncLabel();
+          }
+        });
+      }
+
+      const observer = new MutationObserver(() => syncLabel());
+      observer.observe(selectEl, { childList: true, subtree: true, attributes: true });
+
+      selectEl.parentNode.insertBefore(wrapper, selectEl);
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(selectEl);
+      selectEl.style.display = 'none';
+      syncLabel();
+
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (_activeSearchableTrigger === trigger) {
+          closeActiveSearchableSelect();
+          return;
+        }
+        closeActiveSearchableSelect();
+
+        const panel = document.createElement('div');
+        panel.className = 'sdu-ss-panel open';
+        panel.innerHTML = `
+          <div class="sdu-ss-search-wrap">
+            <input type="text" class="sdu-ss-search-input" placeholder="พิมพ์คำค้นหาในรายการ..." autocomplete="off">
+          </div>
+          <div class="sdu-ss-list"></div>
+        `;
+
+        const mountHost = selectEl.closest('.swal2-popup') || document.body;
+        mountHost.appendChild(panel);
+        _activeSearchablePanel = panel;
+        _activeSearchableTrigger = trigger;
+        trigger.classList.add('open');
+
+        const rect = trigger.getBoundingClientRect();
+        const panelWidth = Math.max(rect.width, 230);
+        const spaceBelow = window.innerHeight - rect.bottom - 10;
+        const spaceAbove = rect.top - 10;
+        const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
+        panel.style.width = `${Math.min(panelWidth, window.innerWidth - 20)}px`;
+        panel.style.left = `${Math.max(10, Math.min(rect.left, window.innerWidth - Math.min(panelWidth, window.innerWidth - 20) - 10))}px`;
+        if (openAbove) {
+          panel.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+          panel.style.top = 'auto';
+        } else {
+          panel.style.top = `${rect.bottom + 4}px`;
+          panel.style.bottom = 'auto';
+        }
+
+        const searchInput = panel.querySelector('.sdu-ss-search-input');
+        const listEl = panel.querySelector('.sdu-ss-list');
+        let highlightedIdx = -1;
+
+        const renderOptions = (filterText = '') => {
+          const clean = filterText.trim().toLowerCase();
+          const currentVal = selectEl.value;
+          const opts = Array.from(selectEl.options || []).filter(o => !o.disabled);
+          const matched = opts.filter(o =>
+            !clean ||
+            (o.textContent && o.textContent.toLowerCase().includes(clean)) ||
+            (o.value && o.value.toLowerCase().includes(clean))
+          );
+          if (matched.length === 0) {
+            listEl.innerHTML = `<div class="sdu-ss-empty">ไม่พบตัวเลือกที่ตรงกับ "${filterText.replace(/</g, '&lt;')}"</div>`;
+            highlightedIdx = -1;
+            return;
+          }
+          listEl.innerHTML = '';
+          matched.forEach((opt, idx) => {
+            const item = document.createElement('div');
+            const isSel = opt.value === currentVal;
+            item.className = 'sdu-ss-item' + (isSel ? ' selected' : '') + (idx === highlightedIdx ? ' highlighted' : '');
+            const textSpan = document.createElement('span');
+            textSpan.textContent = opt.textContent;
+            item.appendChild(textSpan);
+            if (isSel) {
+              item.insertAdjacentHTML('beforeend', `<svg style="width:14px;height:14px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`);
+            }
+            item.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              selectEl.value = opt.value;
+              syncLabel();
+              closeActiveSearchableSelect();
+              selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            listEl.appendChild(item);
+          });
+        };
+
+        renderOptions('');
+        setTimeout(() => searchInput.focus(), 10);
+
+        searchInput.addEventListener('click', (ev) => ev.stopPropagation());
+        searchInput.addEventListener('input', () => {
+          highlightedIdx = 0;
+          renderOptions(searchInput.value);
+        });
+        searchInput.addEventListener('keydown', (ev) => {
+          const items = listEl.querySelectorAll('.sdu-ss-item');
+          if (ev.key === 'ArrowDown') {
+            ev.preventDefault();
+            if (items.length > 0) {
+              highlightedIdx = (highlightedIdx + 1) % items.length;
+              items.forEach((el, i) => el.classList.toggle('highlighted', i === highlightedIdx));
+              if (items[highlightedIdx]) items[highlightedIdx].scrollIntoView({ block: 'nearest' });
+            }
+          } else if (ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            if (items.length > 0) {
+              highlightedIdx = highlightedIdx <= 0 ? items.length - 1 : highlightedIdx - 1;
+              items.forEach((el, i) => el.classList.toggle('highlighted', i === highlightedIdx));
+              if (items[highlightedIdx]) items[highlightedIdx].scrollIntoView({ block: 'nearest' });
+            }
+          } else if (ev.key === 'Enter') {
+            ev.preventDefault();
+            const targetItem = (highlightedIdx >= 0 && items[highlightedIdx]) ? items[highlightedIdx] : items[0];
+            if (targetItem) targetItem.click();
+          } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            closeActiveSearchableSelect();
+          }
+        });
+      });
+    }
+
+    function enhanceAllSearchableSelects(root = document) {
+      if (!root || !root.querySelectorAll) return;
+      root.querySelectorAll('select').forEach(sel => enhanceSearchableSelect(sel));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      enhanceAllSearchableSelects(document);
+      const bodyObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          m.addedNodes.forEach(node => {
+            if (node && node.nodeType === 1) {
+              if (node.tagName === 'SELECT') enhanceSearchableSelect(node);
+              else if (node.querySelectorAll) enhanceAllSearchableSelects(node);
+            }
+          });
+        }
+      });
+      if (document.body) {
+        bodyObserver.observe(document.body, { childList: true, subtree: true });
+      }
+    });
+'''
 
 # Shared Database Initial Data (34 Stock Items aligned with Excel ยอดสต๊อก ตค.xlsx)
 initial_items = [
@@ -696,6 +1061,8 @@ requester_template = r'''<!DOCTYPE html>
       }
     }
 
+
+__SEARCHABLE_SELECT_CSS__
 
     /* Requester Login Screen */
     .login-wrapper {
@@ -3377,6 +3744,8 @@ requester_template = r'''<!DOCTYPE html>
       syncFromMySQLAPI();
     });
 
+__SEARCHABLE_SELECT_JS__
+
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {
       if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_QUOTAS_KEY) {
@@ -3409,6 +3778,8 @@ requester_html = (
     requester_template
     .replace('__SYSTEM_VERSION__', SYSTEM_VERSION)
     .replace('__AUTH_BYPASS__', 'true' if AUTH_BYPASS else 'false')
+    .replace('__SEARCHABLE_SELECT_CSS__', SEARCHABLE_SELECT_CSS)
+    .replace('__SEARCHABLE_SELECT_JS__', SEARCHABLE_SELECT_JS)
     .replace('__DEFAULT_ITEMS__', json.dumps(initial_items, ensure_ascii=False))
     .replace('__DEFAULT_REQS__', json.dumps(initial_requisitions, ensure_ascii=False))
     .replace('__DEFAULT_DEPTS__', dept_json_str)
@@ -3798,6 +4169,8 @@ staff_template = r'''<!DOCTYPE html>
       }
     }
 
+
+__SEARCHABLE_SELECT_CSS__
 
     /* Staff Specific Styles */
     .dashboard-header {
@@ -8234,6 +8607,8 @@ staff_template = r'''<!DOCTYPE html>
       syncFromMySQLAPI();
     });
 
+__SEARCHABLE_SELECT_JS__
+
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {
       if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY || e.key === DB_QUOTAS_KEY) {
@@ -8249,6 +8624,8 @@ staff_html = (
     staff_template
     .replace('__SYSTEM_VERSION__', SYSTEM_VERSION)
     .replace('__AUTH_BYPASS__', 'true' if AUTH_BYPASS else 'false')
+    .replace('__SEARCHABLE_SELECT_CSS__', SEARCHABLE_SELECT_CSS)
+    .replace('__SEARCHABLE_SELECT_JS__', SEARCHABLE_SELECT_JS)
     .replace('__DEFAULT_ITEMS__', json.dumps(initial_items, ensure_ascii=False))
     .replace('__DEFAULT_REQS__', json.dumps(initial_requisitions, ensure_ascii=False))
     .replace('__DEFAULT_DEPTS__', dept_json_str)
