@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.3.4"
+        assert SYSTEM_VERSION == "3.4.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1210,6 +1210,59 @@ class TestPhase8ExtendedRequirements:
         with open(os.path.join(PROJECT_ROOT, "backend", "server.py"), "r", encoding="utf-8") as f:
             srv_txt = f.read()
         assert "had_role_col" in srv_txt
+
+    def test_monthly_analytics_person_usage_breakdown(self):
+        """Verify monthly analytics returns per-personnel requisition breakdown and UI elements in staff.html."""
+        import server
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchall.side_effect = [
+            [{"status": "COMPLETED", "count": 2}],
+            [{"item_id": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_piece_name": "ใบ", "total_pieces": 1500, "req_count": 2}],
+            [
+                {
+                    "requester": "นางสาววาสนา จันทร์จ่าย",
+                    "dept": "สำนักงานผู้อำนวยการ สวท.",
+                    "req_count": 1,
+                    "completed_count": 1,
+                    "total_requested_pieces": 1000,
+                    "total_approved_pieces": 1000,
+                },
+                {
+                    "requester": "นางสาวจีรวรรณ บุญพิทักษ์",
+                    "dept": "หน่วยงานศึกษาทั่วไป",
+                    "req_count": 1,
+                    "completed_count": 0,
+                    "total_requested_pieces": 500,
+                    "total_approved_pieces": 0,
+                },
+            ],
+            [
+                {"requester": "นางสาววาสนา จันทร์จ่าย", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 1000, "approved_pieces": 1000},
+                {"requester": "นางสาวจีรวรรณ บุญพิทักษ์", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 500, "approved_pieces": 0},
+            ],
+        ]
+        mock_cur.fetchone.return_value = {"total_requested": 1500, "total_approved": 1000}
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_get_monthly_analytics({"month": ["2026-11"]})
+            assert res["status"] == "success"
+            pu = res["data"]["personUsage"]
+            assert len(pu) == 2
+            assert pu[0]["requester"] == "นางสาววาสนา จันทร์จ่าย"
+            assert pu[0]["totalRequestedPieces"] == 1000
+            assert len(pu[0]["items"]) == 1
+            assert pu[0]["items"][0]["name"] == "กระดาษคำตอบ"
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "analyticsByPersonCard" in stf_html
+        assert "analyticsPersonUsageTbody" in stf_html
+        assert "renderAnalyticsPersonUsageTable" in stf_html
+        assert "openPersonAnalyticsDetailModal" in stf_html
+        assert "analyticsPersonDeptFilter" in stf_html
 
 
 

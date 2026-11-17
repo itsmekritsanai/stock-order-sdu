@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.3.4"
+SYSTEM_VERSION = "3.4.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -862,6 +862,77 @@ def handle_get_monthly_analytics(params):
             top_items = all_items[:5] if all_items else []
             least_items = list(reversed(all_items[-5:])) if len(all_items) >= 5 else list(reversed(all_items))
 
+            person_usage = []
+            try:
+                person_where_and = ""
+                if not is_all:
+                    if IS_POSTGRES:
+                        person_where_and = "AND ((r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                    else:
+                        person_where_and = "AND ((r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+
+                person_summary_query = f"""
+                    SELECT
+                        r.requester,
+                        MAX(r.dept) AS dept,
+                        COUNT(DISTINCT r.id) AS req_count,
+                        COUNT(DISTINCT CASE WHEN r.status = 'COMPLETED' THEN r.id END) AS completed_count,
+                        COALESCE(SUM(ri.total_pieces), 0) AS total_requested_pieces,
+                        COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'COMPLETED') THEN COALESCE(ri.approved_pieces, ri.total_pieces) ELSE 0 END), 0) AS total_approved_pieces
+                    FROM requisitions r
+                    JOIN requisition_items ri ON r.id = ri.requisition_id
+                    WHERE r.status != 'REJECTED' {person_where_and}
+                    GROUP BY r.requester
+                    ORDER BY total_requested_pieces DESC, req_count DESC, r.requester ASC
+                """
+                cur.execute(person_summary_query, tuple(query_args))
+                person_rows = cur.fetchall()
+
+                person_items_map = {}
+                if isinstance(person_rows, list) and len(person_rows) > 0:
+                    person_items_query = f"""
+                        SELECT
+                            r.requester,
+                            ri.item_id,
+                            COALESCE(MAX(i.name), MAX(ri.name)) AS item_name,
+                            COALESCE(MAX(i.unit_piece_name), MAX(ri.unit_piece), 'ชิ้น') AS unit_name,
+                            COALESCE(SUM(ri.total_pieces), 0) AS total_pieces,
+                            COALESCE(SUM(CASE WHEN r.status IN ('APPROVED', 'COMPLETED') THEN COALESCE(ri.approved_pieces, ri.total_pieces) ELSE 0 END), 0) AS approved_pieces
+                        FROM requisitions r
+                        JOIN requisition_items ri ON r.id = ri.requisition_id
+                        LEFT JOIN inventory_items i ON ri.item_id = i.id
+                        WHERE r.status != 'REJECTED' {person_where_and}
+                        GROUP BY r.requester, ri.item_id
+                        ORDER BY total_pieces DESC, ri.item_id ASC
+                    """
+                    cur.execute(person_items_query, tuple(query_args))
+                    p_item_rows = cur.fetchall()
+                    if isinstance(p_item_rows, list):
+                        for pi in p_item_rows:
+                            req_name = pi["requester"]
+                            person_items_map.setdefault(req_name, []).append({
+                                "itemId": int(pi["item_id"]),
+                                "name": pi.get("item_name") or "",
+                                "unit": pi.get("unit_name") or "ชิ้น",
+                                "totalPieces": int(pi.get("total_pieces") or 0),
+                                "approvedPieces": int(pi.get("approved_pieces") or 0),
+                            })
+
+                if isinstance(person_rows, list):
+                    for pr in person_rows:
+                        r_name = pr["requester"]
+                        person_usage.append({
+                            "requester": r_name,
+                            "dept": pr.get("dept") or "",
+                            "requisitionCount": int(pr.get("req_count") or 0),
+                            "completedCount": int(pr.get("completed_count") or 0),
+                            "totalRequestedPieces": int(pr.get("total_requested_pieces") or 0),
+                            "totalApprovedPieces": int(pr.get("total_approved_pieces") or 0),
+                            "items": person_items_map.get(r_name, []),
+                        })
+            except StopIteration:
+                person_usage = []
+
             return {
                 "status": "success",
                 "data": {
@@ -878,6 +949,7 @@ def handle_get_monthly_analytics(params):
                     "topItems": top_items,
                     "leastItems": least_items,
                     "allItemUsage": all_items,
+                    "personUsage": person_usage,
                 }
             }
     finally:

@@ -1057,6 +1057,52 @@
             </table>
           </div>
         </div>
+
+        <!-- Per-Personnel Breakdown Card -->
+        <div id="analyticsByPersonCard" style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.25rem; box-shadow: var(--shadow-sm); margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> สรุปยอดการเบิกพัสดุจำแนกตามรายบุคคลประจำเดือน
+              </h3>
+              <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 2px;">แสดงจำนวนคำขอ ปริมาณพัสดุที่ขอเบิก/จ่ายจริง และรายการพัสดุที่เบิกแยกตามบุคลากรแต่ละท่าน</p>
+            </div>
+            <span id="analyticsPersonTotalCount" style="font-size: 0.85rem; color: var(--neutral-500); font-weight: 600;"></span>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 220px;">
+              <input type="text" id="analyticsPersonSearchInput" class="form-control"
+                     placeholder="พิมพ์ค้นหาชื่อบุคลากร, หน่วยงาน หรือชื่อพัสดุ..."
+                     oninput="renderAnalyticsPersonUsageTable()">
+            </div>
+            <div style="min-width: 240px;">
+              <select id="analyticsPersonDeptFilter" class="form-control" onchange="renderAnalyticsPersonUsageTable()">
+                <option value="ALL">ทุกกลุ่มงาน / หน่วยงานทั้งหมด</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="req-table" style="font-size: 0.875rem;">
+              <thead>
+                <tr>
+                  <th style="width: 55px; text-align: center;">ลำดับ</th>
+                  <th style="min-width: 180px;">ชื่อ-นามสกุล ผู้ขอเบิก</th>
+                  <th style="min-width: 180px;">กลุ่มงาน / หน่วยงาน</th>
+                  <th style="width: 110px; text-align: center;">จำนวนคำขอ</th>
+                  <th style="width: 130px; text-align: right;">จำนวนที่ขอเบิก</th>
+                  <th style="width: 130px; text-align: right;">อนุมัติ / จ่ายจริง</th>
+                  <th style="min-width: 220px;">รายการพัสดุที่เบิกหลัก</th>
+                  <th style="width: 110px; text-align: right;">รายละเอียด</th>
+                </tr>
+              </thead>
+              <tbody id="analyticsPersonUsageTbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- TAB 3: OFFICIAL PDF PRINTABLE PREVIEW -->
@@ -1157,13 +1203,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.3.4 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.4.0 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.3.4';
+    const APP_VERSION = '3.4.0';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = true;
     const vIcons = {
@@ -3493,8 +3539,28 @@
         let totalRequested = 0;
         let totalApproved = 0;
         const itemUsageMap = {};
+        const personMap = {};
 
         monthReqs.forEach(r => {
+          const reqPerson = String(r.requester || 'ไม่ระบุผู้ขอเบิก').trim();
+          const reqDept = String(r.dept || '').trim();
+          if (r.status !== 'REJECTED') {
+            if (!personMap[reqPerson]) {
+              personMap[reqPerson] = {
+                requester: reqPerson,
+                dept: reqDept,
+                requisitionCount: 0,
+                completedCount: 0,
+                totalRequestedPieces: 0,
+                totalApprovedPieces: 0,
+                itemsMap: {}
+              };
+            }
+            if (reqDept && !personMap[reqPerson].dept) personMap[reqPerson].dept = reqDept;
+            personMap[reqPerson].requisitionCount += 1;
+            if (r.status === 'COMPLETED') personMap[reqPerson].completedCount += 1;
+          }
+
           (r.items || []).forEach(it => {
             const itId = Number(it.itemId);
             const pTot = Number(it.totalPieces || 0);
@@ -3509,6 +3575,26 @@
               }
               itemUsageMap[itId].totalPieces += pTot;
               itemUsageMap[itId].reqCount += 1;
+
+              const pRec = personMap[reqPerson];
+              pRec.totalRequestedPieces += pTot;
+              if (r.status === 'APPROVED' || r.status === 'COMPLETED') {
+                pRec.totalApprovedPieces += pApp;
+              }
+              if (!pRec.itemsMap[itId]) {
+                const catalogItem = items.find(x => Number(x.id) === itId);
+                pRec.itemsMap[itId] = {
+                  itemId: itId,
+                  name: (catalogItem && catalogItem.name) || it.name || `พัสดุ #${itId}`,
+                  unit: (catalogItem && catalogItem.unit_piece_name) || it.unitPiece || 'ชิ้น',
+                  totalPieces: 0,
+                  approvedPieces: 0
+                };
+              }
+              pRec.itemsMap[itId].totalPieces += pTot;
+              if (r.status === 'APPROVED' || r.status === 'COMPLETED') {
+                pRec.itemsMap[itId].approvedPieces += pApp;
+              }
             }
           });
         });
@@ -3530,6 +3616,19 @@
         const topItems = allItemsUsage.slice(0, 5);
         const leastItems = allItemsUsage.slice(-5).reverse();
 
+        const personUsageList = Object.values(personMap).map(p => {
+          const itemList = Object.values(p.itemsMap).sort((a, b) => b.totalPieces - a.totalPieces);
+          return {
+            requester: p.requester,
+            dept: p.dept,
+            requisitionCount: p.requisitionCount,
+            completedCount: p.completedCount,
+            totalRequestedPieces: p.totalRequestedPieces,
+            totalApprovedPieces: p.totalApprovedPieces,
+            items: itemList
+          };
+        }).sort((a, b) => (b.totalRequestedPieces - a.totalRequestedPieces) || (b.requisitionCount - a.requisitionCount));
+
         analyticsData = {
           month: selectedMonth,
           totalRequisitions: monthReqs.length,
@@ -3542,7 +3641,8 @@
           totalPiecesApproved: totalApproved,
           topItems: topItems,
           leastItems: leastItems,
-          allItemUsage: allItemsUsage
+          allItemUsage: allItemsUsage,
+          personUsage: personUsageList
         };
       }
 
@@ -3619,6 +3719,139 @@
         `).join('');
       }
       window.lastMonthlyAnalyticsData = analyticsData;
+      renderAnalyticsPersonUsageTable();
+    }
+
+    function renderAnalyticsPersonUsageTable() {
+      const tbody = document.getElementById('analyticsPersonUsageTbody');
+      const countEl = document.getElementById('analyticsPersonTotalCount');
+      const deptFilterEl = document.getElementById('analyticsPersonDeptFilter');
+      const searchEl = document.getElementById('analyticsPersonSearchInput');
+      if (!tbody) return;
+
+      const list = (window.lastMonthlyAnalyticsData && Array.isArray(window.lastMonthlyAnalyticsData.personUsage))
+        ? window.lastMonthlyAnalyticsData.personUsage
+        : [];
+
+      if (deptFilterEl) {
+        const prevVal = deptFilterEl.value || 'ALL';
+        const deptSet = new Set(getAllDeptNames());
+        list.forEach(p => { if (p.dept) deptSet.add(p.dept); });
+        const allDepts = Array.from(deptSet);
+        deptFilterEl.innerHTML = `<option value="ALL">ทุกกลุ่มงาน / หน่วยงานทั้งหมด (${allDepts.length})</option>` +
+          allDepts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+        if (allDepts.includes(prevVal)) deptFilterEl.value = prevVal;
+      }
+
+      const selectedDept = deptFilterEl ? deptFilterEl.value : 'ALL';
+      const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+
+      const filtered = list.filter(p => {
+        const matchDept = selectedDept === 'ALL' || p.dept === selectedDept;
+        const matchSearch = !q ||
+          (p.requester && p.requester.toLowerCase().includes(q)) ||
+          (p.dept && p.dept.toLowerCase().includes(q)) ||
+          (p.items || []).some(it => it.name && it.name.toLowerCase().includes(q));
+        return matchDept && matchSearch;
+      });
+
+      if (countEl) {
+        countEl.innerText = `(พบ ${filtered.length.toLocaleString()} จาก ${list.length.toLocaleString()} ท่าน)`;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--neutral-400);">
+              ไม่พบข้อมูลการเบิกพัสดุรายบุคคลในเดือนหรือเงื่อนไขที่เลือก
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((p, idx) => {
+        const topSummary = (p.items || []).slice(0, 2).map(it =>
+          `<span style="display:inline-block; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; padding:2px 8px; border-radius:999px; font-size:0.74rem; margin:2px 4px 2px 0;">${escapeHtml(it.name)} (${(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unit || 'ชิ้น')})</span>`
+        ).join('');
+        const extraCount = (p.items || []).length > 2 ? `<span style="font-size:0.74rem; color:#64748b;"> +อีก ${(p.items || []).length - 2} รายการ</span>` : '';
+        const safeReqJs = String(p.requester || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        return `
+          <tr>
+            <td style="text-align: center; color: var(--neutral-500);">${idx + 1}</td>
+            <td><strong>${escapeHtml(p.requester)}</strong></td>
+            <td>
+              <span style="background: #f1f5f9; color: #334155; font-size: 0.78rem; padding: 3px 9px; border-radius: 999px; display: inline-block;">
+                ${escapeHtml(p.dept || '-')}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <strong>${(p.requisitionCount || 0).toLocaleString()}</strong>
+              <span style="font-size: 0.74rem; color: var(--accent); display: block;">สำเร็จ ${(p.completedCount || 0).toLocaleString()}</span>
+            </td>
+            <td style="text-align: right; font-weight: 700; color: #1e40af;">${(p.totalRequestedPieces || 0).toLocaleString()} ชิ้น</td>
+            <td style="text-align: right; font-weight: 700; color: #059669;">${(p.totalApprovedPieces || 0).toLocaleString()} ชิ้น</td>
+            <td>${topSummary || '-'}${extraCount}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="openPersonAnalyticsDetailModal('${safeReqJs}')">
+                ${vIcons.eye} ดูรายการ
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openPersonAnalyticsDetailModal(requesterName) {
+      const list = (window.lastMonthlyAnalyticsData && Array.isArray(window.lastMonthlyAnalyticsData.personUsage))
+        ? window.lastMonthlyAnalyticsData.personUsage
+        : [];
+      const person = list.find(p => p.requester === requesterName);
+      if (!person) return;
+
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const monthLabel = monthSelect && monthSelect.selectedIndex >= 0
+        ? monthSelect.options[monthSelect.selectedIndex].text
+        : (window.lastMonthlyAnalyticsData.thaiMonth || 'ทั้งหมด');
+
+      const rowsHtml = (person.items || []).map((it, idx) => `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px; text-align: center; color: #64748b;">${idx + 1}</td>
+          <td style="padding: 8px; text-align: left; font-weight: 600; color: #0f172a;">${escapeHtml(it.name)}</td>
+          <td style="padding: 8px; text-align: right; color: #1e40af; font-weight: 700;">${(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unit || 'ชิ้น')}</td>
+          <td style="padding: 8px; text-align: right; color: #059669; font-weight: 700;">${(it.approvedPieces || 0).toLocaleString()} ${escapeHtml(it.unit || 'ชิ้น')}</td>
+        </tr>
+      `).join('');
+
+      Swal.fire({
+        title: `รายละเอียดการเบิกพัสดุ: ${escapeHtml(person.requester)}`,
+        width: '720px',
+        html: `
+          <div style="text-align: left; font-size: 0.9rem; margin-top: 0.5rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div><strong>หน่วยงาน:</strong> ${escapeHtml(person.dept || '-')}</div>
+              <div><strong>งวดรายงาน:</strong> ${escapeHtml(monthLabel)}</div>
+              <div><strong>จำนวนคำขอ:</strong> ${(person.requisitionCount || 0).toLocaleString()} คำขอ (สำเร็จ ${(person.completedCount || 0).toLocaleString()})</div>
+            </div>
+            <div style="max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+                <thead>
+                  <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                    <th style="padding: 8px; width: 45px; text-align: center;">#</th>
+                    <th style="padding: 8px; text-align: left;">รายการพัสดุ</th>
+                    <th style="padding: 8px; width: 130px; text-align: right;">จำนวนที่ขอเบิก</th>
+                    <th style="padding: 8px; width: 130px; text-align: right;">อนุมัติ / จ่ายจริง</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml || '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8;">ไม่มีรายการพัสดุ</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>
+        `,
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ปิดหน้าต่าง'
+      });
     }
 
     async function exportMonthlyAnalyticsCsv() {
@@ -3667,6 +3900,14 @@
       rows.push(['ลำดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิกในเดือน', 'จำนวนคำขอ', 'หน่วยนับ']);
       (data.allItemUsage || []).forEach((it, idx) => {
         rows.push([idx + 1, it.name, it.category || '', it.totalPieces || 0, it.requisitionCount || 0, it.unit || 'ชิ้น']);
+      });
+
+      rows.push([]);
+      rows.push(['สรุปยอดการเบิกพัสดุจำแนกตามรายบุคคลประจำเดือน']);
+      rows.push(['ลำดับ', 'ชื่อ-นามสกุล ผู้ขอเบิก', 'กลุ่มงาน / หน่วยงาน', 'จำนวนคำขอ', 'จ่ายสำเร็จ', 'จำนวนชิ้นที่ขอเบิก', 'จำนวนชิ้นที่อนุมัติ/จ่ายจริง', 'รายการพัสดุที่เบิก']);
+      (data.personUsage || []).forEach((p, idx) => {
+        const itemsDesc = (p.items || []).map(it => `${it.name} (${it.totalPieces || 0} ${it.unit || 'ชิ้น'})`).join('; ');
+        rows.push([idx + 1, p.requester, p.dept || '-', p.requisitionCount || 0, p.completedCount || 0, p.totalRequestedPieces || 0, p.totalApprovedPieces || 0, itemsDesc || '-']);
       });
 
       const csvContent = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
@@ -3732,6 +3973,20 @@
         </tr>
       `).join('');
 
+      const personRows = (data.personUsage || []).map((p, idx) => {
+        const itemSummary = (p.items || []).slice(0, 3).map(it => `${escapeHtml(it.name)} (${(it.totalPieces || 0).toLocaleString()})`).join(', ');
+        return `
+        <tr>
+          <td style="text-align:center;">${idx + 1}</td>
+          <td>${escapeHtml(p.requester)}</td>
+          <td>${escapeHtml(p.dept || '-')}</td>
+          <td style="text-align:center;">${(p.requisitionCount || 0).toLocaleString()}</td>
+          <td style="text-align:right; font-weight:700;">${(p.totalRequestedPieces || 0).toLocaleString()}</td>
+          <td style="text-align:right;">${(p.totalApprovedPieces || 0).toLocaleString()}</td>
+          <td style="font-size:11px;">${itemSummary || '-'}</td>
+        </tr>
+      `;}).join('');
+
       const doc = iframe.contentWindow.document;
       doc.open();
       doc.write(`
@@ -3780,6 +4035,11 @@
           <table>
             <thead><tr><th style="width:50px;">อันดับ</th><th>ชื่อรายการพัสดุ</th><th style="width:130px;">หมวดหมู่</th><th style="width:120px;">จำนวนที่เบิก</th><th style="width:80px;">คำขอ</th></tr></thead>
             <tbody>${leastRows}</tbody>
+          </table>
+          <h3>3. สรุปยอดการเบิกพัสดุจำแนกตามรายบุคคล</h3>
+          <table>
+            <thead><tr><th style="width:45px;">อันดับ</th><th>ชื่อ-นามสกุล ผู้ขอเบิก</th><th>หน่วยงาน</th><th style="width:65px;">คำขอ</th><th style="width:90px;">ขอเบิก (ชิ้น)</th><th style="width:90px;">จ่ายจริง (ชิ้น)</th><th>รายการหลัก</th></tr></thead>
+            <tbody>${personRows || '<tr><td colspan="7" style="text-align:center;">ไม่มีข้อมูลการเบิกในงวดนี้</td></tr>'}</tbody>
           </table>
           <div class="sig-row">
             <div>
