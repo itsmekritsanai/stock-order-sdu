@@ -25,7 +25,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.5.0"
+SYSTEM_VERSION = "3.6.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -115,6 +115,7 @@ def ensure_database_schema(conn=None):
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'REQUESTER';")
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);")
                 cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS monthly_limit INT NOT NULL DEFAULT 0;")
+                cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS last_unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
                 cur.execute("ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS last_restocked_at TIMESTAMP DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS verified_by VARCHAR(150) DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP DEFAULT NULL;")
@@ -127,6 +128,8 @@ def ensure_database_schema(conn=None):
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_at TIMESTAMP DEFAULT NULL;")
                 cur.execute("ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS rejected_date VARCHAR(100) DEFAULT NULL;")
                 cur.execute("ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS recorded_by VARCHAR(150) DEFAULT NULL;")
+                cur.execute("ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
+                cur.execute("ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS total_cost DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
                 cur.execute("ALTER TABLE requisitions DROP CONSTRAINT IF EXISTS requisitions_status_check;")
                 cur.execute("ALTER TABLE requisitions ADD CONSTRAINT requisitions_status_check CHECK (status IN ('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED'));")
                 default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
@@ -234,6 +237,19 @@ def ensure_database_schema(conn=None):
                 """)
                 if not cur.fetchone():
                     cur.execute("ALTER TABLE `stock_transactions` ADD COLUMN `recorded_by` VARCHAR(150) DEFAULT NULL;")
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory_items' AND COLUMN_NAME = 'last_unit_price';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `inventory_items` ADD COLUMN `last_unit_price` DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
+                cur.execute("""
+                    SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'stock_transactions' AND COLUMN_NAME = 'unit_price';
+                """)
+                if not cur.fetchone():
+                    cur.execute("ALTER TABLE `stock_transactions` ADD COLUMN `unit_price` DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
+                    cur.execute("ALTER TABLE `stock_transactions` ADD COLUMN `total_cost` DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS `quota_rules` (
                       `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -380,6 +396,7 @@ def handle_get_items(params):
                 "available_pieces": available,
                 "min_alert": int(r["min_alert"] or 500),
                 "monthly_limit": int(r.get("monthly_limit") or 0),
+                "last_unit_price": round(float(r.get("last_unit_price") or 0), 2),
                 "last_restocked_at": str(r["last_restocked_at"]) if r.get("last_restocked_at") else "",
                 "image_piece": r["image_piece"] or "",
                 "image_box": r["image_box"] or "",
@@ -731,6 +748,8 @@ def handle_get_item_transactions(params):
                 "transactionType": r["transaction_type"],
                 "changePieces": int(r["change_pieces"] or 0),
                 "balanceAfter": int(r["balance_after"] or 0),
+                "unitPrice": round(float(r.get("unit_price") or 0), 2),
+                "totalCost": round(float(r.get("total_cost") or 0), 2),
                 "referenceType": r.get("reference_type") or "",
                 "referenceId": r.get("reference_id") or "",
                 "reason": r.get("reason") or "",
@@ -938,6 +957,121 @@ def handle_get_monthly_analytics(params):
             except StopIteration:
                 person_usage = []
 
+            total_purchase_cost = 0.0
+            total_restock_count = 0
+            total_restocked_pieces = 0
+            purchase_summary = []
+            purchase_transactions = []
+            try:
+                purchase_where_and = ""
+                purchase_args = []
+                if not is_all:
+                    if IS_POSTGRES:
+                        purchase_where_and = "AND st.created_at IS NOT NULL AND TO_CHAR(st.created_at, 'YYYY-MM') = %s"
+                    else:
+                        purchase_where_and = "AND st.created_at IS NOT NULL AND DATE_FORMAT(st.created_at, '%%Y-%%m') = %s"
+                    purchase_args = [month_filter]
+
+                purchase_summary_query = f"""
+                    SELECT
+                        st.item_id,
+                        COALESCE(MAX(i.name), 'พัสดุ #' || CAST(st.item_id AS VARCHAR)) AS item_name,
+                        COALESCE(MAX(i.category), '-') AS category,
+                        COALESCE(MAX(i.unit_piece_name), 'ชิ้น') AS unit_name,
+                        COUNT(*) AS restock_count,
+                        COALESCE(SUM(st.change_pieces), 0) AS restocked_pieces,
+                        COALESCE(SUM(COALESCE(st.total_cost, 0)), 0) AS total_cost
+                    FROM stock_transactions st
+                    LEFT JOIN inventory_items i ON st.item_id = i.id
+                    WHERE st.transaction_type = 'IN' {purchase_where_and}
+                    GROUP BY st.item_id
+                    ORDER BY total_cost DESC, restocked_pieces DESC, st.item_id ASC
+                """ if IS_POSTGRES else f"""
+                    SELECT
+                        st.item_id,
+                        COALESCE(MAX(i.name), CONCAT('พัสดุ #', st.item_id)) AS item_name,
+                        COALESCE(MAX(i.category), '-') AS category,
+                        COALESCE(MAX(i.unit_piece_name), 'ชิ้น') AS unit_name,
+                        COUNT(*) AS restock_count,
+                        COALESCE(SUM(st.change_pieces), 0) AS restocked_pieces,
+                        COALESCE(SUM(COALESCE(st.total_cost, 0)), 0) AS total_cost
+                    FROM stock_transactions st
+                    LEFT JOIN inventory_items i ON st.item_id = i.id
+                    WHERE st.transaction_type = 'IN' {purchase_where_and}
+                    GROUP BY st.item_id
+                    ORDER BY total_cost DESC, restocked_pieces DESC, st.item_id ASC
+                """
+                cur.execute(purchase_summary_query, tuple(purchase_args))
+                p_sum_rows = cur.fetchall()
+                if isinstance(p_sum_rows, list):
+                    for ps in p_sum_rows:
+                        r_cnt = int(ps.get("restock_count") or 0)
+                        r_pcs = int(ps.get("restocked_pieces") or 0)
+                        t_cost = round(float(ps.get("total_cost") or 0), 2)
+                        avg_up = round(t_cost / r_pcs, 2) if r_pcs > 0 else 0.0
+                        total_restock_count += r_cnt
+                        total_restocked_pieces += r_pcs
+                        total_purchase_cost = round(total_purchase_cost + t_cost, 2)
+                        purchase_summary.append({
+                            "itemId": int(ps["item_id"]),
+                            "name": ps.get("item_name") or "",
+                            "category": ps.get("category") or "-",
+                            "unit": ps.get("unit_name") or "ชิ้น",
+                            "restockCount": r_cnt,
+                            "restockedPieces": r_pcs,
+                            "avgUnitPrice": avg_up,
+                            "totalCost": t_cost,
+                        })
+
+                purchase_tx_query = f"""
+                    SELECT
+                        st.id,
+                        st.item_id,
+                        i.name AS item_name,
+                        i.unit_piece_name AS unit_name,
+                        st.change_pieces,
+                        COALESCE(st.unit_price, 0) AS unit_price,
+                        COALESCE(st.total_cost, 0) AS total_cost,
+                        st.reason,
+                        st.recorded_by,
+                        st.created_at
+                    FROM stock_transactions st
+                    LEFT JOIN inventory_items i ON st.item_id = i.id
+                    WHERE st.transaction_type = 'IN' {purchase_where_and}
+                    ORDER BY st.created_at DESC, st.id DESC
+                    LIMIT 200
+                """
+                cur.execute(purchase_tx_query, tuple(purchase_args))
+                p_tx_rows = cur.fetchall()
+                if isinstance(p_tx_rows, list):
+                    for pt in p_tx_rows:
+                        dt_val = pt.get("created_at")
+                        if isinstance(dt_val, datetime):
+                            fmt_dt = format_thai_datetime(dt_val)
+                            iso_dt = dt_val.strftime("%Y-%m-%d %H:%M:%S")
+                        else:
+                            iso_dt = str(dt_val or "")
+                            fmt_dt = iso_dt
+                        purchase_transactions.append({
+                            "id": int(pt["id"]),
+                            "itemId": int(pt["item_id"]),
+                            "itemName": pt.get("item_name") or f"พัสดุ #{pt['item_id']}",
+                            "unit": pt.get("unit_name") or "ชิ้น",
+                            "quantityPieces": int(pt.get("change_pieces") or 0),
+                            "unitPrice": round(float(pt.get("unit_price") or 0), 2),
+                            "totalCost": round(float(pt.get("total_cost") or 0), 2),
+                            "reason": pt.get("reason") or "",
+                            "recordedBy": pt.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.",
+                            "formattedDate": fmt_dt,
+                            "createdAt": iso_dt,
+                        })
+            except StopIteration:
+                total_purchase_cost = 0.0
+                total_restock_count = 0
+                total_restocked_pieces = 0
+                purchase_summary = []
+                purchase_transactions = []
+
             return {
                 "status": "success",
                 "data": {
@@ -951,10 +1085,15 @@ def handle_get_monthly_analytics(params):
                     "totalRejected": total_rejected,
                     "totalPiecesRequested": total_pieces_requested,
                     "totalPiecesApproved": total_pieces_approved,
+                    "totalPurchaseCost": round(total_purchase_cost, 2),
+                    "totalRestockCount": total_restock_count,
+                    "totalRestockedPieces": total_restocked_pieces,
                     "topItems": top_items,
                     "leastItems": least_items,
                     "allItemUsage": all_items,
                     "personUsage": person_usage,
+                    "purchaseSummary": purchase_summary,
+                    "purchaseTransactions": purchase_transactions,
                 }
             }
     finally:
@@ -1586,6 +1725,25 @@ def handle_restock_item(payload):
     note = str(payload.get("note") or "รับพัสดุเข้าคลัง").strip()
     recorded_by = str(payload.get("recordedBy") or payload.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
 
+    try:
+        raw_unit_price = payload.get("unitPrice", payload.get("unit_price", 0))
+        raw_total_cost = payload.get("totalCost", payload.get("total_cost", 0))
+        unit_price = float(raw_unit_price if raw_unit_price not in (None, "") else 0)
+        total_cost = float(raw_total_cost if raw_total_cost not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return {"status": "error", "message": "กรุณาระบุราคาหรือยอดเงินซื้อเข้าเป็นตัวเลขที่ถูกต้อง"}
+
+    if unit_price < 0 or total_cost < 0:
+        return {"status": "error", "message": "ราคาต่อหน่วยและยอดเงินรวมต้องไม่ติดลบ"}
+
+    if total_cost > 0 and unit_price <= 0 and qty > 0:
+        unit_price = round(total_cost / qty, 2)
+    elif unit_price > 0 and total_cost <= 0 and qty > 0:
+        total_cost = round(unit_price * qty, 2)
+    else:
+        unit_price = round(unit_price, 2)
+        total_cost = round(total_cost, 2)
+
     if not item_id or qty <= 0:
         return {"status": "error", "message": "กรุณาระบุรหัสพัสดุ (itemId) และจำนวนที่รับเข้ามากกว่า 0"}
 
@@ -1600,16 +1758,22 @@ def handle_restock_item(payload):
 
             new_on_hand = int(inv["on_hand_pieces"] or 0) + qty
             now = datetime.now()
-            cur.execute(
-                "UPDATE inventory_items SET on_hand_pieces = %s, last_restocked_at = %s WHERE id = %s",
-                (new_on_hand, now, item_id),
-            )
+            if unit_price > 0:
+                cur.execute(
+                    "UPDATE inventory_items SET on_hand_pieces = %s, last_restocked_at = %s, last_unit_price = %s WHERE id = %s",
+                    (new_on_hand, now, unit_price, item_id),
+                )
+            else:
+                cur.execute(
+                    "UPDATE inventory_items SET on_hand_pieces = %s, last_restocked_at = %s WHERE id = %s",
+                    (new_on_hand, now, item_id),
+                )
             cur.execute(
                 """
-                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, reference_type, reference_id, reason, recorded_by, created_at)
-                VALUES (%s, 'IN', %s, %s, 'STOCK_IN', NULL, %s, %s, %s)
+                INSERT INTO stock_transactions (item_id, transaction_type, change_pieces, balance_after, unit_price, total_cost, reference_type, reference_id, reason, recorded_by, created_at)
+                VALUES (%s, 'IN', %s, %s, %s, %s, 'STOCK_IN', NULL, %s, %s, %s)
                 """,
-                (item_id, qty, new_on_hand, note, recorded_by, now),
+                (item_id, qty, new_on_hand, unit_price, total_cost, note, recorded_by, now),
             )
 
         conn.commit()
@@ -1618,6 +1782,8 @@ def handle_restock_item(payload):
             "message": "รับพัสดุเข้าคลัง MySQL สำเร็จ",
             "itemId": item_id,
             "on_hand_pieces": new_on_hand,
+            "unit_price": unit_price,
+            "total_cost": total_cost,
             "last_restocked_at": str(now),
         }
     except Exception as e:

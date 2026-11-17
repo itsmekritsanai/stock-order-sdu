@@ -60,8 +60,9 @@ def _estimate_widths(rows_spec, base_widths):
 def _build_styles_xml() -> str:
     return '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <numFmts count="1">
+  <numFmts count="2">
     <numFmt numFmtId="164" formatCode="#,##0"/>
+    <numFmt numFmtId="165" formatCode="#,##0.00"/>
   </numFmts>
   <fonts count="6">
     <font><sz val="11"/><name val="Tahoma"/></font>
@@ -101,7 +102,7 @@ def _build_styles_xml() -> str:
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="13">
+  <cellXfs count="16">
     <!-- 0: Default -->
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
     <!-- 1: SDU Banner Title -->
@@ -128,6 +129,12 @@ def _build_styles_xml() -> str:
     <xf numFmtId="0" fontId="2" fillId="7" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
     <!-- 12: Total Number Bold -->
     <xf numFmtId="164" fontId="2" fillId="7" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 13: Data Decimal Currency Right -->
+    <xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 14: Data Decimal Currency Right Zebra -->
+    <xf numFmtId="165" fontId="0" fillId="6" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
+    <!-- 15: Total Decimal Currency Bold -->
+    <xf numFmtId="165" fontId="2" fillId="7" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1">
     <cellStyle name="Normal" xfId="0" builtinId="0"/>
@@ -213,21 +220,24 @@ def build_monthly_analytics_xlsx(data: dict, exported_at: str, detail_rows=None)
     s1_merges.append("A5:C5")
 
     kpi_items = [
-        ("คำขอเบิกทั้งหมดในงวด", data.get("totalRequisitions", 0), "คำขอ", "นับรวมทุกสถานะ"),
-        ("รอคัดกรองเบื้องต้น", data.get("totalPending", 0), "คำขอ", "รอเจ้าหน้าที่พัสดุตรวจสอบ"),
-        ("รอหัวหน้าหน่วยงานอนุมัติ", data.get("totalVerified", 0), "คำขอ", "ผ่านการคัดกรองแล้ว"),
-        ("อนุมัติแล้ว รอผู้เบิกรับของ", data.get("totalApproved", 0), "คำขอ", "กันยอดจองในคลังเรียบร้อย"),
-        ("จ่ายพัสดุสำเร็จแล้ว", data.get("totalCompleted", 0), "คำขอ", "ตัดสต๊อกจริงครบถ้วน"),
-        ("ไม่อนุมัติ / ยกเลิก", data.get("totalRejected", 0), "คำขอ", "คืนยอดจองหรือยกเลิกคำขอ"),
-        ("ปริมาณพัสดุที่ขอเบิกรวม", data.get("totalPiecesRequested", 0), "ชิ้น", "ผลรวมคำขอทั้งหมด"),
-        ("ปริมาณพัสดุที่อนุมัติ / จ่ายจริงรวม", data.get("totalPiecesApproved", 0), "ชิ้น", "คำขอสถานะอนุมัติและจ่ายสำเร็จ"),
+        ("คำขอเบิกทั้งหมดในงวด", data.get("totalRequisitions", 0), "คำขอ", "นับรวมทุกสถานะ", False),
+        ("รอคัดกรองเบื้องต้น", data.get("totalPending", 0), "คำขอ", "รอเจ้าหน้าที่พัสดุตรวจสอบ", False),
+        ("รอหัวหน้าหน่วยงานอนุมัติ", data.get("totalVerified", 0), "คำขอ", "ผ่านการคัดกรองแล้ว", False),
+        ("อนุมัติแล้ว รอผู้เบิกรับของ", data.get("totalApproved", 0), "คำขอ", "กันยอดจองในคลังเรียบร้อย", False),
+        ("จ่ายพัสดุสำเร็จแล้ว", data.get("totalCompleted", 0), "คำขอ", "ตัดสต๊อกจริงครบถ้วน", False),
+        ("ไม่อนุมัติ / ยกเลิก", data.get("totalRejected", 0), "คำขอ", "คืนยอดจองหรือยกเลิกคำขอ", False),
+        ("ปริมาณพัสดุที่ขอเบิกรวม", data.get("totalPiecesRequested", 0), "ชิ้น", "ผลรวมคำขอทั้งหมด", False),
+        ("ปริมาณพัสดุที่อนุมัติ / จ่ายจริงรวม", data.get("totalPiecesApproved", 0), "ชิ้น", "คำขอสถานะอนุมัติและจ่ายสำเร็จ", False),
+        ("จำนวนครั้งที่ซื้อ/เติมพัสดุเข้าคลัง", data.get("totalRestockCount", 0), "ครั้ง", "รายการรับพัสดุเข้าคลังในงวด", False),
+        ("ปริมาณพัสดุที่ซื้อเข้าคลังรวม", data.get("totalRestockedPieces", 0), "ชิ้น", "ยอดรับเข้าคลังสะสมในงวด", False),
+        ("ยอดเงินซื้อพัสดุเข้าคลังรวม", round(float(data.get("totalPurchaseCost") or 0), 2), "บาท", "มูลค่ารวมจากการรับเข้าสต๊อก", True),
     ]
     r_idx = 6
-    for idx, (label, val, unit, note) in enumerate(kpi_items):
+    for idx, (label, val, unit, note, is_dec) in enumerate(kpi_items):
         is_z = idx % 2 == 1
         st_txt = 8 if is_z else 5
         st_ctr = 9 if is_z else 6
-        st_num = 10 if is_z else 7
+        st_num = (14 if is_z else 13) if is_dec else (10 if is_z else 7)
         s1_merges.append(f"A{r_idx}:C{r_idx}")
         s1_rows.append((r_idx, 20, [
             (1, label, st_txt, False), (2, "", st_txt, False), (3, "", st_txt, False),
@@ -414,12 +424,125 @@ def build_monthly_analytics_xlsx(data: dict, exported_at: str, detail_rows=None)
         autofilter_ref=f"A4:I{max(4, cur_r4 - 1)}" if d_rows else None,
     )
 
+    # ------------------------------------------------------------------
+    # Sheet 5: สรุปยอดซื้อเข้า
+    # ------------------------------------------------------------------
+    p_sum_list = data.get("purchaseSummary", [])
+    s5_total_cost = round(float(data.get("totalPurchaseCost") or sum(float(x.get("totalCost") or 0) for x in p_sum_list)), 2)
+    s5_sub = f"{subtitle}   |   รายการที่รับเข้า: {len(p_sum_list)} รายการ   |   ยอดเงินรวม: {s5_total_cost:,.2f} บาท"
+    s5_rows, s5_merges = _banner_rows("สรุปยอดเงินซื้อพัสดุเข้าคลังแยกรายรายการ", s5_sub, 8)
+    s5_rows.append((4, 26, [
+        (1, "ลำดับ", 4, False), (2, "ชื่อรายการพัสดุ", 4, False), (3, "หมวดหมู่", 4, False),
+        (4, "จำนวนครั้งที่เติม", 4, False), (5, "จำนวนที่รับเข้า", 4, False), (6, "หน่วยนับ", 4, False),
+        (7, "ราคาเฉลี่ย/หน่วย (บาท)", 4, False), (8, "ยอดเงินซื้อเข้ารวม (บาท)", 4, False),
+    ]))
+    cur_r5 = 5
+    sum_rc5 = sum_pcs5 = 0
+    sum_cost5 = 0.0
+    for idx, ps in enumerate(p_sum_list):
+        is_z = idx % 2 == 1
+        st_txt = 8 if is_z else 5
+        st_ctr = 9 if is_z else 6
+        st_num = 10 if is_z else 7
+        st_dec = 14 if is_z else 13
+        rc = int(ps.get("restockCount") or 0)
+        pcs = int(ps.get("restockedPieces") or 0)
+        avg_p = round(float(ps.get("avgUnitPrice") or 0), 2)
+        tc = round(float(ps.get("totalCost") or 0), 2)
+        sum_rc5 += rc
+        sum_pcs5 += pcs
+        sum_cost5 = round(sum_cost5 + tc, 2)
+        s5_rows.append((cur_r5, 20, [
+            (1, idx + 1, st_ctr, True),
+            (2, ps.get("name", ""), st_txt, False),
+            (3, ps.get("category", "-"), st_ctr, False),
+            (4, rc, st_num, True),
+            (5, pcs, st_num, True),
+            (6, ps.get("unit", "ชิ้น"), st_ctr, False),
+            (7, avg_p, st_dec, True),
+            (8, tc, st_dec, True),
+        ]))
+        cur_r5 += 1
+    if p_sum_list:
+        s5_merges.append(f"A{cur_r5}:C{cur_r5}")
+        s5_rows.append((cur_r5, 24, [
+            (1, "รวมเงินซื้อเข้าทั้งหมด", 11, False), (2, "", 11, False), (3, "", 11, False),
+            (4, sum_rc5, 12, True), (5, sum_pcs5, 12, True), (6, "", 11, False),
+            (7, "", 11, False), (8, sum_cost5, 15, True),
+        ]))
+    else:
+        s5_merges.append("A5:H5")
+        s5_rows.append((5, 22, [(1, "ไม่มีรายการรับเข้า/ซื้อพัสดุในงวดที่เลือก", 6, False)] + [(c, "", 6, False) for c in range(2, 9)]))
+    sheet5_xml = _build_sheet_xml(
+        s5_rows,
+        {1: 8, 2: 44, 3: 22, 4: 16, 5: 16, 6: 12, 7: 20, 8: 22},
+        merges=s5_merges,
+        freeze_row=4,
+        autofilter_ref=f"A4:H{max(4, cur_r5 - 1)}" if p_sum_list else None,
+    )
+
+    # ------------------------------------------------------------------
+    # Sheet 6: ประวัติซื้อเข้า
+    # ------------------------------------------------------------------
+    p_tx_list = data.get("purchaseTransactions", [])
+    s6_sub = f"{subtitle}   |   จำนวนบิล/ครั้งที่รับเข้า: {len(p_tx_list)} รายการ   |   ยอดเงินรวม: {s5_total_cost:,.2f} บาท"
+    s6_rows, s6_merges = _banner_rows("ประวัติรายการเติมสต๊อกและยอดเงินซื้อเข้าคลัง", s6_sub, 8)
+    s6_rows.append((4, 26, [
+        (1, "วัน-เวลาที่รับเข้า", 4, False), (2, "รายการพัสดุ", 4, False), (3, "จำนวนรับเข้า", 4, False),
+        (4, "หน่วยนับ", 4, False), (5, "ราคา/หน่วย (บาท)", 4, False), (6, "ยอดเงินรวม (บาท)", 4, False),
+        (7, "เลขที่ใบส่งของ / หมายเหตุ", 4, False), (8, "ผู้บันทึกรายการ", 4, False),
+    ]))
+    cur_r6 = 5
+    sum_pcs6 = 0
+    sum_cost6 = 0.0
+    for idx, pt in enumerate(p_tx_list):
+        is_z = idx % 2 == 1
+        st_txt = 8 if is_z else 5
+        st_ctr = 9 if is_z else 6
+        st_num = 10 if is_z else 7
+        st_dec = 14 if is_z else 13
+        pcs = int(pt.get("quantityPieces") or 0)
+        up = round(float(pt.get("unitPrice") or 0), 2)
+        tc = round(float(pt.get("totalCost") or 0), 2)
+        sum_pcs6 += pcs
+        sum_cost6 = round(sum_cost6 + tc, 2)
+        s6_rows.append((cur_r6, 20, [
+            (1, pt.get("formattedDate") or pt.get("createdAt") or "", st_ctr, False),
+            (2, pt.get("itemName", ""), st_txt, False),
+            (3, pcs, st_num, True),
+            (4, pt.get("unit", "ชิ้น"), st_ctr, False),
+            (5, up, st_dec, True),
+            (6, tc, st_dec, True),
+            (7, pt.get("reason", ""), st_txt, False),
+            (8, pt.get("recordedBy", ""), st_txt, False),
+        ]))
+        cur_r6 += 1
+    if p_tx_list:
+        s6_merges.append(f"A{cur_r6}:B{cur_r6}")
+        s6_rows.append((cur_r6, 24, [
+            (1, "รวมยอดซื้อเข้าทั้งหมด", 11, False), (2, "", 11, False),
+            (3, sum_pcs6, 12, True), (4, "", 11, False), (5, "", 11, False),
+            (6, sum_cost6, 15, True), (7, "", 11, False), (8, "", 11, False),
+        ]))
+    else:
+        s6_merges.append("A5:H5")
+        s6_rows.append((5, 22, [(1, "ไม่มีประวัติการเติมสต๊อกในงวดที่เลือก", 6, False)] + [(c, "", 6, False) for c in range(2, 9)]))
+    sheet6_xml = _build_sheet_xml(
+        s6_rows,
+        {1: 22, 2: 42, 3: 15, 4: 11, 5: 18, 6: 20, 7: 34, 8: 24},
+        merges=s6_merges,
+        freeze_row=4,
+        autofilter_ref=f"A4:H{max(4, cur_r6 - 1)}" if p_tx_list else None,
+    )
+
     # Package as standard OpenXML .xlsx archive
     sheets_meta = [
         ("ภาพรวมประจำเดือน", sheet1_xml),
         ("สรุปรายบุคคล", sheet2_xml),
         ("สรุปทุกพัสดุ", sheet3_xml),
         ("รายละเอียดคำขอเบิก", sheet4_xml),
+        ("สรุปยอดซื้อเข้า", sheet5_xml),
+        ("ประวัติซื้อเข้า", sheet6_xml),
     ]
 
     content_types = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',

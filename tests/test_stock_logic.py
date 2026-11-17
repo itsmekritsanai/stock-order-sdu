@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.5.0"
+        assert SYSTEM_VERSION == "3.6.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1303,6 +1303,15 @@ class TestPhase8ExtendedRequirements:
                     "items": [{"itemId": 3, "name": "กระดาษคำตอบ", "totalPieces": 1000, "approvedPieces": 1000, "unit": "ใบ"}],
                 }
             ],
+            "totalPurchaseCost": 2500.0,
+            "totalRestockCount": 1,
+            "totalRestockedPieces": 500,
+            "purchaseSummary": [
+                {"itemId": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit": "ใบ", "restockCount": 1, "restockedPieces": 500, "avgUnitPrice": 5.0, "totalCost": 2500.0}
+            ],
+            "purchaseTransactions": [
+                {"id": 10, "itemId": 3, "itemName": "กระดาษคำตอบ", "unit": "ใบ", "quantityPieces": 500, "unitPrice": 5.0, "totalCost": 2500.0, "reason": "PO-2569-01", "recordedBy": "เจ้าหน้าที่พัสดุ", "formattedDate": "17 พ.ย. 2569 09:00 น."}
+            ],
         }
         detail_rows = [
             {
@@ -1333,17 +1342,20 @@ class TestPhase8ExtendedRequirements:
                 "xl/worksheets/sheet2.xml",
                 "xl/worksheets/sheet3.xml",
                 "xl/worksheets/sheet4.xml",
+                "xl/worksheets/sheet5.xml",
+                "xl/worksheets/sheet6.xml",
             ):
                 assert expected in names
                 xml_txt = zf.read(expected).decode("utf-8")
                 ET.fromstring(xml_txt)
 
             wb_xml = zf.read("xl/workbook.xml").decode("utf-8")
-            for sheet_name in ("ภาพรวมประจำเดือน", "สรุปรายบุคคล", "สรุปทุกพัสดุ", "รายละเอียดคำขอเบิก"):
+            for sheet_name in ("ภาพรวมประจำเดือน", "สรุปรายบุคคล", "สรุปทุกพัสดุ", "รายละเอียดคำขอเบิก", "สรุปยอดซื้อเข้า", "ประวัติซื้อเข้า"):
                 assert sheet_name in wb_xml
 
             styles_xml = zf.read("xl/styles.xml").decode("utf-8")
             assert "#,##0" in styles_xml
+            assert "#,##0.00" in styles_xml
 
         # Verify server handler integration with mocked analytics + requisitions
         mock_analytics = {"status": "success", "data": sample_data}
@@ -1368,6 +1380,83 @@ class TestPhase8ExtendedRequirements:
             assert "exportMonthlyAnalyticsExcel" in f.read()
         with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
             assert "exportMonthlyAnalyticsExcel" in f.read()
+
+    def test_restock_pricing_and_purchase_spend_analytics(self):
+        """Verify stock-in unitPrice/totalCost calculation, negative guard, purchase analytics, and staff UI elements."""
+        import server
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {"id": 3, "on_hand_pieces": 1000}
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        # 1. Supply totalCost=1250 for qty=500 -> derives unit_price=2.50
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res_total = server.handle_restock_item({
+                "itemId": 3,
+                "quantityPieces": 500,
+                "totalCost": 1250,
+                "note": "PO-2569-101",
+            })
+            assert res_total["status"] == "success"
+            assert res_total["on_hand_pieces"] == 1500
+            assert res_total["total_cost"] == 1250.0
+            assert res_total["unit_price"] == 2.5
+
+        # 2. Supply unitPrice=4.25 for qty=200 -> derives total_cost=850.0
+        mock_cur.fetchone.return_value = {"id": 3, "on_hand_pieces": 1500}
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res_unit = server.handle_restock_item({
+                "itemId": 3,
+                "quantityPieces": 200,
+                "unitPrice": 4.25,
+                "note": "PO-2569-102",
+            })
+            assert res_unit["status"] == "success"
+            assert res_unit["on_hand_pieces"] == 1700
+            assert res_unit["unit_price"] == 4.25
+            assert res_unit["total_cost"] == 850.0
+
+        # 3. Reject negative prices
+        res_neg = server.handle_restock_item({"itemId": 3, "quantityPieces": 100, "totalCost": -50})
+        assert res_neg["status"] == "error"
+
+        # 4. Verify handle_get_monthly_analytics aggregates purchaseSummary & purchaseTransactions
+        mock_cur_an = MagicMock()
+        mock_cur_an.fetchall.side_effect = [
+            [{"status": "COMPLETED", "count": 1}],
+            [{"item_id": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_piece_name": "ใบ", "total_pieces": 500, "req_count": 1}],
+            [],  # personUsage empty
+            [{"item_id": 3, "item_name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_name": "ใบ", "restock_count": 2, "restocked_pieces": 700, "total_cost": 2100.0}],
+            [{"id": 9, "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "change_pieces": 500, "unit_price": 2.5, "total_cost": 1250.0, "reason": "PO-2569-101", "recorded_by": "Staff", "created_at": "2026-11-17 09:00:00"}],
+        ]
+        mock_cur_an.fetchone.return_value = {"total_requested": 500, "total_approved": 500}
+        mock_conn_an = MagicMock()
+        mock_conn_an.cursor.return_value.__enter__.return_value = mock_cur_an
+
+        with patch("server.get_db_connection", return_value=mock_conn_an):
+            an_res = server.handle_get_monthly_analytics({"month": ["2026-11"]})
+            assert an_res["status"] == "success"
+            d = an_res["data"]
+            assert d["totalPurchaseCost"] == 2100.0
+            assert d["totalRestockCount"] == 2
+            assert d["totalRestockedPieces"] == 700
+            assert len(d["purchaseSummary"]) == 1
+            assert d["purchaseSummary"][0]["avgUnitPrice"] == 3.0
+            assert len(d["purchaseTransactions"]) == 1
+            assert d["purchaseTransactions"][0]["totalCost"] == 1250.0
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        for token in (
+            "swalStockPriceMode",
+            "swalStockPriceInput",
+            "swalStockCostPreview",
+            "analyticsPurchaseCard",
+            "analyticsMetricTotalPurchaseCost",
+            "renderAnalyticsPurchaseSection",
+        ):
+            assert token in stf_html
 
 
 
