@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.3.2"
+SYSTEM_VERSION = "3.3.3"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -338,6 +338,9 @@ SEARCHABLE_SELECT_JS = r'''
         return;
       }
       if (selectEl.getAttribute('data-no-search') === 'true' || selectEl.multiple) return;
+      // Skip hidden placeholder selects such as SweetAlert2's empty built-in #swal2-select
+      if (selectEl.style.display === 'none') return;
+      if (selectEl.id === 'swal2-select' && (!selectEl.options || selectEl.options.length === 0)) return;
       selectEl.setAttribute('data-searchable-enhanced', 'true');
 
       const wrapper = document.createElement('div');

@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.3.2"
+        assert SYSTEM_VERSION == "3.3.3"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1196,6 +1196,7 @@ class TestPhase8ExtendedRequirements:
             assert "function enhanceSearchableSelect(" in html, f"{fname} missing enhanceSearchableSelect"
             assert "function enhanceAllSearchableSelects(" in html, f"{fname} missing enhanceAllSearchableSelects"
             assert "sdu-ss-search-input" in html, f"{fname} missing searchable select input styling/markup"
+            assert "selectEl.id === 'swal2-select'" in html, f"{fname} missing hidden swal2-select guard"
 
 
 

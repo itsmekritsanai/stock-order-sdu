@@ -1281,14 +1281,14 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v3.3.2 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v3.3.3 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.3.2';
+    const APP_VERSION = '3.3.3';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = true;
     const defaultDepts = [
@@ -3331,6 +3331,9 @@
         return;
       }
       if (selectEl.getAttribute('data-no-search') === 'true' || selectEl.multiple) return;
+      // Skip hidden placeholder selects such as SweetAlert2's empty built-in #swal2-select
+      if (selectEl.style.display === 'none') return;
+      if (selectEl.id === 'swal2-select' && (!selectEl.options || selectEl.options.length === 0)) return;
       selectEl.setAttribute('data-searchable-enhanced', 'true');
 
       const wrapper = document.createElement('div');
