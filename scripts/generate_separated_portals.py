@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.3.1"
+SYSTEM_VERSION = "3.3.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -90,7 +90,7 @@ def parse_docx_depts_and_users(docx_path):
     # Demo User สำหรับผู้ขอเบิกเข้าใช้งาน
     users.append({
         "id": len(users) + 1,
-        "name": "ผู้ขอเบิกทดสอบ (Demo User)",
+        "name": "ผู้ขอเบิกทดสอบ",
         "username": "user",
         "password": DEFAULT_USER_PASSWORD,
         "position": "เจ้าหน้าที่บริการการศึกษา",
@@ -1420,7 +1420,7 @@ __SEARCHABLE_SELECT_CSS__
     <div class="login-card" style="max-width: 480px;">
       <div class="login-header" style="padding: 1.75rem 1.75rem 1.25rem 1.75rem;">
         <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 60px; margin-bottom: 0.6rem; object-fit: contain;">
-        <h2 id="loginRoleTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)</h2>
+        <h2 id="loginRoleTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบผู้ขอเบิกพัสดุ</h2>
         <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
         <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
           <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -1429,34 +1429,34 @@ __SEARCHABLE_SELECT_CSS__
       </div>
       <div class="login-body" style="padding: 1.25rem 1.75rem 1.75rem 1.75rem;">
         <div style="margin-bottom: 1.1rem;">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน (Select Role):</label>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน:</label>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="portalRoleTabs">
             <button type="button" class="role-tab-btn active" data-role="REQUESTER" onclick="selectPortalLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #1e40af; background: #eff6ff; color: #1e40af; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
               <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               <div>
                 <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Requester</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ส่งคำขอเบิก</div>
               </div>
             </button>
             <button type="button" class="role-tab-btn" data-role="STAFF" onclick="selectPortalLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
               <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
               <div>
                 <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Staff (ผู้คัดกรอง)</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้คัดกรอง</div>
               </div>
             </button>
             <button type="button" class="role-tab-btn" data-role="HEAD" onclick="selectPortalLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
               <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
               <div>
                 <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Head (ผู้อนุมัติ)</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้อนุมัติ</div>
               </div>
             </button>
             <button type="button" class="role-tab-btn" data-role="ADMIN" onclick="selectPortalLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
               <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               <div>
                 <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">System Admin</div>
+                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้ดูแลระบบ</div>
               </div>
             </button>
           </div>
@@ -1465,14 +1465,14 @@ __SEARCHABLE_SELECT_CSS__
 
         <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
           <div class="login-input-group">
-            <label for="loginUsername" id="loginUsernameLabel">ชื่อผู้ใช้งาน (Username)</label>
+            <label for="loginUsername" id="loginUsernameLabel">ชื่อผู้ใช้งาน</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
               <input type="text" id="loginUsername" class="login-input" placeholder="กรอกชื่อผู้ใช้งานผู้ขอเบิก" required autocomplete="username">
             </div>
           </div>
           <div class="login-input-group">
-            <label for="loginPassword">รหัสผ่าน (Password)</label>
+            <label for="loginPassword">รหัสผ่าน</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
               <input type="password" id="loginPassword" class="login-input" placeholder="กรอกรหัสผ่านของคุณ" required autocomplete="current-password">
@@ -1486,7 +1486,7 @@ __SEARCHABLE_SELECT_CSS__
 
         <div class="login-notice-box" style="margin-top: 1rem;">
           <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าสู่ระบบตามบทบาท (RBAC)
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าสู่ระบบตามบทบาท
           </div>
           <div id="loginNoticeRoleHint" style="font-size: 0.775rem; line-height: 1.5;">
             เลือกบทบาทด้านบนเพื่อเข้าสู่ระบบตามสิทธิ์ของท่าน หรือกลับไปที่ <a href="portal.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">ศูนย์กลางพอร์ทัล</a>
@@ -1721,11 +1721,11 @@ __SEARCHABLE_SELECT_CSS__
       <div class="modal-header" style="padding: 1rem 1.5rem; background: var(--neutral-50); border-bottom: 1px solid var(--neutral-200); display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--neutral-900);">ใบขอเบิกพัสดุ (Official Requisition Form)</h3>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--neutral-900);">ใบขอเบิกพัสดุ</h3>
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <button class="btn btn-primary" onclick="printRequisitionPdf()" style="padding: 0.45rem 1rem; font-size: 0.85rem;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> สั่งพิมพ์เอกสาร (Print PDF)
+            <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> สั่งพิมพ์เอกสาร PDF
           </button>
           <button class="close-btn" onclick="closeRequisitionPdfModal()">
             <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
@@ -1821,7 +1821,7 @@ __SEARCHABLE_SELECT_CSS__
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v__SYSTEM_VERSION__) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -2419,7 +2419,7 @@ __SEARCHABLE_SELECT_CSS__
         const safePieceName = escapeHtml(item.unit_piece_name);
         const safeImgSrc = escapeHtml(imgSrc);
 
-        let statusLabel = 'พร้อมให้เบิก (Available):';
+        let statusLabel = 'พร้อมให้เบิก:';
         if (availablePieces === 0) {
           statusLabel = 'หมดสต๊อกชั่วคราว:';
         } else if (isLow) {
@@ -2826,7 +2826,7 @@ __SEARCHABLE_SELECT_CSS__
                   ${newDocNo}
                 </div>
                 <p style="font-size: 0.85rem; color: #475569; margin-top: 0.85rem; line-height: 1.6;">
-                  คำขอของท่านเข้าสู่สถานะ <b>"รออนุมัติ (Pending)"</b> และถูกส่งต่อไปยังเจ้าหน้าที่แผนกพัสดุเรียบร้อยแล้ว<br>
+                  คำขอของท่านเข้าสู่สถานะ <b>"รออนุมัติ"</b> และถูกส่งต่อไปยังเจ้าหน้าที่แผนกพัสดุเรียบร้อยแล้ว<br>
                   เมื่อเจ้าหน้าที่อนุมัติ ท่านสามารถเดินทางไปรับพัสดุได้ที่ห้องคลังพัสดุ
                 </p>
               </div>
@@ -2977,7 +2977,7 @@ __SEARCHABLE_SELECT_CSS__
         let borderClass = 'status-border-pending';
 
         if (req.status === 'PENDING') {
-          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รอคัดกรอง (Staff Screen)</span>`;
+          statusBadge = `<span class="req-status-pill pill-pending">${vIcons.clock} รอคัดกรอง</span>`;
           borderClass = 'status-border-pending';
         } else if (req.status === 'VERIFIED') {
           statusBadge = `<span class="req-status-pill pill-verified">${vIcons.clock} ผ่านการคัดกรอง (รอหัวหน้าอนุมัติ)</span>`;
@@ -3085,7 +3085,7 @@ __SEARCHABLE_SELECT_CSS__
 
             <div style="margin-top: 0.85rem; display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.4rem 0.85rem;" onclick="openRequisitionPdf('${req.id}')">
-                ${vIcons.file_text} พิมพ์ใบเบิกพัสดุ (PDF)
+                ${vIcons.file_text} พิมพ์ใบเบิกพัสดุ PDF
               </button>
             </div>
           </div>
@@ -3381,7 +3381,7 @@ __SEARCHABLE_SELECT_CSS__
         const users = getUsersDB();
         const defaultTester = users.find(u => (u.username || '').toLowerCase() === 'user') || users[0] || {
           id: 5,
-          name: 'ผู้ขอเบิกทดสอบ (Demo User)',
+          name: 'ผู้ขอเบิกทดสอบ',
           username: 'user',
           position: 'เจ้าหน้าที่บริการการศึกษา',
           dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
@@ -3496,7 +3496,7 @@ __SEARCHABLE_SELECT_CSS__
 
       const roleConfigs = {
         REQUESTER: {
-          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
           badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
           badgeBg: '#eff6ff',
           badgeColor: '#1e40af',
@@ -3506,33 +3506,33 @@ __SEARCHABLE_SELECT_CSS__
           btnBg: '#1e40af'
         },
         STAFF: {
-          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)',
-          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)',
+          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
+          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)',
           badgeBg: '#ecfdf5',
           badgeColor: '#047857',
           badgeBorder: '#a7f3d0',
           placeholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่พัสดุ',
-          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)',
+          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
           btnBg: '#059669'
         },
         HEAD: {
-          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน (Head Approver)',
+          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน',
           badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูรายงาน)',
           badgeBg: '#f5f3ff',
           badgeColor: '#6d28d9',
           badgeBorder: '#ddd6fe',
           placeholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
-          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ (Head)',
+          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ',
           btnBg: '#4f46e5'
         },
         ADMIN: {
-          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (System Admin)',
+          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
           badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
           badgeBg: '#f1f5f9',
           badgeColor: '#0f172a',
           badgeBorder: '#cbd5e1',
           placeholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
-          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (Admin)',
+          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
           btnBg: '#0f172a'
         }
       };
@@ -3593,7 +3593,7 @@ __SEARCHABLE_SELECT_CSS__
           let dispName = username;
           if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
             resolved = 'ADMIN';
-            dispName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+            dispName = 'ผู้ดูแลระบบคลังพัสดุ';
           } else if (['staff', 'warehouse_staff', 'screener'].includes(uLow) && password === 'sdu1234') {
             resolved = 'STAFF';
             dispName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
@@ -3691,7 +3691,7 @@ __SEARCHABLE_SELECT_CSS__
         Swal.fire({
           icon: 'error',
           title: 'เข้าสู่ระบบไม่สำเร็จ',
-          text: (loginResult && loginResult.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง หรือยังไม่ได้เปิดใช้งานบัญชี กรุณาติดต่อเจ้าหน้าที่พัสดุ (Staff)',
+          text: (loginResult && loginResult.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง หรือยังไม่ได้เปิดใช้งานบัญชี กรุณาติดต่อเจ้าหน้าที่พัสดุ',
           confirmButtonColor: '#1e40af',
           confirmButtonText: 'ลองใหม่อีกครั้ง'
         });
@@ -3800,7 +3800,7 @@ staff_template = r'''<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบบริหารคลังพัสดุ (Staff Portal) | มหาวิทยาลัยสวนดุสิต</title>
+  <title>ระบบบริหารคลังพัสดุ | มหาวิทยาลัยสวนดุสิต</title>
   
   <!-- PWA & Mobile Icons -->
   <meta name="theme-color" content="#1e40af">
@@ -4253,43 +4253,43 @@ __SEARCHABLE_SELECT_CSS__
   <div id="loginScreen" class="login-container" style="display: none;">
     <div style="text-align: center; margin-bottom: 1.25rem;">
       <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.6rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
-      <h2 id="staffLoginTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)</h2>
+      <h2 id="staffLoginTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</h2>
       <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
       <div id="staffLoginBadge" style="margin-top: 0.6rem; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
         <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <span>สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)</span>
+        <span>สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)</span>
       </div>
     </div>
 
     <div style="margin-bottom: 1.1rem;">
-      <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน (Select Role):</label>
+      <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน:</label>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="staffRoleLoginTabs">
         <button type="button" class="staff-role-tab-btn active" data-role="STAFF" onclick="selectStaffLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #059669; background: #ecfdf5; color: #047857; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
           <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
           <div>
             <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Staff (ผู้คัดกรอง)</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้คัดกรอง</div>
           </div>
         </button>
         <button type="button" class="staff-role-tab-btn" data-role="HEAD" onclick="selectStaffLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
           <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
           <div>
             <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Head (ผู้อนุมัติ)</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้อนุมัติ</div>
           </div>
         </button>
         <button type="button" class="staff-role-tab-btn" data-role="ADMIN" onclick="selectStaffLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
           <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <div>
             <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">System Admin</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้ดูแลระบบ</div>
           </div>
         </button>
         <button type="button" class="staff-role-tab-btn" data-role="REQUESTER" onclick="selectStaffLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
           <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           <div>
             <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">Requester</div>
+            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ส่งคำขอเบิก</div>
           </div>
         </button>
       </div>
@@ -4298,22 +4298,22 @@ __SEARCHABLE_SELECT_CSS__
 
     <form onsubmit="handleStaffLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
       <div class="form-group">
-        <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ชื่อผู้ใช้งาน (Username)</label>
+        <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ชื่อผู้ใช้งาน</label>
         <input type="text" id="loginUsername" class="form-control" placeholder="กรอกชื่อผู้ใช้งานเจ้าหน้าที่" required autocomplete="username">
       </div>
       <div class="form-group">
-        <label><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> รหัสผ่าน (Password)</label>
+        <label><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> รหัสผ่าน</label>
         <input type="password" id="loginPassword" class="form-control" placeholder="กรอกรหัสผ่านเจ้าหน้าที่" required autocomplete="current-password">
       </div>
       <button type="submit" id="btnStaffLoginSubmit" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; margin-top: 0.5rem; background: #059669;">
-        <span id="btnStaffLoginSubmitText">เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)</span>
+        <span id="btnStaffLoginSubmitText">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</span>
       </button>
     </form>
 
     <div style="margin-top: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.775rem; color: #475569; line-height: 1.5;">
-      <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 4px;">สิทธิ์การเข้าใช้งานตามบทบาท (RBAC Roles):</div>
-      <div>• <strong>staff</strong> : เจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify / จัดการสต๊อก)</div>
-      <div>• <strong>head</strong> : หัวหน้าหน่วยงาน (อนุมัติขั้นสุดท้าย Approve)</div>
+      <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 4px;">สิทธิ์การเข้าใช้งานตามบทบาท:</div>
+      <div>• <strong>staff</strong> : เจ้าหน้าที่พัสดุ (คัดกรองคำขอ / จัดการสต๊อก)</div>
+      <div>• <strong>head</strong> : หัวหน้าหน่วยงาน (อนุมัติขั้นสุดท้าย)</div>
       <div>• <strong>admin_staff</strong> : ผู้ดูแลระบบสูงสุด (เข้าถึงและสลับมุมมองได้ทุกสิทธิ์)</div>
     </div>
 
@@ -4336,7 +4336,7 @@ __SEARCHABLE_SELECT_CSS__
         <div class="brand">
           <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
           <div class="brand-text">
-            <h1>ระบบบริหารคลังพัสดุ (Staff Portal)</h1>
+            <h1>ระบบบริหารคลังพัสดุ</h1>
             <p>ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
           </div>
         </div>
@@ -4363,13 +4363,13 @@ __SEARCHABLE_SELECT_CSS__
           </span>
           <div id="staffRoleBadge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.775rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
             <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            <span id="staffRoleLabelText">ผู้ดูแลระบบสูงสุด (Admin)</span>
+            <span id="staffRoleLabelText">ผู้ดูแลระบบสูงสุด</span>
           </div>
           <div id="staffRoleSwitcherWrap" style="display: inline-flex; align-items: center; gap: 4px;">
-            <select id="staffRoleSelect" class="form-control" style="width: auto; font-size: 0.775rem; padding: 0.32rem 0.6rem; height: auto; border-color: #cbd5e1;" onchange="switchActiveRole(this.value)" title="สลับมุมมองสิทธิ์การใช้งาน (RBAC View Switcher)">
-              <option value="ADMIN">มุมมอง: ผู้ดูแลระบบ (All)</option>
-              <option value="STAFF">มุมมอง: เจ้าหน้าที่พัสดุ (Staff)</option>
-              <option value="HEAD">มุมมอง: หัวหน้าผู้อนุมัติ (Head)</option>
+            <select id="staffRoleSelect" class="form-control" style="width: auto; font-size: 0.775rem; padding: 0.32rem 0.6rem; height: auto; border-color: #cbd5e1;" onchange="switchActiveRole(this.value)" title="สลับมุมมองสิทธิ์การใช้งาน">
+              <option value="ADMIN">มุมมอง: ผู้ดูแลระบบ</option>
+              <option value="STAFF">มุมมอง: เจ้าหน้าที่พัสดุ</option>
+              <option value="HEAD">มุมมอง: หัวหน้าผู้อนุมัติ</option>
             </select>
           </div>
           <a href="portal.html" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
@@ -4391,7 +4391,7 @@ __SEARCHABLE_SELECT_CSS__
         <div id="reqLowStockBanner" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 0.5rem; color: #991b1b; font-size: 0.85rem;">
             <svg class="svg-icon" viewBox="0 0 24 24" style="color: #dc2626; flex-shrink: 0;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-            <span id="reqLowStockBannerText">แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert): มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำ</span>
+            <span id="reqLowStockBannerText">แจ้งเตือนจุดสั่งซื้อใหม่: มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำ</span>
           </div>
           <button class="btn btn-outline" style="font-size: 0.775rem; padding: 0.35rem 0.75rem; background: white; color: #b91c1c; border-color: #fca5a5;" onclick="jumpToLowStockInventory()">
             ตรวจสอบรายการสต๊อกต่ำ →
@@ -4400,8 +4400,8 @@ __SEARCHABLE_SELECT_CSS__
 
         <div class="dashboard-header" style="flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <h2>จัดการและอนุมัติคำขอเบิกพัสดุ (2-Tier Approval)</h2>
-            <p style="color: var(--neutral-600); font-size: 0.85rem;" id="reqRoleHintSubtitle">เจ้าหน้าที่คัดกรองคำขอ (Screening) และหัวหน้าอนุมัติขั้นสุดท้าย (Final Approval) ก่อนจ่ายพัสดุ</p>
+            <h2>จัดการและอนุมัติคำขอเบิกพัสดุ</h2>
+            <p style="color: var(--neutral-600); font-size: 0.85rem;" id="reqRoleHintSubtitle">เจ้าหน้าที่คัดกรองคำขอ และหัวหน้าอนุมัติขั้นสุดท้าย ก่อนจ่ายพัสดุ</p>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto;">
             <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
@@ -4450,7 +4450,7 @@ __SEARCHABLE_SELECT_CSS__
             <span class="metric-val" style="color: var(--danger);" id="metricLowStock">12 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">รายการ</small></span>
           </div>
           <div class="metric-card">
-            <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ยอดจองรอจ่าย (Reserved Stock)</div>
+            <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ยอดจองรอจ่าย</div>
             <span class="metric-val" style="color: var(--primary);" id="metricReserved">0 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">ชิ้น</small></span>
           </div>
           <div class="metric-card">
@@ -4463,7 +4463,7 @@ __SEARCHABLE_SELECT_CSS__
           <div style="display: flex; flex-direction: column; gap: 2px;">
             <div style="display: flex; align-items: center; gap: 6px; font-weight: 700; color: #be123c; font-size: 0.9rem;">
               <svg class="svg-icon" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
-              <span id="lowStockBannerTitle">แจ้งเตือนจุดสั่งซื้อใหม่ (Low Stock Reorder Point Alert)</span>
+              <span id="lowStockBannerTitle">แจ้งเตือนจุดสั่งซื้อใหม่</span>
             </div>
             <div id="lowStockBannerItems" style="font-size: 0.8rem; color: #881337;"></div>
           </div>
@@ -4474,10 +4474,10 @@ __SEARCHABLE_SELECT_CSS__
 
         <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-            <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง (On-Hand vs Available)</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 700;">ตารางรายการสต๊อกคงเหลือจริง</h3>
             <div id="inventoryActionButtonsWrap" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" onclick="openStockAdjustModal()">
-                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> ปรับยอดสต๊อก (Adjustment)
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg> ปรับยอดสต๊อก
               </button>
               <button class="btn btn-outline" onclick="openStockInModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> บันทึกรับเข้าพัสดุ (เติมสต๊อก)
@@ -4495,9 +4495,9 @@ __SEARCHABLE_SELECT_CSS__
                   <th style="width: 50px;">ลำดับ</th>
                   <th>ชื่อรายการพัสดุ</th>
                   <th>หน่วยบรรจุ</th>
-                  <th>คงคลังจริง (On-Hand)</th>
-                  <th>ยอดจอง (Reserved)</th>
-                  <th>พร้อมเบิก (Available)</th>
+                  <th>คงคลังจริง</th>
+                  <th>ยอดจอง</th>
+                  <th>พร้อมเบิก</th>
                   <th>โควตา/ท่าน/เดือน</th>
                   <th>สถานะสต๊อก <small style="font-size: 0.75rem; font-weight: normal; color: var(--neutral-500);">(เกณฑ์เตือน)</small></th>
                   <th>รับเข้าล่าสุด</th>
@@ -4543,7 +4543,7 @@ __SEARCHABLE_SELECT_CSS__
                 <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> กำหนดโควตาบุคลากร / กลุ่มงาน
               </button>
               <button class="btn btn-primary" onclick="openUserModal()">
-                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> เพิ่มรายชื่อบุคลากร (User)
+                <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> เพิ่มรายชื่อบุคลากร
               </button>
             </div>
           </div>
@@ -4566,8 +4566,8 @@ __SEARCHABLE_SELECT_CSS__
               <thead>
                 <tr>
                   <th style="width: 50px; text-align: center;">ลำดับ</th>
-                  <th style="width: 140px;">ชื่อผู้ใช้งาน (Username)</th>
-                  <th style="width: 150px;">บทบาทสิทธิ์ (Role)</th>
+                  <th style="width: 140px;">ชื่อผู้ใช้งาน</th>
+                  <th style="width: 150px;">บทบาทสิทธิ์</th>
                   <th>ชื่อ-นามสกุล</th>
                   <th>ตำแหน่ง</th>
                   <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
@@ -4634,7 +4634,7 @@ __SEARCHABLE_SELECT_CSS__
       <section id="view-analytics" class="view-content">
         <div class="dashboard-header" style="margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
-            <h2>สรุปยอดและสถิติการเบิกจ่ายรายเดือน (Monthly Analytics)</h2>
+            <h2>สรุปยอดและสถิติการเบิกจ่ายรายเดือน</h2>
             <p style="color: var(--neutral-600); font-size: 0.85rem;">รายงานภาพรวมการเบิกจ่ายพัสดุ สถิติรายการพัสดุที่เบิกมาก-น้อย และการสืบค้นข้อมูลย้อนหลัง</p>
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
@@ -4651,7 +4651,7 @@ __SEARCHABLE_SELECT_CSS__
               <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> ส่งออก Excel / CSV
             </button>
             <button type="button" class="btn btn-primary" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="printMonthlyAnalyticsPdf()">
-              <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> พิมพ์รายงานสรุปผู้บริหาร (PDF)
+              <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> พิมพ์รายงานสรุปผู้บริหาร PDF
             </button>
           </div>
         </div>
@@ -4737,7 +4737,7 @@ __SEARCHABLE_SELECT_CSS__
         <div class="pdf-preview-container">
           <div class="pdf-preview-actions" style="display: flex; gap: 1rem;">
             <button class="btn btn-success" onclick="printRequisitionPdf()">
-              <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> สั่งพิมพ์เอกสารราชการ (Print PDF)
+              <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> สั่งพิมพ์เอกสารราชการ PDF
             </button>
             <button class="btn btn-outline" style="background: white;" onclick="switchStaffView('requisitions')">
               <svg class="svg-icon" viewBox="0 0 24 24"><line x1="19" x2="5" y1="12" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> กลับหน้ารายการเบิก
@@ -4830,7 +4830,7 @@ __SEARCHABLE_SELECT_CSS__
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v__SYSTEM_VERSION__) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
@@ -5102,7 +5102,7 @@ __SEARCHABLE_SELECT_CSS__
     function getLoggedInStaff() {
       const role = getActiveStaffRole();
       const username = sessionStorage.getItem('staff_username') || (role === 'HEAD' ? 'head_approver' : role === 'STAFF' ? 'staff' : 'admin_staff');
-      let defaultName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+      let defaultName = 'ผู้ดูแลระบบคลังพัสดุ';
       if (role === 'STAFF') defaultName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
       if (role === 'HEAD') defaultName = 'หัวหน้าสำนักงานผู้อำนวยการ สวท. (ผู้อนุมัติ)';
       const name = sessionStorage.getItem('staff_name') || defaultName;
@@ -5129,27 +5129,27 @@ __SEARCHABLE_SELECT_CSS__
           badgeEl.style.background = '#f5f3ff';
           badgeEl.style.color = '#6d28d9';
           badgeEl.style.borderColor = '#ddd6fe';
-          labelEl.innerText = 'สิทธิ์: หัวหน้าผู้อนุมัติ (HEAD)';
+          labelEl.innerText = 'สิทธิ์: หัวหน้าผู้อนุมัติ';
         } else if (activeRole === 'STAFF') {
           badgeEl.style.background = '#ecfdf5';
           badgeEl.style.color = '#047857';
           badgeEl.style.borderColor = '#a7f3d0';
-          labelEl.innerText = 'สิทธิ์: เจ้าหน้าที่พัสดุ (STAFF)';
+          labelEl.innerText = 'สิทธิ์: เจ้าหน้าที่พัสดุ';
         } else {
           badgeEl.style.background = '#eff6ff';
           badgeEl.style.color = '#1e40af';
           badgeEl.style.borderColor = '#bfdbfe';
-          labelEl.innerText = 'สิทธิ์: ผู้ดูแลระบบสูงสุด (ADMIN)';
+          labelEl.innerText = 'สิทธิ์: ผู้ดูแลระบบสูงสุด';
         }
       }
 
       if (subtitleEl) {
         if (activeRole === 'STAFF') {
-          subtitleEl.innerText = 'โหมดเจ้าหน้าที่พัสดุ (STAFF): ตรวจสอบความถูกต้องของคำขอ (Verify), รับของเข้าคลัง, และบันทึกจ่ายพัสดุ';
+          subtitleEl.innerText = 'โหมดเจ้าหน้าที่พัสดุ: ตรวจสอบความถูกต้องของคำขอ, รับของเข้าคลัง, และบันทึกจ่ายพัสดุ';
         } else if (activeRole === 'HEAD') {
-          subtitleEl.innerText = 'โหมดหัวหน้าหน่วยงาน (HEAD): พิจารณาอนุมัติคำขอขั้นสุดท้าย (Approve) สำหรับรายการที่ผ่านการคัดกรองแล้ว';
+          subtitleEl.innerText = 'โหมดหัวหน้าหน่วยงาน: พิจารณาอนุมัติคำขอขั้นสุดท้าย สำหรับรายการที่ผ่านการคัดกรองแล้ว';
         } else {
-          subtitleEl.innerText = 'โหมดผู้ดูแลระบบ (ADMIN): สามารถดำเนินการคัดกรอง (Verify), อนุมัติขั้นสุดท้าย (Approve), และบริหารจัดการระบบทั้งหมด';
+          subtitleEl.innerText = 'โหมดผู้ดูแลระบบ: สามารถดำเนินการคัดกรอง, อนุมัติขั้นสุดท้าย, และบริหารจัดการระบบทั้งหมด';
         }
       }
 
@@ -5223,47 +5223,47 @@ __SEARCHABLE_SELECT_CSS__
 
       const roleConfigs = {
         STAFF: {
-          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff Screener)',
-          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ Verify, รับของเข้าคลัง และจ่ายพัสดุ)',
+          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
+          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)',
           badgeBg: '#ecfdf5',
           badgeColor: '#047857',
           badgeBorder: '#a7f3d0',
           userPlaceholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่',
           passPlaceholder: 'กรอกรหัสผ่านเจ้าหน้าที่',
-          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ (Staff)',
+          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
           btnBg: '#059669'
         },
         HEAD: {
-          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน (Head Approver)',
+          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน',
           badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูสถิติ)',
           badgeBg: '#f5f3ff',
           badgeColor: '#6d28d9',
           badgeBorder: '#ddd6fe',
           userPlaceholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
           passPlaceholder: 'กรอกรหัสผ่านหัวหน้าหน่วยงาน',
-          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ (Head)',
+          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ',
           btnBg: '#4f46e5'
         },
         ADMIN: {
-          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (System Admin)',
+          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
           badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
           badgeBg: '#f1f5f9',
           badgeColor: '#0f172a',
           badgeBorder: '#cbd5e1',
           userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
           passPlaceholder: 'กรอกรหัสผ่านผู้ดูแลระบบ',
-          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด (Admin)',
+          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
           btnBg: '#0f172a'
         },
         REQUESTER: {
-          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
           badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
           badgeBg: '#eff6ff',
           badgeColor: '#1e40af',
           badgeBorder: '#bfdbfe',
           userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
           passPlaceholder: 'กรอกรหัสผ่านผู้ขอเบิก',
-          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ (Requester)',
+          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
           btnBg: '#1e40af'
         }
       };
@@ -5416,7 +5416,7 @@ __SEARCHABLE_SELECT_CSS__
         let resolvedName = username;
         if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'ADMIN';
-          resolvedName = 'ผู้ดูแลระบบคลังพัสดุ (Admin)';
+          resolvedName = 'ผู้ดูแลระบบคลังพัสดุ';
         } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'STAFF';
           resolvedName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
@@ -5445,7 +5445,7 @@ __SEARCHABLE_SELECT_CSS__
           Swal.fire({
             icon: 'error',
             title: 'เข้าสู่ระบบไม่สำเร็จ',
-            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (Offline Fallback)'
+            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง โหมดออฟไลน์'
           });
           return;
         }
@@ -5571,11 +5571,11 @@ __SEARCHABLE_SELECT_CSS__
 
       container.innerHTML = filtered.map(req => {
         let badgeClass = 'badge-pending';
-        let badgeText = 'รอคัดกรอง (Staff Screen)';
-        if (req.status === 'VERIFIED') { badgeClass = 'badge-verified'; badgeText = 'รอหัวหน้าอนุมัติ (Awaiting Head Approval)'; }
+        let badgeText = 'รอคัดกรอง';
+        if (req.status === 'VERIFIED') { badgeClass = 'badge-verified'; badgeText = 'รอหัวหน้าอนุมัติ'; }
         if (req.status === 'APPROVED') { badgeClass = 'badge-approved'; badgeText = 'อนุมัติแล้ว รอผู้เบิกมารับของ'; }
-        if (req.status === 'COMPLETED') { badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว (Completed)'; }
-        if (req.status === 'REJECTED') { badgeClass = 'badge-rejected'; badgeText = 'ไม่อนุมัติ / ยกเลิก (Rejected)'; }
+        if (req.status === 'COMPLETED') { badgeClass = 'badge-completed'; badgeText = 'จ่ายของสำเร็จแล้ว'; }
+        if (req.status === 'REJECTED') { badgeClass = 'badge-rejected'; badgeText = 'ไม่อนุมัติ / ยกเลิก'; }
         const reasonStr = req.reject_reason || req.rejectReason || '';
 
         return `
@@ -5668,7 +5668,7 @@ __SEARCHABLE_SELECT_CSS__
                   if (activeRole === 'HEAD') {
                     return `
                       <span style="font-size: 0.825rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                        ${vIcons.clock} รอเจ้าหน้าที่พัสดุ (STAFF) ตรวจสอบและคัดกรองเบื้องต้นก่อนเสนอหัวหน้าอนุมัติ
+                        ${vIcons.clock} รอเจ้าหน้าที่พัสดุ ตรวจสอบและคัดกรองเบื้องต้นก่อนเสนอหัวหน้าอนุมัติ
                       </span>
                     `;
                   }
@@ -5685,7 +5685,7 @@ __SEARCHABLE_SELECT_CSS__
                   if (activeRole === 'STAFF') {
                     return `
                       <span style="font-size: 0.825rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                        ${vIcons.shield} ผ่านการคัดกรองแล้ว — รอหัวหน้าหน่วยงาน (HEAD) กดอนุมัติขั้นสุดท้าย
+                        ${vIcons.shield} ผ่านการคัดกรองแล้ว — รอหัวหน้าหน่วยงาน กดอนุมัติขั้นสุดท้าย
                       </span>
                     `;
                   }
@@ -5705,7 +5705,7 @@ __SEARCHABLE_SELECT_CSS__
                         ${vIcons.eye} ดูตัวอย่างใบเบิก PDF
                       </button>
                       <span style="font-size: 0.825rem; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 0.45rem 0.85rem; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                        ${vIcons.check} อนุมัติแล้ว — รอเจ้าหน้าที่พัสดุ (STAFF) ส่งมอบพัสดุ
+                        ${vIcons.check} อนุมัติแล้ว — รอเจ้าหน้าที่พัสดุ ส่งมอบพัสดุ
                       </span>
                     `;
                   }
@@ -5724,7 +5724,7 @@ __SEARCHABLE_SELECT_CSS__
                 if (req.status === 'COMPLETED') {
                   return `
                     <button class="btn btn-outline" onclick="previewDocInPdf('${req.id}')">
-                      ${vIcons.printer} พิมพ์ใบเบิกทางการ (PDF)
+                      ${vIcons.printer} พิมพ์ใบเบิกทางการ PDF
                     </button>
                   `;
                 }
@@ -5747,8 +5747,8 @@ __SEARCHABLE_SELECT_CSS__
       if (getActiveStaffRole() === 'HEAD') {
         Swal.fire({
           icon: 'warning',
-          title: 'จำกัดสิทธิ์ตามบทบาท (RBAC)',
-          text: 'สิทธิ์หัวหน้าหน่วยงาน (HEAD) สำหรับอนุมัติขั้นสุดท้ายเท่านั้น การคัดกรองเบื้องต้นเป็นหน้าที่ของเจ้าหน้าที่พัสดุ (STAFF)',
+          title: 'จำกัดสิทธิ์ตามบทบาท',
+          text: 'สิทธิ์หัวหน้าหน่วยงาน สำหรับอนุมัติขั้นสุดท้ายเท่านั้น การคัดกรองเบื้องต้นเป็นหน้าที่ของเจ้าหน้าที่พัสดุ',
           confirmButtonColor: '#1e40af',
           confirmButtonText: 'ตกลง'
         });
@@ -5822,8 +5822,8 @@ __SEARCHABLE_SELECT_CSS__
       if (getActiveStaffRole() === 'STAFF') {
         Swal.fire({
           icon: 'warning',
-          title: 'จำกัดสิทธิ์ตามบทบาท (RBAC)',
-          text: 'สิทธิ์เจ้าหน้าที่พัสดุ (STAFF) ไม่สามารถกดอนุมัติคำขอขั้นสุดท้ายได้ ต้องให้หัวหน้าหน่วยงาน (HEAD) เป็นผู้อนุมัติ',
+          title: 'จำกัดสิทธิ์ตามบทบาท',
+          text: 'สิทธิ์เจ้าหน้าที่พัสดุ ไม่สามารถกดอนุมัติคำขอขั้นสุดท้ายได้ ต้องให้หัวหน้าหน่วยงาน เป็นผู้อนุมัติ',
           confirmButtonColor: '#1e40af',
           confirmButtonText: 'ตกลง'
         });
@@ -5868,7 +5868,7 @@ __SEARCHABLE_SELECT_CSS__
             <p><strong>ผู้ขอเบิก:</strong> ${escapeHtml(req.requester)} (${escapeHtml(req.dept)})</p>
             <p><strong>จำนวนพัสดุ:</strong> ${req.items.length} รายการ</p>
             <div style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; color: #1e40af; font-size: 0.85rem;">
-              • หัวหน้าอนุมัติคำขอขั้นสุดท้าย และระบบทำการกันยอดสต๊อก (Reserved Stock) ทันที
+              • หัวหน้าอนุมัติคำขอขั้นสุดท้าย และระบบทำการกันยอดสต๊อก ทันที
             </div>
           </div>
         `,
@@ -6067,7 +6067,7 @@ __SEARCHABLE_SELECT_CSS__
           title: 'จ่ายพัสดุเรียบร้อยแล้ว',
           text: `คำขอ ${docNo} ดำเนินการตัดยอดสต๊อกคงคลังจริงเรียบร้อยแล้ว`,
           confirmButtonColor: '#059669',
-          confirmButtonText: 'ดูใบเบิกทางการ (PDF)'
+          confirmButtonText: 'ดูใบเบิกทางการ PDF'
         }).then(() => {
           previewDocInPdf(req.id);
         });
@@ -6078,7 +6078,7 @@ __SEARCHABLE_SELECT_CSS__
       const items = getItemsDB();
 
       Swal.fire({
-        title: 'บันทึกรับเข้าพัสดุใหม่ (Stock-In)',
+        title: 'บันทึกรับเข้าพัสดุใหม่',
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
             <div>
@@ -6314,7 +6314,7 @@ __SEARCHABLE_SELECT_CSS__
       const items = getItemsDB();
 
       Swal.fire({
-        title: 'ปรับยอดสต๊อกจริง (Stock Adjustment)',
+        title: 'ปรับยอดสต๊อกจริง',
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
             <div>
@@ -6855,7 +6855,7 @@ __SEARCHABLE_SELECT_CSS__
         if (lowStockCount > 0) {
           lowBanner.style.display = 'flex';
           if (lowBannerTitle) {
-            lowBannerTitle.innerText = `แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert): พบพัสดุต่ำกว่าเกณฑ์ขั้นต่ำ ${lowStockCount} รายการ`;
+            lowBannerTitle.innerText = `แจ้งเตือนจุดสั่งซื้อใหม่: พบพัสดุต่ำกว่าเกณฑ์ขั้นต่ำ ${lowStockCount} รายการ`;
           }
           if (lowBannerItems) {
             const sampleNames = lowStockItems.slice(0, 5).map(i => i.name).join(', ');
@@ -6875,7 +6875,7 @@ __SEARCHABLE_SELECT_CSS__
         if (lowStockCount > 0) {
           reqLowBanner.style.display = 'flex';
           if (reqLowBannerText) {
-            reqLowBannerText.innerHTML = `<strong>แจ้งเตือนจุดสั่งซื้อใหม่ (Reorder Point Alert):</strong> มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำจำนวน <strong>${lowStockCount} รายการ</strong>`;
+            reqLowBannerText.innerHTML = `<strong>แจ้งเตือนจุดสั่งซื้อใหม่:</strong> มีรายการพัสดุคงเหลือต่ำกว่าเกณฑ์ขั้นต่ำจำนวน <strong>${lowStockCount} รายการ</strong>`;
           }
         } else {
           reqLowBanner.style.display = 'none';
@@ -6969,11 +6969,11 @@ __SEARCHABLE_SELECT_CSS__
       const rowsHtml = txList.length === 0
         ? `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">ยังไม่มีประวัติความเคลื่อนไหวสำหรับพัสดุรายการนี้</td></tr>`
         : txList.map((t, idx) => {
-            let typeBadge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">รับเข้า (IN)</span>`;
+            let typeBadge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">รับเข้า</span>`;
             if (t.transactionType === 'OUT') {
-              typeBadge = `<span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">จ่ายออก (OUT)</span>`;
+              typeBadge = `<span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">จ่ายออก</span>`;
             } else if (t.transactionType === 'ADJUST') {
-              typeBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">ปรับยอด (ADJUST)</span>`;
+              typeBadge = `<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:999px; font-size:0.72rem; font-weight:600;">ปรับยอด</span>`;
             }
             const chg = Number(t.changePieces || 0);
             const chgStr = chg > 0 ? `+${chg.toLocaleString()}` : `${chg.toLocaleString()}`;
@@ -6992,7 +6992,7 @@ __SEARCHABLE_SELECT_CSS__
           }).join('');
 
       Swal.fire({
-        title: 'ประวัติความเคลื่อนไหวสต๊อก (Stock Audit Trail)',
+        title: 'ประวัติความเคลื่อนไหวสต๊อก',
         width: 820,
         html: `
           <div style="text-align: left; margin-top: 0.5rem;">
@@ -7230,15 +7230,15 @@ __SEARCHABLE_SELECT_CSS__
         [],
         ['สรุปภาพรวมประจำเดือน', 'จำนวน'],
         ['คำขอเบิกทั้งหมด (คำขอ)', data.totalRequisitions || 0],
-        ['รอคัดกรอง (PENDING)', data.totalPending || 0],
-        ['รอหัวหน้าอนุมัติ (VERIFIED)', data.totalVerified || 0],
-        ['อนุมัติแล้วรอจ่าย (APPROVED)', data.totalApproved || 0],
-        ['จ่ายพัสดุสำเร็จ (COMPLETED)', data.totalCompleted || 0],
-        ['ไม่อนุมัติ/ยกเลิก (REJECTED)', data.totalRejected || 0],
+        ['รอคัดกรอง', data.totalPending || 0],
+        ['รอหัวหน้าอนุมัติ', data.totalVerified || 0],
+        ['อนุมัติแล้วรอจ่าย', data.totalApproved || 0],
+        ['จ่ายพัสดุสำเร็จ', data.totalCompleted || 0],
+        ['ไม่อนุมัติ/ยกเลิก', data.totalRejected || 0],
         ['จำนวนชิ้นพัสดุที่ขอเบิกรวม (ชิ้น)', data.totalPiecesRequested || 0],
         ['จำนวนชิ้นที่อนุมัติ/จ่ายสำเร็จรวม (ชิ้น)', data.totalPiecesApproved || 0],
         [],
-        ['5 อันดับพัสดุที่มีการเบิกมากที่สุด (Top 5 Requisitioned Items)'],
+        ['5 อันดับพัสดุที่มีการเบิกมากที่สุด 5 อันดับ'],
         ['อันดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิก', 'จำนวนคำขอ', 'หน่วยนับ']
       ];
 
@@ -7247,7 +7247,7 @@ __SEARCHABLE_SELECT_CSS__
       });
 
       rows.push([]);
-      rows.push(['5 อันดับพัสดุที่มีการเบิกน้อยที่สุด (Least 5 Requisitioned Items)']);
+      rows.push(['5 อันดับพัสดุที่มีการเบิกน้อยที่สุด 5 อันดับ']);
       rows.push(['อันดับ', 'ชื่อรายการพัสดุ', 'หมวดหมู่', 'จำนวนที่เบิก', 'จำนวนคำขอ', 'หน่วยนับ']);
       (data.leastItems || []).forEach((it, idx) => {
         rows.push([idx + 1, it.name, it.category || '', it.totalPieces || 0, it.requisitionCount || 0, it.unit || 'ชิ้น']);
@@ -7352,7 +7352,7 @@ __SEARCHABLE_SELECT_CSS__
         <body>
           <div class="report-header">
             <img src="assets/logo_sdu.png" alt="SDU">
-            <h2>รายงานสรุปยอดและสถิติการเบิกจ่ายพัสดุประจำเดือน (Executive Summary)</h2>
+            <h2>รายงานสรุปยอดและสถิติการเบิกจ่ายพัสดุประจำเดือน</h2>
             <p>สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต</p>
             <p><strong>ประจำงวด:</strong> ${escapeHtml(monthLabel)} | <strong>วันที่พิมพ์รายงาน:</strong> ${escapeHtml(formatThaiDatetime(new Date()))}</p>
           </div>
@@ -7362,12 +7362,12 @@ __SEARCHABLE_SELECT_CSS__
             <div class="kpi-box"><div>จำนวนชิ้นที่ขอเบิก</div><div class="val">${(data.totalPiecesRequested || 0).toLocaleString()} ชิ้น</div></div>
             <div class="kpi-box"><div>จำนวนชิ้นที่จ่ายจริง</div><div class="val">${(data.totalPiecesApproved || 0).toLocaleString()} ชิ้น</div></div>
           </div>
-          <h3>1. อันดับพัสดุที่มีการเบิกจ่ายสูงสุด 5 อันดับแรก (Top 5 Most Requisitioned Items)</h3>
+          <h3>1. อันดับพัสดุที่มีการเบิกจ่ายสูงสุด 5 อันดับแรก</h3>
           <table>
             <thead><tr><th style="width:50px;">อันดับ</th><th>ชื่อรายการพัสดุ</th><th style="width:130px;">หมวดหมู่</th><th style="width:120px;">จำนวนที่เบิก</th><th style="width:80px;">คำขอ</th></tr></thead>
             <tbody>${topRows}</tbody>
           </table>
-          <h3>2. อันดับพัสดุที่มีการเบิกจ่ายน้อยที่สุด 5 อันดับแรก (Least 5 / Slow-Moving Items)</h3>
+          <h3>2. อันดับพัสดุที่มีการเบิกจ่ายน้อยที่สุด 5 อันดับแรก</h3>
           <table>
             <thead><tr><th style="width:50px;">อันดับ</th><th>ชื่อรายการพัสดุ</th><th style="width:130px;">หมวดหมู่</th><th style="width:120px;">จำนวนที่เบิก</th><th style="width:80px;">คำขอ</th></tr></thead>
             <tbody>${leastRows}</tbody>
@@ -7760,13 +7760,13 @@ __SEARCHABLE_SELECT_CSS__
 
       tbody.innerHTML = filtered.map((u, idx) => {
         const uRole = String(u.role || (['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes((u.username || '').toLowerCase()) ? 'HEAD' : 'REQUESTER')).toUpperCase();
-        let roleBadge = `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ขอเบิก (REQUESTER)</span>`;
+        let roleBadge = `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ขอเบิก</span>`;
         if (uRole === 'STAFF') {
-          roleBadge = `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">เจ้าหน้าที่พัสดุ (STAFF)</span>`;
+          roleBadge = `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">เจ้าหน้าที่พัสดุ</span>`;
         } else if (uRole === 'HEAD') {
-          roleBadge = `<span style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">หัวหน้าผู้อนุมัติ (HEAD)</span>`;
+          roleBadge = `<span style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">หัวหน้าผู้อนุมัติ</span>`;
         } else if (uRole === 'ADMIN') {
-          roleBadge = `<span style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ดูแลระบบ (ADMIN)</span>`;
+          roleBadge = `<span style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ดูแลระบบ</span>`;
         }
         const userRules = allQuotas.filter(q =>
           String(q.targetType || q.target_type || '').toUpperCase() === 'USER' &&
@@ -7825,26 +7825,26 @@ __SEARCHABLE_SELECT_CSS__
       ).join('') + `<option value="__NEW__">+ เพิ่มกลุ่มงาน / หน่วยงานใหม่...</option>`;
 
       Swal.fire({
-        title: existing ? 'แก้ไขข้อมูลบุคลากรและสิทธิ์ (User & Role)' : 'เพิ่มรายชื่อบุคลากรและกำหนดสิทธิ์ (User & Role)',
+        title: existing ? 'แก้ไขข้อมูลบุคลากรและสิทธิ์' : 'เพิ่มรายชื่อบุคลากรและกำหนดสิทธิ์',
         html: `
           <div style="text-align: left; display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
               <div>
-                <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อผู้ใช้งาน (Username) *</label>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ชื่อผู้ใช้งาน *</label>
                 <input id="swal-user-uname" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.92rem; height: 40px;" placeholder="กรอกชื่อผู้ใช้งาน" value="${existing ? (existing.username || '') : ''}">
               </div>
               <div>
-                <label style="font-size: 0.85rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">บทบาทสิทธิ์ในระบบ (Role) *</label>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #1e40af; display: block; margin-bottom: 4px;">บทบาทสิทธิ์ในระบบ *</label>
                 <select id="swal-user-role" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.88rem; height: 40px;">
-                  <option value="REQUESTER" ${curRole === 'REQUESTER' ? 'selected' : ''}>REQUESTER — ผู้ขอเบิกพัสดุ</option>
-                  <option value="STAFF" ${curRole === 'STAFF' ? 'selected' : ''}>STAFF — เจ้าหน้าที่พัสดุ (ผู้คัดกรอง)</option>
-                  <option value="HEAD" ${curRole === 'HEAD' ? 'selected' : ''}>HEAD — หัวหน้าหน่วยงาน (ผู้อนุมัติ)</option>
-                  <option value="ADMIN" ${curRole === 'ADMIN' ? 'selected' : ''}>ADMIN — ผู้ดูแลระบบสูงสุด</option>
+                  <option value="REQUESTER" ${curRole === 'REQUESTER' ? 'selected' : ''}>ผู้ขอเบิกพัสดุ</option>
+                  <option value="STAFF" ${curRole === 'STAFF' ? 'selected' : ''}>เจ้าหน้าที่พัสดุ (ผู้คัดกรอง)</option>
+                  <option value="HEAD" ${curRole === 'HEAD' ? 'selected' : ''}>หัวหน้าหน่วยงาน (ผู้อนุมัติ)</option>
+                  <option value="ADMIN" ${curRole === 'ADMIN' ? 'selected' : ''}>ผู้ดูแลระบบสูงสุด</option>
                 </select>
               </div>
             </div>
             <div>
-              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รหัสผ่านเข้าใช้งาน (Password) ${existing ? '<span style="font-weight: normal; color: #64748b;">(เว้นว่างหากไม่เปลี่ยน)</span>' : '*'}</label>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รหัสผ่านเข้าใช้งาน ${existing ? '<span style="font-weight: normal; color: #64748b;">(เว้นว่างหากไม่เปลี่ยน)</span>' : '*'}</label>
               <input type="password" id="swal-user-pass" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.95rem; height: 40px;" placeholder="${existing ? 'กรอกรหัสผ่านใหม่เพื่อเปลี่ยน' : 'กำหนดรหัสผ่านเข้าสู่ระบบ'}">
             </div>
             <div>
@@ -7888,7 +7888,7 @@ __SEARCHABLE_SELECT_CSS__
           const finalDept = deptSel === '__NEW__' ? newDept : deptSel;
 
           if (!username) {
-            Swal.showValidationMessage('กรุณาระบุชื่อผู้ใช้งาน (Username) สำหรับเข้าสู่ระบบ');
+            Swal.showValidationMessage('กรุณาระบุชื่อผู้ใช้งาน สำหรับเข้าสู่ระบบ');
             return false;
           }
           const duplicateUser = currentUsers.find(u =>
@@ -7900,7 +7900,7 @@ __SEARCHABLE_SELECT_CSS__
             return false;
           }
           if (!existing && !password) {
-            Swal.showValidationMessage('กรุณากำหนดรหัสผ่าน (Password) สำหรับผู้ใช้งานใหม่');
+            Swal.showValidationMessage('กรุณากำหนดรหัสผ่าน สำหรับผู้ใช้งานใหม่');
             return false;
           }
           if (!name) {

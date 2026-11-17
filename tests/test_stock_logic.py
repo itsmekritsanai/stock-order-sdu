@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.3.1"
+        assert SYSTEM_VERSION == "3.3.2"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1083,7 +1083,7 @@ class TestPhase8ExtendedRequirements:
         with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
             stf_html = f.read()
         assert "password === 'sdu1234'" in stf_html
-        assert "(Offline Fallback)" in stf_html
+        assert "โหมดออฟไลน์" in stf_html
 
     def test_auth_bypass_toggle_and_helpers(self):
         """Verify AUTH_BYPASS toggle helper in backend and portal test-mode hooks."""
