@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.4.0"
+        assert SYSTEM_VERSION == "3.5.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1263,6 +1263,111 @@ class TestPhase8ExtendedRequirements:
         assert "renderAnalyticsPersonUsageTable" in stf_html
         assert "openPersonAnalyticsDetailModal" in stf_html
         assert "analyticsPersonDeptFilter" in stf_html
+
+    def test_export_monthly_analytics_xlsx_workbook_valid(self):
+        """Verify native OpenXML (.xlsx) monthly analytics workbook structure, 4 Thai sheets, and endpoint integration."""
+        import io
+        import zipfile
+        import xml.etree.ElementTree as ET
+        from excel_export import build_monthly_analytics_xlsx
+        import server
+
+        sample_data = {
+            "month": "2026-11",
+            "thaiMonth": "พ.ย. 2569",
+            "totalRequisitions": 2,
+            "totalPending": 0,
+            "totalVerified": 0,
+            "totalApproved": 1,
+            "totalCompleted": 1,
+            "totalRejected": 0,
+            "totalPiecesRequested": 1500,
+            "totalPiecesApproved": 1000,
+            "topItems": [
+                {"itemId": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "totalPieces": 1500, "requisitionCount": 2, "unit": "ใบ"}
+            ],
+            "leastItems": [
+                {"itemId": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "totalPieces": 1500, "requisitionCount": 2, "unit": "ใบ"}
+            ],
+            "allItemUsage": [
+                {"itemId": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "totalPieces": 1500, "requisitionCount": 2, "unit": "ใบ"}
+            ],
+            "personUsage": [
+                {
+                    "requester": "นางสาววาสนา จันทร์จ่าย",
+                    "dept": "สำนักงานผู้อำนวยการ สวท.",
+                    "requisitionCount": 1,
+                    "completedCount": 1,
+                    "totalRequestedPieces": 1000,
+                    "totalApprovedPieces": 1000,
+                    "items": [{"itemId": 3, "name": "กระดาษคำตอบ", "totalPieces": 1000, "approvedPieces": 1000, "unit": "ใบ"}],
+                }
+            ],
+        }
+        detail_rows = [
+            {
+                "docNo": "REQ-256911-0001",
+                "date": "17 พ.ย. 2569 10:00 น.",
+                "statusThai": "จ่ายสำเร็จแล้ว",
+                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "dept": "สำนักงานผู้อำนวยการ สวท.",
+                "itemName": "กระดาษคำตอบ",
+                "totalPieces": 1000,
+                "approvedPieces": 1000,
+                "unit": "ใบ",
+            }
+        ]
+
+        xlsx_bytes = build_monthly_analytics_xlsx(sample_data, "17 พ.ย. 2569 12:00 น.", detail_rows=detail_rows)
+        assert xlsx_bytes.startswith(b"PK")
+
+        with zipfile.ZipFile(io.BytesIO(xlsx_bytes), "r") as zf:
+            names = set(zf.namelist())
+            for expected in (
+                "[Content_Types].xml",
+                "_rels/.rels",
+                "xl/workbook.xml",
+                "xl/_rels/workbook.xml.rels",
+                "xl/styles.xml",
+                "xl/worksheets/sheet1.xml",
+                "xl/worksheets/sheet2.xml",
+                "xl/worksheets/sheet3.xml",
+                "xl/worksheets/sheet4.xml",
+            ):
+                assert expected in names
+                xml_txt = zf.read(expected).decode("utf-8")
+                ET.fromstring(xml_txt)
+
+            wb_xml = zf.read("xl/workbook.xml").decode("utf-8")
+            for sheet_name in ("ภาพรวมประจำเดือน", "สรุปรายบุคคล", "สรุปทุกพัสดุ", "รายละเอียดคำขอเบิก"):
+                assert sheet_name in wb_xml
+
+            styles_xml = zf.read("xl/styles.xml").decode("utf-8")
+            assert "#,##0" in styles_xml
+
+        # Verify server handler integration with mocked analytics + requisitions
+        mock_analytics = {"status": "success", "data": sample_data}
+        mock_reqs = {
+            "status": "success",
+            "data": [{
+                "id": "REQ-256911-0001",
+                "date": "17 พ.ย. 2569 10:00 น.",
+                "status": "COMPLETED",
+                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "dept": "สำนักงานผู้อำนวยการ สวท.",
+                "items": [{"name": "กระดาษคำตอบ", "totalPieces": 1000, "approvedPieces": 1000, "unitPiece": "ใบ"}],
+            }],
+        }
+        with patch("server.handle_get_monthly_analytics", return_value=mock_analytics), \
+             patch("server.handle_get_requisitions", return_value=mock_reqs):
+            out_bytes, out_name = server.handle_export_monthly_analytics_excel({"month": ["2026-11"]})
+            assert out_bytes.startswith(b"PK")
+            assert out_name == "SDU_Monthly_Analytics_2026-11.xlsx"
+
+        with open(os.path.join(PROJECT_ROOT, "backend", "server.py"), "r", encoding="utf-8") as f:
+            assert "exportMonthlyAnalyticsExcel" in f.read()
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            assert "exportMonthlyAnalyticsExcel" in f.read()
 
 
 

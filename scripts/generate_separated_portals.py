@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.4.0"
+SYSTEM_VERSION = "3.5.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -4652,7 +4652,7 @@ __SEARCHABLE_SELECT_CSS__
               <option value="ALL">ภาพรวมข้อมูลย้อนหลังทั้งหมด</option>
             </select>
             <button type="button" class="btn btn-outline" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="exportMonthlyAnalyticsCsv()">
-              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> ส่งออก Excel / CSV
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg> ส่งออก Excel
             </button>
             <button type="button" class="btn btn-primary" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="printMonthlyAnalyticsPdf()">
               <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg> พิมพ์รายงานสรุปผู้บริหาร PDF
@@ -7462,7 +7462,38 @@ __SEARCHABLE_SELECT_CSS__
       if (!data) return;
 
       const monthSelect = document.getElementById('analyticsMonthSelect');
+      const selectedMonth = monthSelect ? monthSelect.value : (data.month || 'ALL');
       const monthLabel = monthSelect ? monthSelect.options[monthSelect.selectedIndex].text : (data.thaiMonth || data.month || 'ทั้งหมด');
+
+      if (MYSQL_API_URL && navigator.onLine) {
+        try {
+          const res = await fetch(`${MYSQL_API_URL}?action=exportMonthlyAnalyticsExcel&month=${encodeURIComponent(selectedMonth)}`);
+          const contentType = res.headers.get('Content-Type') || '';
+          if (res.ok && contentType.includes('spreadsheetml')) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SDU_Monthly_Analytics_${selectedMonth}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            Swal.fire({
+              icon: 'success',
+              title: 'ส่งออกไฟล์ Excel สำเร็จ',
+              text: `ดาวน์โหลดรายงานประจำเดือน (${monthLabel}) แยก 4 ชีต จัดคอลัมน์และตัวกรองอัตโนมัติเรียบร้อยแล้ว`,
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn('Excel export endpoint unavailable, falling back to offline CSV:', err);
+        }
+      }
+
       const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
       const rows = [
@@ -7523,8 +7554,8 @@ __SEARCHABLE_SELECT_CSS__
 
       Swal.fire({
         icon: 'success',
-        title: 'ส่งออกไฟล์ CSV สำเร็จ',
-        text: `ดาวน์โหลดไฟล์สรุปยอดประจำเดือน (${monthLabel}) เรียบร้อยแล้ว สามารถเปิดด้วย Microsoft Excel ได้ทันที`,
+        title: 'ส่งออกไฟล์ออฟไลน์สำเร็จ',
+        text: `ดาวน์โหลดไฟล์สรุปยอดประจำเดือน (${monthLabel}) เรียบร้อยแล้ว`,
         confirmButtonColor: '#1e40af',
         confirmButtonText: 'ตกลง'
       });

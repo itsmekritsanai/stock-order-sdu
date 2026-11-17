@@ -20,7 +20,12 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.4.0"
+try:
+    from excel_export import build_monthly_analytics_xlsx
+except ImportError:
+    from backend.excel_export import build_monthly_analytics_xlsx
+
+SYSTEM_VERSION = "3.5.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -954,6 +959,48 @@ def handle_get_monthly_analytics(params):
             }
     finally:
         conn.close()
+
+
+STATUS_THAI_LABELS = {
+    "PENDING": "รอคัดกรอง",
+    "VERIFIED": "รอหัวหน้าอนุมัติ",
+    "APPROVED": "อนุมัติแล้ว รอรับของ",
+    "COMPLETED": "จ่ายสำเร็จแล้ว",
+    "REJECTED": "ไม่อนุมัติ / ยกเลิก",
+}
+
+
+def handle_export_monthly_analytics_excel(params):
+    """Build styled multi-sheet native Excel (.xlsx) workbook for monthly analytics."""
+    analytics_res = handle_get_monthly_analytics(params)
+    analytics_data = analytics_res.get("data", {})
+    resolved_month = analytics_data.get("month") or "ALL"
+
+    reqs_res = handle_get_requisitions({"month": [resolved_month]})
+    req_list = reqs_res.get("data", []) if isinstance(reqs_res, dict) else []
+
+    detail_rows = []
+    for req in req_list:
+        status_code = req.get("status") or ""
+        status_thai = STATUS_THAI_LABELS.get(status_code, status_code)
+        is_approved = status_code in ("APPROVED", "COMPLETED")
+        for it in (req.get("items") or []):
+            detail_rows.append({
+                "docNo": req.get("id") or "",
+                "date": req.get("date") or "",
+                "statusThai": status_thai,
+                "requester": req.get("requester") or "",
+                "dept": req.get("dept") or "",
+                "itemName": it.get("name") or "",
+                "totalPieces": int(it.get("totalPieces") or 0),
+                "approvedPieces": int(it.get("approvedPieces") or 0) if is_approved else 0,
+                "unit": it.get("unitPiece") or "ชิ้น",
+            })
+
+    xlsx_bytes = build_monthly_analytics_xlsx(analytics_data, format_thai_datetime(), detail_rows=detail_rows)
+    safe_month = "".join(ch for ch in str(resolved_month) if ch.isalnum() or ch in ("-", "_")) or "ALL"
+    filename = f"SDU_Monthly_Analytics_{safe_month}.xlsx"
+    return xlsx_bytes, filename
 
 
 # ==============================================================================
@@ -2542,6 +2589,15 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def send_bytes(self, body, content_type, filename):
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_cors_headers()
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_cors_headers()
@@ -2567,6 +2623,13 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json(handle_get_quotas())
                 elif action == "getMonthlyAnalytics":
                     return self.send_json(handle_get_monthly_analytics(params))
+                elif action == "exportMonthlyAnalyticsExcel":
+                    xlsx_bytes, filename = handle_export_monthly_analytics_excel(params)
+                    return self.send_bytes(
+                        xlsx_bytes,
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        filename,
+                    )
                 elif action == "getItemTransactions":
                     return self.send_json(handle_get_item_transactions(params))
                 elif action in ("health", "ping"):
