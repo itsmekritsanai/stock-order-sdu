@@ -559,6 +559,9 @@
         </nav>
 
         <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <span id="staffAuthBypassBadge" style="display: none; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+            โหมดทดสอบ: พักระบบ Login
+          </span>
           <div id="staffRoleBadge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.775rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
             <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
             <span id="staffRoleLabelText">ผู้ดูแลระบบสูงสุด (Admin)</span>
@@ -974,14 +977,15 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.4) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.5) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.2.4';
+    const APP_VERSION = '3.2.5';
     const MYSQL_API_URL = '/api';
+    const AUTH_BYPASS = true;
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
       cart: `<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
@@ -1499,16 +1503,44 @@
     }
 
     // Auth Simulation
-    function checkStaffAuth() {
-      const isAuth = sessionStorage.getItem('staff_auth') === 'true';
+    function checkStaffAuth(skipBypass = false) {
+      let isAuth = sessionStorage.getItem('staff_auth') === 'true';
+      const wantsLogin = window.location.search.includes('showLogin=1');
+      if (!isAuth && AUTH_BYPASS && !skipBypass && !wantsLogin) {
+        let initialActiveRole = 'ADMIN';
+        try {
+          const urlRole = (new URLSearchParams(window.location.search).get('role') || '').toUpperCase();
+          if (['STAFF', 'HEAD', 'ADMIN'].includes(urlRole)) {
+            initialActiveRole = urlRole;
+          }
+        } catch (e) {}
+        sessionStorage.setItem('staff_auth', 'true');
+        sessionStorage.setItem('staff_username', 'admin_staff');
+        sessionStorage.setItem('staff_name', 'ผู้ดูแลระบบคลังพัสดุ (โหมดทดสอบ)');
+        sessionStorage.setItem('staff_role', 'ADMIN');
+        sessionStorage.setItem('staff_active_role', initialActiveRole);
+        isAuth = true;
+      }
       if (!isAuth) {
         document.getElementById('loginScreen').style.display = 'block';
         document.getElementById('staffPortalApp').style.display = 'none';
       } else {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('staffPortalApp').style.display = 'block';
+        const bypassBadge = document.getElementById('staffAuthBypassBadge');
+        if (bypassBadge) bypassBadge.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
         updateRoleUI();
         loadStaffDashboard();
+        const activeRole = getActiveStaffRole();
+        if (AUTH_BYPASS && !skipBypass) {
+          if (activeRole === 'HEAD') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+          } else if (activeRole === 'STAFF') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
+          }
+        }
       }
     }
 
@@ -1658,7 +1690,7 @@
           sessionStorage.removeItem('staff_name');
           sessionStorage.removeItem('staff_role');
           sessionStorage.removeItem('staff_active_role');
-          checkStaffAuth();
+          checkStaffAuth(true);
         }
       });
     }
@@ -4441,9 +4473,17 @@
         const params = new URLSearchParams(window.location.search);
         const roleParam = (params.get('role') || '').toUpperCase();
         if (['STAFF', 'HEAD', 'ADMIN', 'REQUESTER'].includes(roleParam)) {
-          sessionStorage.removeItem('staff_auth');
-          sessionStorage.removeItem('staff_token');
-          selectStaffLoginRole(roleParam);
+          if (AUTH_BYPASS && roleParam !== 'REQUESTER') {
+            sessionStorage.setItem('staff_auth', 'true');
+            sessionStorage.setItem('staff_username', 'admin_staff');
+            sessionStorage.setItem('staff_name', 'ผู้ดูแลระบบคลังพัสดุ (โหมดทดสอบ)');
+            sessionStorage.setItem('staff_role', 'ADMIN');
+            sessionStorage.setItem('staff_active_role', roleParam);
+          } else {
+            sessionStorage.removeItem('staff_auth');
+            sessionStorage.removeItem('staff_token');
+            selectStaffLoginRole(roleParam);
+          }
         }
       } catch (e) {}
       checkStaffAuth();

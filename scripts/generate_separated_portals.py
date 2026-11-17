@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.4"
+SYSTEM_VERSION = "3.2.5"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -10,6 +10,7 @@ MYSQL_API_URL = "/api"
 DEFAULT_USER_PASSWORD = "password123"
 STAFF_PASSWORD = "sdu1234"
 STAFF_USERNAME = "admin_staff"
+AUTH_BYPASS = False
 
 env_path = os.path.join(PROJECT_ROOT, '.env')
 if os.path.exists(env_path):
@@ -29,6 +30,8 @@ if os.path.exists(env_path):
                 STAFF_PASSWORD = v
             elif k == 'STAFF_USERNAME':
                 STAFF_USERNAME = v
+            elif k == 'AUTH_BYPASS':
+                AUTH_BYPASS = v.lower() in ('true', '1', 'yes', 'on')
 
 def parse_docx_depts_and_users(docx_path):
     import zipfile
@@ -1146,6 +1149,14 @@ requester_template = r'''<!DOCTYPE html>
             <span id="navRequesterDept" style="color: var(--neutral-500); font-size: 0.775rem;">-</span>
           </div>
 
+          <span id="requesterAuthBypassBadge" style="display: none; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+            โหมดทดสอบ: พักระบบ Login
+          </span>
+
+          <button class="btn btn-outline" id="btnSwitchTestRequester" onclick="switchTestRequester()" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.4rem 0.7rem; border-color: #93c5fd; color: #1e40af; background: #eff6ff;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> สลับผู้ขอเบิก (ทดสอบ)
+          </button>
+
           <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg> รายการคำขอของฉัน
             <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
@@ -1450,8 +1461,9 @@ requester_template = r'''<!DOCTYPE html>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.0.3';
+    const APP_VERSION = '__SYSTEM_VERSION__';
     const MYSQL_API_URL = '/api';
+    const AUTH_BYPASS = __AUTH_BYPASS__;
     const defaultDepts = __DEFAULT_DEPTS__;
     const defaultUsers = __DEFAULT_USERS__;
 
@@ -2893,10 +2905,32 @@ requester_template = r'''<!DOCTYPE html>
       }
     }
 
-    function checkRequesterAuth() {
-      const user = getLoggedInRequester();
+    function checkRequesterAuth(skipBypass = false) {
+      let user = getLoggedInRequester();
       const loginScreen = document.getElementById('requesterLoginScreen');
       const appContainer = document.getElementById('requesterApp');
+      const wantsLogin = window.location.search.includes('showLogin=1');
+
+      if (!user && AUTH_BYPASS && !skipBypass && !wantsLogin) {
+        const users = getUsersDB();
+        const defaultTester = users.find(u => (u.username || '').toLowerCase() === 'user') || users[0] || {
+          id: 5,
+          name: 'ผู้ขอเบิกทดสอบ (Demo User)',
+          username: 'user',
+          position: 'เจ้าหน้าที่บริการการศึกษา',
+          dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+          phone: '089-123-4567'
+        };
+        user = {
+          id: defaultTester.id,
+          name: defaultTester.name,
+          username: defaultTester.username || 'user',
+          position: defaultTester.position || '',
+          dept: defaultTester.dept || '',
+          phone: defaultTester.phone || ''
+        };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
+      }
 
       if (!user) {
         if (loginScreen) loginScreen.style.display = 'flex';
@@ -2907,8 +2941,53 @@ requester_template = r'''<!DOCTYPE html>
       if (loginScreen) loginScreen.style.display = 'none';
       if (appContainer) appContainer.style.display = 'flex';
 
+      const bypassBadge = document.getElementById('requesterAuthBypassBadge');
+      const switchBtn = document.getElementById('btnSwitchTestRequester');
+      if (bypassBadge) bypassBadge.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
+      if (switchBtn) switchBtn.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
+
       applyRequesterSession(user);
       return true;
+    }
+
+    function switchTestRequester() {
+      const users = getUsersDB();
+      if (!users || users.length === 0) return;
+      const cur = getLoggedInRequester();
+      const opts = users.map(u => {
+        const selected = cur && (u.username === cur.username || u.name === cur.name) ? 'selected' : '';
+        return `<option value="${escapeHtml(String(u.id))}" ${selected}>${escapeHtml(u.name)} (${escapeHtml(u.dept || '-')})</option>`;
+      }).join('');
+
+      Swal.fire({
+        title: 'สลับบัญชีผู้ขอเบิก (โหมดทดสอบ)',
+        html: `<div style="text-align:left; font-size:0.875rem; color:#475569; margin-bottom:0.5rem;">เลือกบุคลากรเพื่อทดสอบโควตารายเดือนและการส่งคำขอได้ทันทีโดยไม่ต้องกรอกรหัสผ่าน:</div>
+               <select id="swalSwitchRequesterSelect" class="form-control" style="width:100%;">${opts}</select>`,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'สลับผู้ใช้งาน',
+        cancelButtonText: 'ยกเลิก'
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        const selEl = document.getElementById('swalSwitchRequesterSelect');
+        const chosenId = selEl ? selEl.value : '';
+        const picked = users.find(u => String(u.id) === String(chosenId));
+        if (!picked) return;
+        const sessionUser = {
+          id: picked.id,
+          name: picked.name,
+          username: picked.username || '',
+          position: picked.position || '',
+          dept: picked.dept || '',
+          phone: picked.phone || ''
+        };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionUser));
+        applyRequesterSession(sessionUser);
+        renderCatalog();
+        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1600 })
+          .fire({ icon: 'success', title: `สลับเป็นผู้ขอเบิก: ${picked.name}` });
+      });
     }
 
     function applyRequesterSession(user) {
@@ -3166,7 +3245,11 @@ requester_template = r'''<!DOCTYPE html>
       }).then((res) => {
         if (res.isConfirmed) {
           localStorage.removeItem(AUTH_SESSION_KEY);
-          location.reload();
+          if (AUTH_BYPASS) {
+            checkRequesterAuth(true);
+          } else {
+            location.reload();
+          }
         }
       });
     }
@@ -3226,6 +3309,7 @@ requester_template = r'''<!DOCTYPE html>
 requester_html = (
     requester_template
     .replace('__SYSTEM_VERSION__', SYSTEM_VERSION)
+    .replace('__AUTH_BYPASS__', 'true' if AUTH_BYPASS else 'false')
     .replace('__DEFAULT_ITEMS__', json.dumps(initial_items, ensure_ascii=False))
     .replace('__DEFAULT_REQS__', json.dumps(initial_requisitions, ensure_ascii=False))
     .replace('__DEFAULT_DEPTS__', dept_json_str)
@@ -3802,6 +3886,9 @@ staff_template = r'''<!DOCTYPE html>
         </nav>
 
         <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
+          <span id="staffAuthBypassBadge" style="display: none; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+            โหมดทดสอบ: พักระบบ Login
+          </span>
           <div id="staffRoleBadge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.775rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
             <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
             <span id="staffRoleLabelText">ผู้ดูแลระบบสูงสุด (Admin)</span>
@@ -4225,6 +4312,7 @@ staff_template = r'''<!DOCTYPE html>
   <script>
     const APP_VERSION = '__SYSTEM_VERSION__';
     const MYSQL_API_URL = '/api';
+    const AUTH_BYPASS = __AUTH_BYPASS__;
     const vIcons = {
       box: `<svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>`,
       cart: `<svg class="svg-icon" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>`,
@@ -4665,16 +4753,44 @@ staff_template = r'''<!DOCTYPE html>
     }
 
     // Auth Simulation
-    function checkStaffAuth() {
-      const isAuth = sessionStorage.getItem('staff_auth') === 'true';
+    function checkStaffAuth(skipBypass = false) {
+      let isAuth = sessionStorage.getItem('staff_auth') === 'true';
+      const wantsLogin = window.location.search.includes('showLogin=1');
+      if (!isAuth && AUTH_BYPASS && !skipBypass && !wantsLogin) {
+        let initialActiveRole = 'ADMIN';
+        try {
+          const urlRole = (new URLSearchParams(window.location.search).get('role') || '').toUpperCase();
+          if (['STAFF', 'HEAD', 'ADMIN'].includes(urlRole)) {
+            initialActiveRole = urlRole;
+          }
+        } catch (e) {}
+        sessionStorage.setItem('staff_auth', 'true');
+        sessionStorage.setItem('staff_username', 'admin_staff');
+        sessionStorage.setItem('staff_name', 'ผู้ดูแลระบบคลังพัสดุ (โหมดทดสอบ)');
+        sessionStorage.setItem('staff_role', 'ADMIN');
+        sessionStorage.setItem('staff_active_role', initialActiveRole);
+        isAuth = true;
+      }
       if (!isAuth) {
         document.getElementById('loginScreen').style.display = 'block';
         document.getElementById('staffPortalApp').style.display = 'none';
       } else {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('staffPortalApp').style.display = 'block';
+        const bypassBadge = document.getElementById('staffAuthBypassBadge');
+        if (bypassBadge) bypassBadge.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
         updateRoleUI();
         loadStaffDashboard();
+        const activeRole = getActiveStaffRole();
+        if (AUTH_BYPASS && !skipBypass) {
+          if (activeRole === 'HEAD') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+          } else if (activeRole === 'STAFF') {
+            const tabs = document.querySelectorAll('.status-tab');
+            if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
+          }
+        }
       }
     }
 
@@ -4824,7 +4940,7 @@ staff_template = r'''<!DOCTYPE html>
           sessionStorage.removeItem('staff_name');
           sessionStorage.removeItem('staff_role');
           sessionStorage.removeItem('staff_active_role');
-          checkStaffAuth();
+          checkStaffAuth(true);
         }
       });
     }
@@ -7607,9 +7723,17 @@ staff_template = r'''<!DOCTYPE html>
         const params = new URLSearchParams(window.location.search);
         const roleParam = (params.get('role') || '').toUpperCase();
         if (['STAFF', 'HEAD', 'ADMIN', 'REQUESTER'].includes(roleParam)) {
-          sessionStorage.removeItem('staff_auth');
-          sessionStorage.removeItem('staff_token');
-          selectStaffLoginRole(roleParam);
+          if (AUTH_BYPASS && roleParam !== 'REQUESTER') {
+            sessionStorage.setItem('staff_auth', 'true');
+            sessionStorage.setItem('staff_username', 'admin_staff');
+            sessionStorage.setItem('staff_name', 'ผู้ดูแลระบบคลังพัสดุ (โหมดทดสอบ)');
+            sessionStorage.setItem('staff_role', 'ADMIN');
+            sessionStorage.setItem('staff_active_role', roleParam);
+          } else {
+            sessionStorage.removeItem('staff_auth');
+            sessionStorage.removeItem('staff_token');
+            selectStaffLoginRole(roleParam);
+          }
         }
       } catch (e) {}
       checkStaffAuth();
@@ -7630,6 +7754,7 @@ staff_template = r'''<!DOCTYPE html>
 staff_html = (
     staff_template
     .replace('__SYSTEM_VERSION__', SYSTEM_VERSION)
+    .replace('__AUTH_BYPASS__', 'true' if AUTH_BYPASS else 'false')
     .replace('__DEFAULT_ITEMS__', json.dumps(initial_items, ensure_ascii=False))
     .replace('__DEFAULT_REQS__', json.dumps(initial_requisitions, ensure_ascii=False))
     .replace('__DEFAULT_DEPTS__', dept_json_str)

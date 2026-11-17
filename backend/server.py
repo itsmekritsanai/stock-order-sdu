@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.2.4"
+SYSTEM_VERSION = "3.2.5"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -53,6 +53,7 @@ def load_env_config():
         "ADMIN_PASSWORD_HASH": os.environ.get("ADMIN_PASSWORD_HASH", "sha256_or_bcrypt_hash_placeholder"),
         "DEFAULT_USER_PASSWORD": os.environ.get("DEFAULT_USER_PASSWORD", "sdu1234"),
         "REQUESTER_AUTH_SECRET": os.environ.get("REQUESTER_AUTH_SECRET", "sdu_inventory_requester_secret_token_change_in_production"),
+        "AUTH_BYPASS": os.environ.get("AUTH_BYPASS", "false"),
     }
     env_file = os.path.join(PROJECT_ROOT, ".env")
     if os.path.exists(env_file):
@@ -1873,6 +1874,14 @@ def generate_staff_token(username: str = None) -> str:
     return f"{username}.{ts}.{sig}"
 
 
+def is_auth_bypass_enabled() -> bool:
+    """Return True when AUTH_BYPASS testing mode is enabled via env or .env config."""
+    raw = os.environ.get("AUTH_BYPASS")
+    if raw is None:
+        raw = CONFIG.get("AUTH_BYPASS", "false")
+    return str(raw).strip().lower() in ("true", "1", "yes", "on")
+
+
 def verify_staff_token(token: str) -> bool:
     """Verify HMAC-SHA256 staff token validity and expiration (7 days)."""
     if not token or not isinstance(token, str):
@@ -2174,6 +2183,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                         "version": SYSTEM_VERSION,
                         "database": db_label,
                         "db_name": CONFIG["DB_NAME"],
+                        "authBypass": is_auth_bypass_enabled(),
                     })
                 else:
                     return self.send_json({
@@ -2182,6 +2192,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                         "version": SYSTEM_VERSION,
                         "database": "MySQL",
                         "db_name": CONFIG["DB_NAME"],
+                        "authBypass": is_auth_bypass_enabled(),
                     })
             except Exception as err:
                 return self.send_json({
@@ -2244,16 +2255,21 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 token = body.get("staff_token") or body.get("token") or (payload.get("staff_token") if isinstance(payload, dict) else "")
 
             if not verify_staff_token(str(token)):
-                return self.send_json({
-                    "status": "error",
-                    "code": "UNAUTHORIZED",
-                    "message": "ต้องเข้าสู่ระบบในฐานะเจ้าหน้าที่พัสดุ (Unauthorized: Invalid or missing staff token)"
-                }, status_code=401)
+                if is_auth_bypass_enabled():
+                    override_role = self.headers.get("X-Staff-Role", "").strip().upper()
+                    effective_role = override_role if override_role in ("STAFF", "HEAD", "ADMIN") else "ADMIN"
+                else:
+                    return self.send_json({
+                        "status": "error",
+                        "code": "UNAUTHORIZED",
+                        "message": "ต้องเข้าสู่ระบบในฐานะเจ้าหน้าที่พัสดุ (Unauthorized: Invalid or missing staff token)"
+                    }, status_code=401)
+            else:
+                token_user = extract_staff_username(str(token))
+                token_role = get_staff_role(token_user)
+                override_role = self.headers.get("X-Staff-Role", "").strip().upper()
+                effective_role = override_role if (token_role == "ADMIN" and override_role in ("STAFF", "HEAD", "ADMIN")) else token_role
 
-            token_user = extract_staff_username(str(token))
-            token_role = get_staff_role(token_user)
-            override_role = self.headers.get("X-Staff-Role", "").strip().upper()
-            effective_role = override_role if (token_role == "ADMIN" and override_role in ("STAFF", "HEAD", "ADMIN")) else token_role
             allowed, reason_msg = check_staff_role_permission(action, effective_role)
             if not allowed:
                 return self.send_json({

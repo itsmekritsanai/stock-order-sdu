@@ -850,6 +850,14 @@
             <span id="navRequesterDept" style="color: var(--neutral-500); font-size: 0.775rem;">-</span>
           </div>
 
+          <span id="requesterAuthBypassBadge" style="display: none; align-items: center; gap: 4px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+            โหมดทดสอบ: พักระบบ Login
+          </span>
+
+          <button class="btn btn-outline" id="btnSwitchTestRequester" onclick="switchTestRequester()" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.4rem 0.7rem; border-color: #93c5fd; color: #1e40af; background: #eff6ff;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> สลับผู้ขอเบิก (ทดสอบ)
+          </button>
+
           <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
             <svg class="svg-icon" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg> รายการคำขอของฉัน
             <span class="count-tag" id="myReqsBadge" style="background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--primary-border); margin-left: 2px;">0</span>
@@ -1147,15 +1155,16 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.4) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต (v3.2.5) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.0.3';
+    const APP_VERSION = '3.2.5';
     const MYSQL_API_URL = '/api';
+    const AUTH_BYPASS = true;
     const defaultDepts = [
   {
     "category": "สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)",
@@ -2674,10 +2683,32 @@
       }
     }
 
-    function checkRequesterAuth() {
-      const user = getLoggedInRequester();
+    function checkRequesterAuth(skipBypass = false) {
+      let user = getLoggedInRequester();
       const loginScreen = document.getElementById('requesterLoginScreen');
       const appContainer = document.getElementById('requesterApp');
+      const wantsLogin = window.location.search.includes('showLogin=1');
+
+      if (!user && AUTH_BYPASS && !skipBypass && !wantsLogin) {
+        const users = getUsersDB();
+        const defaultTester = users.find(u => (u.username || '').toLowerCase() === 'user') || users[0] || {
+          id: 5,
+          name: 'ผู้ขอเบิกทดสอบ (Demo User)',
+          username: 'user',
+          position: 'เจ้าหน้าที่บริการการศึกษา',
+          dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+          phone: '089-123-4567'
+        };
+        user = {
+          id: defaultTester.id,
+          name: defaultTester.name,
+          username: defaultTester.username || 'user',
+          position: defaultTester.position || '',
+          dept: defaultTester.dept || '',
+          phone: defaultTester.phone || ''
+        };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
+      }
 
       if (!user) {
         if (loginScreen) loginScreen.style.display = 'flex';
@@ -2688,8 +2719,53 @@
       if (loginScreen) loginScreen.style.display = 'none';
       if (appContainer) appContainer.style.display = 'flex';
 
+      const bypassBadge = document.getElementById('requesterAuthBypassBadge');
+      const switchBtn = document.getElementById('btnSwitchTestRequester');
+      if (bypassBadge) bypassBadge.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
+      if (switchBtn) switchBtn.style.display = AUTH_BYPASS ? 'inline-flex' : 'none';
+
       applyRequesterSession(user);
       return true;
+    }
+
+    function switchTestRequester() {
+      const users = getUsersDB();
+      if (!users || users.length === 0) return;
+      const cur = getLoggedInRequester();
+      const opts = users.map(u => {
+        const selected = cur && (u.username === cur.username || u.name === cur.name) ? 'selected' : '';
+        return `<option value="${escapeHtml(String(u.id))}" ${selected}>${escapeHtml(u.name)} (${escapeHtml(u.dept || '-')})</option>`;
+      }).join('');
+
+      Swal.fire({
+        title: 'สลับบัญชีผู้ขอเบิก (โหมดทดสอบ)',
+        html: `<div style="text-align:left; font-size:0.875rem; color:#475569; margin-bottom:0.5rem;">เลือกบุคลากรเพื่อทดสอบโควตารายเดือนและการส่งคำขอได้ทันทีโดยไม่ต้องกรอกรหัสผ่าน:</div>
+               <select id="swalSwitchRequesterSelect" class="form-control" style="width:100%;">${opts}</select>`,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'สลับผู้ใช้งาน',
+        cancelButtonText: 'ยกเลิก'
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        const selEl = document.getElementById('swalSwitchRequesterSelect');
+        const chosenId = selEl ? selEl.value : '';
+        const picked = users.find(u => String(u.id) === String(chosenId));
+        if (!picked) return;
+        const sessionUser = {
+          id: picked.id,
+          name: picked.name,
+          username: picked.username || '',
+          position: picked.position || '',
+          dept: picked.dept || '',
+          phone: picked.phone || ''
+        };
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(sessionUser));
+        applyRequesterSession(sessionUser);
+        renderCatalog();
+        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1600 })
+          .fire({ icon: 'success', title: `สลับเป็นผู้ขอเบิก: ${picked.name}` });
+      });
     }
 
     function applyRequesterSession(user) {
@@ -2947,7 +3023,11 @@
       }).then((res) => {
         if (res.isConfirmed) {
           localStorage.removeItem(AUTH_SESSION_KEY);
-          location.reload();
+          if (AUTH_BYPASS) {
+            checkRequesterAuth(true);
+          } else {
+            location.reload();
+          }
         }
       });
     }

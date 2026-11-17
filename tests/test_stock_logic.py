@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.4"
+        assert SYSTEM_VERSION == "3.2.5"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1084,6 +1084,32 @@ class TestPhase8ExtendedRequirements:
             stf_html = f.read()
         assert "password === 'sdu1234'" in stf_html
         assert "(Offline Fallback)" in stf_html
+
+    def test_auth_bypass_toggle_and_helpers(self):
+        """Verify AUTH_BYPASS toggle helper in backend and portal test-mode hooks."""
+        import server
+
+        assert hasattr(server, "is_auth_bypass_enabled")
+        orig = server.CONFIG.get("AUTH_BYPASS")
+        try:
+            server.os.environ["AUTH_BYPASS"] = "true"
+            assert server.is_auth_bypass_enabled() is True
+            server.os.environ["AUTH_BYPASS"] = "false"
+            assert server.is_auth_bypass_enabled() is False
+        finally:
+            server.os.environ.pop("AUTH_BYPASS", None)
+            if orig is not None:
+                server.CONFIG["AUTH_BYPASS"] = orig
+
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "const AUTH_BYPASS =" in idx_html
+        assert "switchTestRequester" in idx_html
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "const AUTH_BYPASS =" in stf_html
+        assert "staffAuthBypassBadge" in stf_html
 
 
 
