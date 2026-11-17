@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.3.3"
+SYSTEM_VERSION = "3.3.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -462,6 +462,7 @@ SEARCHABLE_SELECT_JS = r'''
             }
             item.addEventListener('click', (ev) => {
               ev.stopPropagation();
+              opt.selected = true;
               selectEl.value = opt.value;
               syncLabel();
               closeActiveSearchableSelect();
@@ -5164,6 +5165,11 @@ __SEARCHABLE_SELECT_CSS__
     function switchActiveRole(newRole) {
       const r = String(newRole || 'ADMIN').toUpperCase();
       sessionStorage.setItem('staff_active_role', r);
+      try {
+        if (window.location.search && window.location.search.includes('role=')) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } catch (e) {}
       updateRoleUI();
       if (r === 'HEAD') {
         const tabs = document.querySelectorAll('.status-tab');
@@ -7916,7 +7922,7 @@ __SEARCHABLE_SELECT_CSS__
           }
           return { username, role, password, name, position, dept: finalDept, phone };
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (!result.isConfirmed || !result.value) return;
         const val = result.value;
         ensureDeptExists(val.dept);
@@ -7954,8 +7960,25 @@ __SEARCHABLE_SELECT_CSS__
           currentUsers.push(savedUser);
         }
 
+        if (savedUser) {
+          const apiRes = await postToMySQLAPI('saveUser', { ...savedUser, role: val.role });
+          if (apiRes && apiRes.status === 'error') {
+            Swal.fire({
+              icon: 'error',
+              title: 'บันทึกข้อมูลบุคลากรไม่สำเร็จ',
+              text: apiRes.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลงสิทธิ์หรือข้อมูลบุคลากรได้'
+            });
+            return;
+          }
+          if (apiRes && apiRes.data) {
+            savedUser = { ...savedUser, ...apiRes.data, role: (apiRes.data.role || val.role) };
+            const hit = currentUsers.findIndex(u => Number(u.id) === Number(savedUser.id));
+            if (hit !== -1) currentUsers[hit] = savedUser;
+            else if (!existing && currentUsers.length > 0) currentUsers[currentUsers.length - 1] = savedUser;
+          }
+        }
+
         saveUsersDB(currentUsers);
-        if (savedUser) postToMySQLAPI('saveUser', savedUser);
         renderStaffUsersTable();
 
         Swal.fire({
@@ -7982,11 +8005,19 @@ __SEARCHABLE_SELECT_CSS__
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ลบรายชื่อ',
         cancelButtonText: 'ยกเลิก'
-      }).then((result) => {
+      }).then(async (result) => {
         if (!result.isConfirmed) return;
+        const apiRes = await postToMySQLAPI('deleteUser', { id: userId });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ลบรายชื่อไม่สำเร็จ',
+            text: apiRes.message || 'คุณไม่มีสิทธิ์ลบข้อมูลบุคลากร'
+          });
+          return;
+        }
         const updated = users.filter(u => Number(u.id) !== Number(userId));
         saveUsersDB(updated);
-        postToMySQLAPI('deleteUser', { id: userId });
         renderStaffUsersTable();
         Swal.fire({
           icon: 'success',

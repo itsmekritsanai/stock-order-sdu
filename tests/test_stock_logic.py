@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.3.3"
+        assert SYSTEM_VERSION == "3.3.4"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1197,6 +1197,19 @@ class TestPhase8ExtendedRequirements:
             assert "function enhanceAllSearchableSelects(" in html, f"{fname} missing enhanceAllSearchableSelects"
             assert "sdu-ss-search-input" in html, f"{fname} missing searchable select input styling/markup"
             assert "selectEl.id === 'swal2-select'" in html, f"{fname} missing hidden swal2-select guard"
+            assert "opt.selected = true;" in html, f"{fname} missing explicit opt.selected assignment"
+
+    def test_save_user_role_persistence_and_await_guard(self):
+        """Verify openUserModal awaits saveUser API and backend preserves explicit role changes."""
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "await postToMySQLAPI('saveUser'" in stf_html
+        assert "await postToMySQLAPI('deleteUser'" in stf_html
+        assert "window.history.replaceState" in stf_html
+
+        with open(os.path.join(PROJECT_ROOT, "backend", "server.py"), "r", encoding="utf-8") as f:
+            srv_txt = f.read()
+        assert "had_role_col" in srv_txt
 
 
 

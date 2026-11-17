@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.3.3"
+SYSTEM_VERSION = "3.3.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -103,6 +103,8 @@ def ensure_database_schema(conn=None):
     try:
         with conn.cursor() as cur:
             if IS_POSTGRES:
+                cur.execute("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role' LIMIT 1;")
+                had_role_col = bool(cur.fetchone())
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100) UNIQUE;")
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '';")
                 cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'REQUESTER';")
@@ -127,7 +129,8 @@ def ensure_database_schema(conn=None):
                 cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (default_user_pass,))
                 cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (default_user_pass,))
                 cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (default_user_pass,))
-                cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
+                if not had_role_col:
+                    cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
                 cur.execute("""
                     INSERT INTO users (id, name, username, password, position, dept, phone, is_active)
                     VALUES (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', %s, 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1)
