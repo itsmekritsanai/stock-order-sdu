@@ -26,7 +26,7 @@ has_error = False
 # ----------------------------------------------------------------------
 # 1. Check for Emojis
 # ----------------------------------------------------------------------
-print("\n[1/5] Checking Strict No-Emoji Policy...")
+print("\n[1/6] Checking Strict No-Emoji Policy...")
 emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u2300-\u23ff]|[\u2b50-\u2b55]|[\u3030\u303d\u3297\u3299]')
 target_files = ['staff.html', 'index.html', 'portal.html', 'backend/server.py', 'scripts/generate_separated_portals.py']
 
@@ -49,7 +49,7 @@ if not emoji_found:
 # ----------------------------------------------------------------------
 # 2. Check for Native Dialogs (alert, confirm, prompt)
 # ----------------------------------------------------------------------
-print("\n[2/5] Checking for Native Dialogs (alert, confirm, prompt)...")
+print("\n[2/6] Checking for Native Dialogs (alert, confirm, prompt)...")
 native_dialog_pattern = re.compile(r'(?<![a-zA-Z0-9_\.])(alert|confirm|prompt)\s*\(')
 dialog_found = False
 for fname in ['staff.html', 'index.html', 'portal.html']:
@@ -74,7 +74,7 @@ if not dialog_found:
 # ----------------------------------------------------------------------
 # 3. Check System Version Synchronization
 # ----------------------------------------------------------------------
-print("\n[3/5] Checking Version Number Synchronization...")
+print("\n[3/6] Checking Version Number Synchronization...")
 
 # Read SYSTEM_VERSION from server.py
 with open(os.path.join(PROJECT_ROOT, 'backend', 'server.py'), 'r', encoding='utf-8') as f:
@@ -114,7 +114,7 @@ else:
 # ----------------------------------------------------------------------
 # 4. Check Single Source of Truth Generator
 # ----------------------------------------------------------------------
-print("\n[4/5] Testing Single Source of Truth Generator (scripts/generate_separated_portals.py)...")
+print("\n[4/6] Testing Single Source of Truth Generator (scripts/generate_separated_portals.py)...")
 try:
     ret = subprocess.run([sys.executable, os.path.join(PROJECT_ROOT, 'scripts', 'generate_separated_portals.py')],
                          capture_output=True, text=True, check=True)
@@ -124,9 +124,27 @@ except Exception as e:
     has_error = True
 
 # ----------------------------------------------------------------------
-# 5. Run Automated Tests with pytest
+# 5. Check Searchable Dropdown Standard
 # ----------------------------------------------------------------------
-print("\n[5/5] Running pytest Test Suite...")
+print("\n[5/6] Checking All-Dropdowns Searchable Enhancer...")
+searchable_missing = False
+for fname in ['index.html', 'staff.html']:
+    fpath = os.path.join(PROJECT_ROOT, fname)
+    if not os.path.exists(fpath):
+        continue
+    with open(fpath, 'r', encoding='utf-8', errors='ignore') as f:
+        html_txt = f.read()
+    if 'function enhanceSearchableSelect(' not in html_txt or 'function enhanceAllSearchableSelects(' not in html_txt:
+        print(f"  ❌ Searchable dropdown enhancer missing in {fname}")
+        searchable_missing = True
+        has_error = True
+if not searchable_missing:
+    print("  ✅ PASS: All portal <select> dropdowns are searchable.")
+
+# ----------------------------------------------------------------------
+# 6. Run Automated Tests with pytest
+# ----------------------------------------------------------------------
+print("\n[6/6] Running pytest Test Suite...")
 try:
     ret_test = subprocess.run([sys.executable, '-m', 'pytest', 'tests/test_stock_logic.py', '-q'],
                               capture_output=True, text=True)

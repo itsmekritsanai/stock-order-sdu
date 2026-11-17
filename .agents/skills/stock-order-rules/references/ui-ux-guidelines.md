@@ -67,3 +67,15 @@ const vIcons = {
   });
   ```
 
+---
+
+## 4. Searchable Dropdown Standard (Mandatory for All `<select>` Controls)
+
+* **Rule:** Every dropdown (`<select>`) in both `index.html` and `staff.html`—including static page filters and dynamic SweetAlert2 modal dropdowns—**must allow users to type to search and filter options**.
+* **Implementation Pattern (SSOT):**
+  * Defined once via `SEARCHABLE_SELECT_CSS` and `SEARCHABLE_SELECT_JS` in `scripts/generate_separated_portals.py` (`enhanceSearchableSelect` / `enhanceAllSearchableSelects`).
+  * A `MutationObserver` automatically upgrades all newly rendered `<select>` elements (including SweetAlert2 modals) without duplicate code.
+  * When `.innerHTML` of an enhanced `<select>` changes dynamically (e.g., dependent dropdowns) or `.value` is assigned programmatically, the trigger label stays synchronized automatically.
+  * Panels render with `position: fixed` attached to `.swal2-popup` (or `document.body`) to prevent overflow clipping inside modals and tables.
+  * Supports keyboard navigation (`ArrowUp`, `ArrowDown`, `Enter`, `Escape`) and contains zero emojis.
+

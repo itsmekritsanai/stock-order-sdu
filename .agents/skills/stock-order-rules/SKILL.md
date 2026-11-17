@@ -59,6 +59,12 @@ Institutional rules, constraints, and standard operating procedures for the **Su
    - All tests in `tests/test_stock_logic.py` must pass (`pytest tests/test_stock_logic.py`).
    - Target test coverage $\ge 90\%$.
 
+9. **All Dropdowns Must Be Searchable (`Searchable Dropdown Standard`):**
+   - Every dropdown / `<select>` UI control (both static forms and dynamic SweetAlert2 modals) **MUST** support live typing search/filtering (`enhanceSearchableSelect` / `enhanceAllSearchableSelects` in `scripts/generate_separated_portals.py`, or an equivalent custom searchable combobox).
+   - Plain unsearchable browser-native `<select>` controls are **FORBIDDEN** in user-facing UIs unless explicitly excluded by technical necessity.
+   - Search inputs and chevrons inside dropdowns must use vector SVG icons or clean text (zero emojis) and emit standard `change` events so underlying `.value` and listeners remain synchronized.
+   - See [UI/UX Guidelines](./references/ui-ux-guidelines.md).
+
 ---
 
 ## 2. Standard Operating Procedure (Workflow)
