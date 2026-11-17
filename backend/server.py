@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-SYSTEM_VERSION = "3.2.5"
+SYSTEM_VERSION = "3.3.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -155,6 +155,21 @@ def ensure_database_schema(conn=None):
                           );
                     """)
                 cur.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 1)) FROM users;")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS quota_rules (
+                      id SERIAL PRIMARY KEY,
+                      target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('USER', 'DEPT')),
+                      target_key VARCHAR(255) NOT NULL,
+                      item_id INT NOT NULL DEFAULT 0,
+                      monthly_limit INT NOT NULL DEFAULT 0,
+                      note VARCHAR(255) DEFAULT '',
+                      updated_by VARCHAR(150) DEFAULT '',
+                      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      UNIQUE (target_type, target_key, item_id)
+                    );
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_quota_target ON quota_rules (target_type, target_key);")
             else:
                 default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
                 cur.execute("""
@@ -211,6 +226,21 @@ def ensure_database_schema(conn=None):
                 """)
                 if not cur.fetchone():
                     cur.execute("ALTER TABLE `stock_transactions` ADD COLUMN `recorded_by` VARCHAR(150) DEFAULT NULL;")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS `quota_rules` (
+                      `id` INT AUTO_INCREMENT PRIMARY KEY,
+                      `target_type` ENUM('USER', 'DEPT') NOT NULL,
+                      `target_key` VARCHAR(255) NOT NULL,
+                      `item_id` INT NOT NULL DEFAULT 0,
+                      `monthly_limit` INT NOT NULL DEFAULT 0,
+                      `note` VARCHAR(255) DEFAULT '',
+                      `updated_by` VARCHAR(150) DEFAULT '',
+                      `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                      `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                      UNIQUE KEY `uq_quota_target_item` (`target_type`, `target_key`, `item_id`),
+                      INDEX `idx_quota_target` (`target_type`, `target_key`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                """)
         conn.commit()
         _SCHEMA_CHECKED = True
     except Exception as err:
@@ -538,6 +568,112 @@ def handle_get_users():
         conn.close()
 
 
+def handle_get_quotas():
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            cur.execute("""
+                SELECT q.id, q.target_type, q.target_key, q.item_id, q.monthly_limit,
+                       q.note, q.updated_by, q.updated_at,
+                       i.name AS item_name, i.unit_piece_name
+                FROM quota_rules q
+                LEFT JOIN inventory_items i ON q.item_id = i.id AND q.item_id > 0
+                ORDER BY q.target_type ASC, q.target_key ASC, q.item_id ASC
+            """)
+            rows = cur.fetchall()
+        data = [
+            {
+                "id": int(r["id"]),
+                "targetType": r["target_type"],
+                "target_type": r["target_type"],
+                "targetKey": r["target_key"],
+                "target_key": r["target_key"],
+                "itemId": int(r["item_id"] or 0),
+                "item_id": int(r["item_id"] or 0),
+                "itemName": r.get("item_name") or ("ทุกพัสดุในคลัง (ค่าเริ่มต้น)" if int(r["item_id"] or 0) == 0 else f"พัสดุ #{r['item_id']}"),
+                "unitPiece": r.get("unit_piece_name") or "ชิ้น",
+                "monthlyLimit": int(r["monthly_limit"] or 0),
+                "monthly_limit": int(r["monthly_limit"] or 0),
+                "note": r.get("note") or "",
+                "updatedBy": r.get("updated_by") or "",
+                "updatedAt": str(r["updated_at"]) if r.get("updated_at") else "",
+            }
+            for r in rows
+        ]
+        return {"status": "success", "data": data, "total": len(data)}
+    finally:
+        conn.close()
+
+
+def resolve_effective_monthly_limits(cur, item_id: int, item_default_limit: int, requester: str, dept: str):
+    """Resolve effective monthly quota limits (personal_limit, dept_limit, user_src, dept_src).
+    Precedence for personal quota: USER+item_id > USER+all_items(0) > inventory_items.monthly_limit.
+    Precedence for department quota: DEPT+item_id > DEPT+all_items(0).
+    Returns None when no limit applies at that tier.
+    """
+    user_item_rule = None
+    user_all_rule = None
+    dept_item_rule = None
+    dept_all_rule = None
+
+    try:
+        cur.execute(
+            """
+            SELECT target_type, target_key, item_id, monthly_limit
+            FROM quota_rules
+            WHERE (target_type = 'USER' AND target_key = %s AND item_id IN (%s, 0))
+               OR (target_type = 'DEPT' AND target_key = %s AND item_id IN (%s, 0))
+            """,
+            (requester, int(item_id), dept, int(item_id)),
+        )
+        rows = cur.fetchall()
+        if isinstance(rows, list):
+            for r in rows:
+                t_type = str(r.get("target_type") or "").upper()
+                r_item_id = int(r.get("item_id") or 0)
+                if t_type == "USER":
+                    if r_item_id == int(item_id):
+                        user_item_rule = r
+                    elif r_item_id == 0:
+                        user_all_rule = r
+                elif t_type == "DEPT":
+                    if r_item_id == int(item_id):
+                        dept_item_rule = r
+                    elif r_item_id == 0:
+                        dept_all_rule = r
+    except Exception:
+        pass
+
+    if user_item_rule is not None:
+        lim = int(user_item_rule.get("monthly_limit") or 0)
+        eff_user_limit = lim if lim > 0 else None
+        user_src = "USER_ITEM"
+    elif user_all_rule is not None:
+        lim = int(user_all_rule.get("monthly_limit") or 0)
+        eff_user_limit = lim if lim > 0 else None
+        user_src = "USER_ALL"
+    elif int(item_default_limit or 0) > 0:
+        eff_user_limit = int(item_default_limit)
+        user_src = "ITEM_DEFAULT"
+    else:
+        eff_user_limit = None
+        user_src = "NONE"
+
+    if dept_item_rule is not None:
+        d_lim = int(dept_item_rule.get("monthly_limit") or 0)
+        eff_dept_limit = d_lim if d_lim > 0 else None
+        dept_src = "DEPT_ITEM"
+    elif dept_all_rule is not None:
+        d_lim = int(dept_all_rule.get("monthly_limit") or 0)
+        eff_dept_limit = d_lim if d_lim > 0 else None
+        dept_src = "DEPT_ALL"
+    else:
+        eff_dept_limit = None
+        dept_src = "NONE"
+
+    return eff_user_limit, eff_dept_limit, user_src, dept_src
+
+
 def handle_get_item_transactions(params):
     raw_id = params.get("itemId", [""])[0] if isinstance(params.get("itemId"), list) else str(params.get("itemId") or "")
     raw_id = raw_id.strip()
@@ -813,12 +949,16 @@ def handle_create_requisition(payload):
                         "details": {"itemId": item_id, "requested": total_pieces, "available": available},
                     }
 
-                # Monthly quota enforcement per personnel (requester)
-                monthly_limit = int(db_item.get("monthly_limit") or 0)
-                if monthly_limit > 0:
-                    cur_now = datetime.now()
-                    cur_iso_month = cur_now.strftime("%Y-%m")
-                    cur_be_doc = f"REQ-{(cur_now.year + 543)}{cur_now.month:02d}-%"
+                # Monthly quota enforcement (personal + department overrides with global item fallback)
+                eff_user_limit, eff_dept_limit, _, _ = resolve_effective_monthly_limits(
+                    cur, item_id, int(db_item.get("monthly_limit") or 0), requester, dept
+                )
+                cur_now = datetime.now()
+                cur_iso_month = cur_now.strftime("%Y-%m")
+                cur_be_doc = f"REQ-{(cur_now.year + 543)}{cur_now.month:02d}-%"
+                unit_p = db_item.get("unit_piece_name") or "ชิ้น"
+
+                if eff_user_limit is not None and eff_user_limit > 0:
                     if IS_POSTGRES:
                         cur.execute(
                             """
@@ -853,20 +993,71 @@ def handle_create_requisition(payload):
                         )
                     month_row = cur.fetchone()
                     current_month_total = int(month_row["month_total"] or 0) if month_row else 0
-                    if current_month_total + total_pieces > monthly_limit:
+                    if current_month_total + total_pieces > eff_user_limit:
                         conn.rollback()
-                        unit_p = db_item.get("unit_piece_name") or "ชิ้น"
-                        rem = max(0, monthly_limit - current_month_total)
+                        rem = max(0, eff_user_limit - current_month_total)
                         return {
                             "status": "error",
                             "code": "QUOTA_EXCEEDED",
-                            "message": f"บุคลากร '{requester}' ขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือนต่อท่าน (จำกัด {monthly_limit} {unit_p}/ท่าน/เดือน, ในเดือนนี้ท่านเบิกไปแล้ว {current_month_total} {unit_p}, คงเหลือโควตา {rem} {unit_p})",
+                            "message": f"บุคลากร '{requester}' ขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือนต่อท่าน (จำกัด {eff_user_limit} {unit_p}/ท่าน/เดือน, ในเดือนนี้ท่านเบิกไปแล้ว {current_month_total} {unit_p}, คงเหลือโควตา {rem} {unit_p})",
                             "details": {
                                 "itemId": item_id,
                                 "requester": requester,
-                                "monthlyLimit": monthly_limit,
+                                "monthlyLimit": eff_user_limit,
                                 "currentMonthTotal": current_month_total,
                                 "remainingQuota": rem,
+                                "requested": total_pieces,
+                            },
+                        }
+
+                if eff_dept_limit is not None and eff_dept_limit > 0:
+                    if IS_POSTGRES:
+                        cur.execute(
+                            """
+                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                            FROM requisitions r
+                            JOIN requisition_items ri ON r.id = ri.requisition_id
+                            WHERE ri.item_id = %s
+                              AND r.dept = %s
+                              AND r.status != 'REJECTED'
+                              AND (
+                                (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
+                                OR (r.created_at IS NULL AND r.id LIKE %s)
+                              )
+                            """,
+                            (item_id, dept, cur_iso_month, cur_be_doc),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                            FROM requisitions r
+                            JOIN requisition_items ri ON r.id = ri.requisition_id
+                            WHERE ri.item_id = %s
+                              AND r.dept = %s
+                              AND r.status != 'REJECTED'
+                              AND (
+                                (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
+                                OR (r.created_at IS NULL AND r.id LIKE %s)
+                              )
+                            """,
+                            (item_id, dept, cur_iso_month, cur_be_doc),
+                        )
+                    dept_row = cur.fetchone()
+                    dept_month_total = int(dept_row["month_total"] or 0) if dept_row else 0
+                    if dept_month_total + total_pieces > eff_dept_limit:
+                        conn.rollback()
+                        dept_rem = max(0, eff_dept_limit - dept_month_total)
+                        return {
+                            "status": "error",
+                            "code": "DEPT_QUOTA_EXCEEDED",
+                            "message": f"กลุ่มงาน '{dept}' ขอเบิก '{db_item['name']}' เกินโควตาสูงสุดประจำเดือนของกลุ่มงาน (จำกัด {eff_dept_limit} {unit_p}/กลุ่มงาน/เดือน, ในเดือนนี้กลุ่มงานเบิกไปแล้ว {dept_month_total} {unit_p}, คงเหลือโควตา {dept_rem} {unit_p})",
+                            "details": {
+                                "itemId": item_id,
+                                "dept": dept,
+                                "monthlyLimit": eff_dept_limit,
+                                "currentMonthTotal": dept_month_total,
+                                "remainingQuota": dept_rem,
                                 "requested": total_pieces,
                             },
                         }
@@ -1403,15 +1594,21 @@ def handle_save_user(payload):
             raw_pass = str(password or "").strip()
             default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
             if user_id:
-                cur.execute("SELECT id, password, role FROM users WHERE id = %s", (int(user_id),))
+                cur.execute("SELECT id, name, password, role FROM users WHERE id = %s", (int(user_id),))
                 existing_row = cur.fetchone()
                 if existing_row:
+                    old_user_name = existing_row.get("name") or ""
                     final_pass = hash_password(raw_pass) if raw_pass else (existing_row.get("password") or hash_password(default_user_pass))
                     final_role = role if "role" in payload else (existing_row.get("role") or "REQUESTER")
                     cur.execute(
                         "UPDATE users SET name = %s, username = %s, password = %s, role = %s, position = %s, dept = %s, phone = %s, is_active = 1 WHERE id = %s",
                         (name, username, final_pass, final_role, position, dept, phone, int(user_id)),
                     )
+                    if old_user_name and old_user_name != name:
+                        cur.execute(
+                            "UPDATE quota_rules SET target_key = %s WHERE target_type = 'USER' AND target_key = %s",
+                            (name, old_user_name),
+                        )
                 else:
                     final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                     cur.execute(
@@ -1599,6 +1796,10 @@ def handle_update_department(payload):
 
             cur.execute(
                 "UPDATE users SET dept = %s, updated_at = CURRENT_TIMESTAMP WHERE dept = %s OR dept = %s",
+                (new_name, current_name, dept.get("full_label", current_name))
+            )
+            cur.execute(
+                "UPDATE quota_rules SET target_key = %s WHERE target_type = 'DEPT' AND (target_key = %s OR target_key = %s)",
                 (new_name, current_name, dept.get("full_label", current_name))
             )
 
@@ -1796,6 +1997,129 @@ def handle_delete_item(payload):
             cur.execute("UPDATE inventory_items SET is_active = 0 WHERE id = %s", (item_id,))
         conn.commit()
         return {"status": "success", "message": "ลบรายการพัสดุสำเร็จ", "id": item_id}
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def handle_save_quota(payload):
+    quota_id = payload.get("id")
+    target_type = str(payload.get("targetType") or payload.get("target_type") or "").strip().upper()
+    target_key = str(payload.get("targetKey") or payload.get("target_key") or "").strip()
+    try:
+        item_id = max(0, int(payload.get("itemId") if "itemId" in payload else (payload.get("item_id") or 0)))
+        monthly_limit = max(0, int(payload.get("monthlyLimit") if "monthlyLimit" in payload else (payload.get("monthly_limit") or 0)))
+    except (ValueError, TypeError):
+        return {"status": "error", "message": "ค่าจำนวนโควตาหรือรหัสพัสดุต้องเป็นตัวเลขจำนวนเต็ม"}
+    note = str(payload.get("note") or "").strip()
+    updated_by = str(payload.get("updatedBy") or payload.get("updated_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
+
+    if target_type not in ("USER", "DEPT"):
+        return {"status": "error", "message": "ประเภทเป้าหมายโควตาต้องเป็น USER (บุคลากร) หรือ DEPT (กลุ่มงาน)"}
+    if not target_key:
+        return {"status": "error", "message": "กรุณาระบุชื่อบุคลากรหรือชื่อกลุ่มงาน/หน่วยงาน"}
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            cur.execute(
+                "SELECT id FROM quota_rules WHERE target_type = %s AND target_key = %s AND item_id = %s LIMIT 1",
+                (target_type, target_key, item_id),
+            )
+            conflict_row = cur.fetchone()
+            target_id = None
+            if quota_id:
+                cur.execute("SELECT id FROM quota_rules WHERE id = %s LIMIT 1", (int(quota_id),))
+                existing_by_id = cur.fetchone()
+                if existing_by_id:
+                    target_id = existing_by_id["id"]
+            if target_id and conflict_row and int(conflict_row["id"]) != int(target_id):
+                cur.execute("DELETE FROM quota_rules WHERE id = %s", (int(target_id),))
+                target_id = int(conflict_row["id"])
+            elif not target_id and conflict_row:
+                target_id = int(conflict_row["id"])
+
+            if target_id:
+                cur.execute(
+                    """
+                    UPDATE quota_rules
+                    SET target_type = %s, target_key = %s, item_id = %s, monthly_limit = %s,
+                        note = %s, updated_by = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (target_type, target_key, item_id, monthly_limit, note, updated_by, target_id),
+                )
+            else:
+                if IS_POSTGRES:
+                    cur.execute(
+                        """
+                        INSERT INTO quota_rules (target_type, target_key, item_id, monthly_limit, note, updated_by)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                        """,
+                        (target_type, target_key, item_id, monthly_limit, note, updated_by),
+                    )
+                    ins = cur.fetchone()
+                    target_id = int(ins["id"]) if ins else 0
+                else:
+                    cur.execute(
+                        """
+                        INSERT INTO quota_rules (target_type, target_key, item_id, monthly_limit, note, updated_by)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (target_type, target_key, item_id, monthly_limit, note, updated_by),
+                    )
+                    target_id = int(cur.lastrowid or 0)
+        conn.commit()
+        return {
+            "status": "success",
+            "message": f"บันทึกกฎโควตาสำหรับ '{target_key}' สำเร็จ",
+            "id": target_id,
+            "data": {
+                "id": target_id,
+                "targetType": target_type,
+                "targetKey": target_key,
+                "itemId": item_id,
+                "monthlyLimit": monthly_limit,
+                "note": note,
+                "updatedBy": updated_by,
+            },
+        }
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+
+def handle_delete_quota(payload):
+    quota_id = payload.get("id")
+    target_type = str(payload.get("targetType") or payload.get("target_type") or "").strip().upper()
+    target_key = str(payload.get("targetKey") or payload.get("target_key") or "").strip()
+    item_id = payload.get("itemId") if "itemId" in payload else payload.get("item_id")
+
+    if not quota_id and not (target_type and target_key):
+        return {"status": "error", "message": "กรุณาระบุ ID หรือข้อมูลกฎโควตาที่ต้องการลบ"}
+
+    conn = get_db_connection()
+    try:
+        with dict_cursor(conn) as cur:
+            if quota_id:
+                cur.execute("DELETE FROM quota_rules WHERE id = %s", (int(quota_id),))
+            elif item_id is not None:
+                cur.execute(
+                    "DELETE FROM quota_rules WHERE target_type = %s AND target_key = %s AND item_id = %s",
+                    (target_type, target_key, int(item_id)),
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM quota_rules WHERE target_type = %s AND target_key = %s",
+                    (target_type, target_key),
+                )
+        conn.commit()
+        return {"status": "success", "message": "ลบกฎโควตาเรียบร้อยแล้ว", "id": quota_id}
     except Exception as e:
         conn.rollback()
         raise e
@@ -2164,6 +2488,8 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json(handle_get_departments())
                 elif action == "getUsers":
                     return self.send_json(handle_get_users())
+                elif action == "getQuotas":
+                    return self.send_json(handle_get_quotas())
                 elif action == "getMonthlyAnalytics":
                     return self.send_json(handle_get_monthly_analytics(params))
                 elif action == "getItemTransactions":
@@ -2241,7 +2567,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
             "verifyRequisition", "approveRequisition", "completeRequisition", "rejectRequisition",
             "restockItem", "adjustStock", "saveUser", "deleteUser",
             "addDepartment", "updateDepartment", "deleteDepartment",
-            "saveItem", "deleteItem"
+            "saveItem", "deleteItem", "saveQuota", "deleteQuota"
         }
 
         if action in STAFF_ACTIONS:
@@ -2313,6 +2639,10 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 return self.send_json(handle_save_item(payload))
             elif action == "deleteItem":
                 return self.send_json(handle_delete_item(payload))
+            elif action == "saveQuota":
+                return self.send_json(handle_save_quota(payload))
+            elif action == "deleteQuota":
+                return self.send_json(handle_delete_quota(payload))
             else:
                 return self.send_json({
                     "status": "error",

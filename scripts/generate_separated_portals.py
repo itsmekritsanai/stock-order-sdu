@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.2.5"
+SYSTEM_VERSION = "3.3.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -1494,6 +1494,20 @@ requester_template = r'''<!DOCTYPE html>
     const DB_REQS_KEY = 'inventory_requisitions';
     const DB_USERS_KEY = 'inventory_users';
     const DB_DEPTS_KEY = 'inventory_departments';
+    const DB_QUOTAS_KEY = 'inventory_quotas';
+
+    function getQuotasDB() {
+      try {
+        const raw = localStorage.getItem(DB_QUOTAS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    function saveQuotasDB(list) {
+      localStorage.setItem(DB_QUOTAS_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+    }
 
     const defaultItems = __DEFAULT_ITEMS__;
     const defaultReqs = __DEFAULT_REQS__;
@@ -1586,12 +1600,17 @@ requester_template = r'''<!DOCTYPE html>
     async function syncFromMySQLAPI() {
       if (!MYSQL_API_URL || !navigator.onLine) return;
       try {
-        const [itemsRes, reqsRes, usersRes, deptsRes] = await Promise.all([
+        const [itemsRes, reqsRes, usersRes, deptsRes, quotasRes] = await Promise.all([
           fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getRequisitions`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getUsers`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null)
+          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getQuotas`).then(r => r.json()).catch(() => null)
         ]);
+        if (quotasRes && quotasRes.status === 'success' && Array.isArray(quotasRes.data)) {
+          saveQuotasDB(quotasRes.data);
+          if (typeof renderCatalog === 'function') renderCatalog();
+        }
         if (itemsRes && itemsRes.status === 'success' && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
           saveItemsDB(itemsRes.data);
           renderCatalog();
@@ -1896,37 +1915,108 @@ requester_template = r'''<!DOCTYPE html>
       return '';
     }
 
+    function getCurrentRequesterDept() {
+      const selEl = document.getElementById('deptSelect');
+      if (selEl && selEl.value && selEl.value.trim()) return selEl.value.trim();
+      const srchEl = document.getElementById('deptSearchInput');
+      if (srchEl && srchEl.value && srchEl.value.trim()) return srchEl.value.trim();
+      if (typeof getLoggedInRequester === 'function') {
+        const u = getLoggedInRequester();
+        if (u && u.dept) return String(u.dept).trim();
+      }
+      return '';
+    }
+
     function getPersonalMonthlyQuotaInfo(item) {
-      const limit = Number(item.monthly_limit || 0);
+      const itemId = Number(item.id);
       const currentPerson = getCurrentRequesterName();
-      if (limit <= 0) return { limit: 0, used: 0, remaining: Infinity, requester: currentPerson };
+      const currentDept = getCurrentRequesterDept();
+      const quotas = getQuotasDB();
+
+      const findRule = (tType, tKey, iId) => {
+        if (!tKey) return null;
+        const cleanKey = tKey.trim().toLowerCase();
+        return quotas.find(q =>
+          String(q.targetType || q.target_type || '').toUpperCase() === tType &&
+          String(q.targetKey || q.target_key || '').trim().toLowerCase() === cleanKey &&
+          Number(q.itemId ?? q.item_id ?? 0) === Number(iId)
+        ) || null;
+      };
+
+      const userItemRule = findRule('USER', currentPerson, itemId);
+      const userAllRule = findRule('USER', currentPerson, 0);
+      const deptItemRule = findRule('DEPT', currentDept, itemId);
+      const deptAllRule = findRule('DEPT', currentDept, 0);
+
+      let limit = 0;
+      let userSource = 'NONE';
+      if (userItemRule) {
+        limit = Number(userItemRule.monthlyLimit ?? userItemRule.monthly_limit ?? 0);
+        userSource = 'USER_ITEM';
+      } else if (userAllRule) {
+        limit = Number(userAllRule.monthlyLimit ?? userAllRule.monthly_limit ?? 0);
+        userSource = 'USER_ALL';
+      } else if (Number(item.monthly_limit || 0) > 0) {
+        limit = Number(item.monthly_limit || 0);
+        userSource = 'ITEM_DEFAULT';
+      }
+
+      let deptLimit = 0;
+      let deptSource = 'NONE';
+      if (deptItemRule) {
+        deptLimit = Number(deptItemRule.monthlyLimit ?? deptItemRule.monthly_limit ?? 0);
+        deptSource = 'DEPT_ITEM';
+      } else if (deptAllRule) {
+        deptLimit = Number(deptAllRule.monthlyLimit ?? deptAllRule.monthly_limit ?? 0);
+        deptSource = 'DEPT_ALL';
+      }
+
+      if (limit <= 0 && deptLimit <= 0) {
+        return {
+          limit: 0, used: 0, remaining: Infinity, requester: currentPerson, userSource,
+          deptLimit: 0, deptUsed: 0, deptRemaining: Infinity, dept: currentDept, deptSource
+        };
+      }
+
       const curDate = new Date();
       const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
       const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
       const reqs = getReqsDB();
       let used = 0;
+      let deptUsed = 0;
       reqs.forEach(r => {
         if (r.status !== 'REJECTED') {
-          const isSamePerson = !currentPerson || (r.requester || '').trim() === currentPerson;
           const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
-          if (isSamePerson && isThisMonth && Array.isArray(r.items)) {
+          if (isThisMonth && Array.isArray(r.items)) {
+            let itemSum = 0;
             r.items.forEach(ri => {
-              if (Number(ri.itemId) === Number(item.id)) {
-                used += Number(ri.totalPieces || 0);
-              }
+              if (Number(ri.itemId) === itemId) itemSum += Number(ri.totalPieces || 0);
             });
+            if (itemSum > 0) {
+              if (!currentPerson || (r.requester || '').trim() === currentPerson) used += itemSum;
+              if (currentDept && (r.dept || '').trim() === currentDept) deptUsed += itemSum;
+            }
           }
         }
       });
       if (typeof cart !== 'undefined' && Array.isArray(cart)) {
-        const inCart = cart.find(c => Number(c.itemId) === Number(item.id));
-        if (inCart) used += Number(inCart.totalPieces || 0);
+        const inCart = cart.find(c => Number(c.itemId) === itemId);
+        if (inCart) {
+          used += Number(inCart.totalPieces || 0);
+          if (currentDept) deptUsed += Number(inCart.totalPieces || 0);
+        }
       }
       return {
         limit,
         used,
-        remaining: Math.max(0, limit - used),
-        requester: currentPerson
+        remaining: limit > 0 ? Math.max(0, limit - used) : Infinity,
+        requester: currentPerson,
+        userSource,
+        deptLimit,
+        deptUsed,
+        deptRemaining: deptLimit > 0 ? Math.max(0, deptLimit - deptUsed) : Infinity,
+        dept: currentDept,
+        deptSource
       };
     }
 
@@ -1989,20 +2079,38 @@ requester_template = r'''<!DOCTYPE html>
               ` : `
                 <span class="ratio-badge">${vIcons.tag} หน่วยเดี่ยว: ${safePieceName}</span>
               `}
-              ${(item.monthly_limit && Number(item.monthly_limit) > 0) ? (() => {
+              ${(() => {
                 const qInfo = getPersonalMonthlyQuotaInfo(item);
-                const isQuotaEmpty = qInfo.remaining <= 0;
-                return `
-                  <div style="font-size: 0.75rem; color: ${isQuotaEmpty ? '#991b1b' : '#b45309'}; background: ${isQuotaEmpty ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isQuotaEmpty ? '#fecaca' : '#fde68a'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
-                    <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
-                      ${vIcons.shield} จำกัดโควตาบุคลากร: ${qInfo.limit.toLocaleString()} ${safePieceName}/ท่าน/เดือน
-                    </span>
-                    <span style="font-size: 0.72rem; color: ${isQuotaEmpty ? '#dc2626' : '#92400e'};">
-                      โควตาคงเหลือของท่านในเดือนนี้: <strong>${qInfo.remaining.toLocaleString()} ${safePieceName}</strong> (เบิกแล้ว ${qInfo.used.toLocaleString()})
-                    </span>
-                  </div>
-                `;
-              })() : ''}
+                let quotaHtml = '';
+                if (qInfo.limit > 0) {
+                  const isQuotaEmpty = qInfo.remaining <= 0;
+                  const srcTag = qInfo.userSource === 'USER_ITEM' || qInfo.userSource === 'USER_ALL' ? ' (เฉพาะบุคคล)' : '';
+                  quotaHtml += `
+                    <div style="font-size: 0.75rem; color: ${isQuotaEmpty ? '#991b1b' : '#b45309'}; background: ${isQuotaEmpty ? '#fef2f2' : '#fffbeb'}; border: 1px solid ${isQuotaEmpty ? '#fecaca' : '#fde68a'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                        ${vIcons.shield} โควตาบุคลากร${srcTag}: ${qInfo.limit.toLocaleString()} ${safePieceName}/ท่าน/เดือน
+                      </span>
+                      <span style="font-size: 0.72rem; color: ${isQuotaEmpty ? '#dc2626' : '#92400e'};">
+                        โควตาคงเหลือของท่านในเดือนนี้: <strong>${qInfo.remaining.toLocaleString()} ${safePieceName}</strong> (เบิกแล้ว ${qInfo.used.toLocaleString()})
+                      </span>
+                    </div>
+                  `;
+                }
+                if (qInfo.deptLimit > 0) {
+                  const isDeptEmpty = qInfo.deptRemaining <= 0;
+                  quotaHtml += `
+                    <div style="font-size: 0.75rem; color: ${isDeptEmpty ? '#991b1b' : '#1e40af'}; background: ${isDeptEmpty ? '#fef2f2' : '#eff6ff'}; border: 1px solid ${isDeptEmpty ? '#fecaca' : '#bfdbfe'}; border-radius: 6px; padding: 4px 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                        ${vIcons.building} โควตากลุ่มงาน: ${qInfo.deptLimit.toLocaleString()} ${safePieceName}/หน่วยงาน/เดือน
+                      </span>
+                      <span style="font-size: 0.72rem; color: ${isDeptEmpty ? '#dc2626' : '#1e3a8a'};">
+                        คงเหลือของกลุ่มงานเดือนนี้: <strong>${qInfo.deptRemaining.toLocaleString()} ${safePieceName}</strong> (เบิกรวมแล้ว ${qInfo.deptUsed.toLocaleString()})
+                      </span>
+                    </div>
+                  `;
+                }
+                return quotaHtml;
+              })()}
               <div class="stock-info ${isLow ? 'low' : ''}">
                 <span class="stock-label">${statusLabel}</span>
                 <span class="stock-value">${stockStr}</span>
@@ -2084,39 +2192,30 @@ requester_template = r'''<!DOCTYPE html>
         return;
       }
 
-      if (item.monthly_limit && Number(item.monthly_limit) > 0) {
-        const curDate = new Date();
-        const curYm = `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
-        const curBeYm = `REQ-${curDate.getFullYear() + 543}${String(curDate.getMonth() + 1).padStart(2, '0')}`;
-        const currentPerson = getCurrentRequesterName();
-        const reqs = getReqsDB();
-        let monthUsed = 0;
-        reqs.forEach(r => {
-          if (r.status !== 'REJECTED') {
-            const isSamePerson = !currentPerson || (r.requester || '').trim() === currentPerson;
-            const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
-            if (isSamePerson && isThisMonth && r.items) {
-              r.items.forEach(it => {
-                if (Number(it.itemId) === item.id) {
-                  monthUsed += Number(it.totalPieces || 0);
-                }
-              });
-            }
-          }
+      const qCheck = getPersonalMonthlyQuotaInfo(item);
+      if (qCheck.limit > 0 && qCheck.used + totalPieces > qCheck.limit) {
+        const rem = Math.max(0, qCheck.limit - qCheck.used);
+        const personLabel = escapeHtml(qCheck.requester || 'ท่าน');
+        Swal.fire({
+          icon: 'warning',
+          title: 'เกินโควตารายเดือนต่อบุคลากร',
+          html: `พัสดุนี้ถูกจำกัดโควตาสำหรับ <b>${personLabel}</b> ไม่เกิน <b>${qCheck.limit.toLocaleString()} ${item.unit_piece_name}/เดือน</b><br>ในเดือนนี้มีการขอเบิก/อยู่ในตะกร้าแล้ว <b>${qCheck.used.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'เข้าใจแล้ว'
         });
-        const currentInCart = (cart.find(c => c.itemId === itemId)?.totalPieces || 0);
-        if (monthUsed + currentInCart + totalPieces > Number(item.monthly_limit)) {
-          const rem = Math.max(0, Number(item.monthly_limit) - monthUsed - currentInCart);
-          const personLabel = escapeHtml(currentPerson || 'ท่าน');
-          Swal.fire({
-            icon: 'warning',
-            title: 'เกินโควตารายเดือนต่อบุคลากร',
-            html: `พัสดุนี้ถูกจำกัดโควตาการเบิกไม่เกิน <b>${Number(item.monthly_limit).toLocaleString()} ${item.unit_piece_name}/ท่าน/เดือน</b><br>ในเดือนนี้บุคลากร (<b>${personLabel}</b>) มีการขอเบิกไปแล้ว <b>${monthUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตาที่ขอได้อีก <b>${rem.toLocaleString()} ${item.unit_piece_name}</b>`,
-            confirmButtonColor: '#1e40af',
-            confirmButtonText: 'เข้าใจแล้ว'
-          });
-          return;
-        }
+        return;
+      }
+      if (qCheck.deptLimit > 0 && qCheck.deptUsed + totalPieces > qCheck.deptLimit) {
+        const dRem = Math.max(0, qCheck.deptLimit - qCheck.deptUsed);
+        const deptLabel = escapeHtml(qCheck.dept || 'กลุ่มงานของท่าน');
+        Swal.fire({
+          icon: 'warning',
+          title: 'เกินโควตารายเดือนของกลุ่มงาน / หน่วยงาน',
+          html: `กลุ่มงาน <b>${deptLabel}</b> ถูกจำกัดโควตาไม่เกิน <b>${qCheck.deptLimit.toLocaleString()} ${item.unit_piece_name}/เดือน</b><br>ในเดือนนี้กลุ่มงานขอเบิก/อยู่ในตะกร้าแล้วรวม <b>${qCheck.deptUsed.toLocaleString()} ${item.unit_piece_name}</b><br>คงเหลือโควตากลุ่มงานที่ขอได้อีก <b>${dRem.toLocaleString()} ${item.unit_piece_name}</b>`,
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'เข้าใจแล้ว'
+        });
+        return;
       }
 
       const existing = cart.find(c => c.itemId === itemId);
@@ -3280,7 +3379,7 @@ requester_template = r'''<!DOCTYPE html>
 
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {
-      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY) {
+      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_QUOTAS_KEY) {
         updateMyReqsBadge();
         renderCatalog();
         const myReqModal = document.getElementById('myRequisitionsModal');
@@ -4051,17 +4150,24 @@ staff_template = r'''<!DOCTYPE html>
             <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> กลุ่มงาน / หน่วยงานภายใน สวท. (คลิกจัดการ)</div>
             <span class="metric-val" style="color: var(--primary);" id="metricTotalDepts">5 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small></span>
           </div>
+          <div class="metric-card" onclick="openQuotaModal()" style="cursor: pointer;" title="คลิกเพื่อเพิ่มกฎโควต้าประจำเดือนสำหรับบุคลากรหรือกลุ่มงาน">
+            <div class="metric-header" style="color: #b45309;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> กฎโควต้าเฉพาะ (บุคลากร / กลุ่มงาน)</div>
+            <span class="metric-val" style="color: #b45309;" id="metricTotalQuotas">0 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">กฎ</small></span>
+          </div>
         </div>
 
         <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
             <div>
               <h3 style="font-size: 1.1rem; font-weight: 700;">ทำเนียบรายชื่อบุคลากรและกลุ่มงาน สวท.</h3>
-              <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข หรือลบรายชื่อบุคลากรและกลุ่มงานได้ตลอดเวลา</p>
+              <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข ลบ และกำหนดโควตาเฉพาะบุคลากร/กลุ่มงานได้ตลอดเวลา</p>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" onclick="openManageDeptsModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> จัดการกลุ่มงาน / หน่วยงาน
+              </button>
+              <button class="btn btn-outline" style="border-color: #f59e0b; color: #b45309; background: #fffbeb;" onclick="openQuotaModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> กำหนดโควตาบุคลากร / กลุ่มงาน
               </button>
               <button class="btn btn-primary" onclick="openUserModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> เพิ่มรายชื่อบุคลากร (User)
@@ -4093,10 +4199,57 @@ staff_template = r'''<!DOCTYPE html>
                   <th>ตำแหน่ง</th>
                   <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
                   <th style="width: 120px;">เบอร์โทรศัพท์</th>
-                  <th style="width: 140px; text-align: right;">จัดการ</th>
+                  <th style="width: 170px;">โควตาเฉพาะบุคคล</th>
+                  <th style="width: 195px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="staffUsersTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- QUOTA RULES MANAGEMENT SECTION (DEPT & PERSONNEL) -->
+        <div id="quotaRulesCard" style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm); margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                ระบบกำหนดโควต้าประจำเดือน (แยกตามกลุ่มงาน และรายบุคลากร)
+              </h3>
+              <p style="font-size: 0.825rem; color: var(--neutral-600);">กำหนดเพดานการเบิกพัสดุรายเดือนเฉพาะเจาะจง (รายบุคลากรมีผลสำคัญกว่าค่ามาตรฐานคลัง และกลุ่มงานคุมเพดานรวมทั้งหน่วยงาน)</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-outline" style="border-color: #93c5fd; color: #1e40af; background: #eff6ff;" onclick="openQuotaModal('DEPT')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> + กำหนดโควตากลุ่มงาน
+              </button>
+              <button class="btn btn-primary" onclick="openQuotaModal('USER')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> + กำหนดโควตารายบุคลากร
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button type="button" class="pill-btn active quota-filter-btn" data-qtype="ALL" onclick="filterQuotaRulesType('ALL', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: var(--primary); color: white; font-size: 0.825rem; font-weight: 600; cursor: pointer;">ทั้งหมด</button>
+            <button type="button" class="pill-btn quota-filter-btn" data-qtype="DEPT" onclick="filterQuotaRulesType('DEPT', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 0.825rem; font-weight: 600; cursor: pointer;">โควตากลุ่มงาน / หน่วยงาน</button>
+            <button type="button" class="pill-btn quota-filter-btn" data-qtype="USER" onclick="filterQuotaRulesType('USER', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 0.825rem; font-weight: 600; cursor: pointer;">โควตารายบุคลากร</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="req-table" style="font-size: 0.875rem;">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">ประเภท</th>
+                  <th>กลุ่มงาน / บุคลากรเป้าหมาย</th>
+                  <th>ขอบเขตรายการพัสดุ</th>
+                  <th style="width: 150px;">โควตาสูงสุด / เดือน</th>
+                  <th style="width: 150px;">เบิกใช้แล้วเดือนนี้</th>
+                  <th>หมายเหตุ</th>
+                  <th style="width: 130px; text-align: right;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="quotaRulesTableBody">
                 <!-- Rendered by JS -->
               </tbody>
             </table>
@@ -4341,6 +4494,20 @@ staff_template = r'''<!DOCTYPE html>
     const DB_REQS_KEY = 'inventory_requisitions';
     const DB_USERS_KEY = 'inventory_users';
     const DB_DEPTS_KEY = 'inventory_departments';
+    const DB_QUOTAS_KEY = 'inventory_quotas';
+
+    function getQuotasDB() {
+      try {
+        const raw = localStorage.getItem(DB_QUOTAS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    function saveQuotasDB(list) {
+      localStorage.setItem(DB_QUOTAS_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+    }
 
     const defaultItems = __DEFAULT_ITEMS__;
     const defaultReqs = __DEFAULT_REQS__;
@@ -4459,12 +4626,17 @@ staff_template = r'''<!DOCTYPE html>
     async function syncFromMySQLAPI() {
       if (!MYSQL_API_URL || !navigator.onLine) return;
       try {
-        const [itemsRes, reqsRes, usersRes, deptsRes] = await Promise.all([
+        const [itemsRes, reqsRes, usersRes, deptsRes, quotasRes] = await Promise.all([
           fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getRequisitions`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getUsers`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null)
+          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getQuotas`).then(r => r.json()).catch(() => null)
         ]);
+        if (quotasRes && quotasRes.status === 'success' && Array.isArray(quotasRes.data)) {
+          saveQuotasDB(quotasRes.data);
+          if (typeof renderCatalog === 'function') renderCatalog();
+        }
         if (itemsRes && itemsRes.status === 'success' && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
           saveItemsDB(itemsRes.data);
         }
@@ -7169,6 +7341,11 @@ staff_template = r'''<!DOCTYPE html>
       if (totalDeptsEl) {
         totalDeptsEl.innerHTML = `${deptNames.length.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small>`;
       }
+      const allQuotas = getQuotasDB();
+      const totalQuotasEl = document.getElementById('metricTotalQuotas');
+      if (totalQuotasEl) {
+        totalQuotasEl.innerHTML = `${allQuotas.length.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">กฎ</small>`;
+      }
 
       const filterSelect = document.getElementById('staffUserDeptFilter');
       if (filterSelect) {
@@ -7199,11 +7376,12 @@ staff_template = r'''<!DOCTYPE html>
       if (filtered.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
+            <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
               ไม่พบรายชื่อบุคลากรที่ตรงกับเงื่อนไขการค้นหา
             </td>
           </tr>
         `;
+        renderQuotaRulesSection();
         return;
       }
 
@@ -7217,6 +7395,20 @@ staff_template = r'''<!DOCTYPE html>
         } else if (uRole === 'ADMIN') {
           roleBadge = `<span style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ดูแลระบบ (ADMIN)</span>`;
         }
+        const userRules = allQuotas.filter(q =>
+          String(q.targetType || q.target_type || '').toUpperCase() === 'USER' &&
+          String(q.targetKey || q.target_key || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()
+        );
+        let userQuotaBadge = `<span style="color: var(--neutral-400); font-size: 0.78rem;">ตามมาตรฐานคลัง</span>`;
+        if (userRules.length === 1) {
+          const r = userRules[0];
+          const lim = Number(r.monthlyLimit ?? r.monthly_limit ?? 0);
+          const itemLbl = Number(r.itemId ?? r.item_id ?? 0) === 0 ? 'ทุกพัสดุ' : (r.itemName || 'เฉพาะรายการ');
+          userQuotaBadge = `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.74rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-block;">${escapeHtml(itemLbl)}: ${lim > 0 ? lim.toLocaleString() + '/ด.' : 'ไม่จำกัด'}</span>`;
+        } else if (userRules.length > 1) {
+          userQuotaBadge = `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.74rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-block;">กำหนดเฉพาะ ${userRules.length} รายการ</span>`;
+        }
+        const safeJsName = String(u.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `
         <tr>
           <td style="text-align: center; color: var(--neutral-600);">${idx + 1}</td>
@@ -7224,15 +7416,19 @@ staff_template = r'''<!DOCTYPE html>
             <code style="background: var(--neutral-100); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.825rem; font-weight: 600; border: 1px solid var(--neutral-200);">${u.username || '-'}</code>
           </td>
           <td>${roleBadge}</td>
-          <td><strong>${u.name}</strong></td>
-          <td style="color: var(--neutral-700);">${u.position || '-'}</td>
+          <td><strong>${escapeHtml(u.name)}</strong></td>
+          <td style="color: var(--neutral-700);">${escapeHtml(u.position || '-')}</td>
           <td>
             <span style="background: var(--primary-light); color: var(--primary); font-size: 0.775rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--primary-border); display: inline-block;">
-              ${u.dept || '-'}
+              ${escapeHtml(u.dept || '-')}
             </span>
           </td>
-          <td style="color: var(--neutral-600);">${u.phone || '-'}</td>
+          <td style="color: var(--neutral-600);">${escapeHtml(u.phone || '-')}</td>
+          <td>${userQuotaBadge}</td>
           <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 4px; color: #b45309; border-color: #fcd34d; background: #fffbeb;" onclick="openQuotaModal('USER', '${safeJsName}')">
+              โควตา
+            </button>
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openUserModal(${u.id})">
               แก้ไข
             </button>
@@ -7242,6 +7438,7 @@ staff_template = r'''<!DOCTYPE html>
           </td>
         </tr>
       `;}).join('');
+      renderQuotaRulesSection();
     }
 
     function openUserModal(userId = null) {
@@ -7447,7 +7644,17 @@ staff_template = r'''<!DOCTYPE html>
         }));
       }
 
-      const rowsHtml = deptsList.map((d, idx) => `
+      const allQuotas = getQuotasDB();
+      const rowsHtml = deptsList.map((d, idx) => {
+        const dRules = allQuotas.filter(q =>
+          String(q.targetType || q.target_type || '').toUpperCase() === 'DEPT' &&
+          String(q.targetKey || q.target_key || '').trim() === String(d.name || '').trim()
+        );
+        const quotaBadge = dRules.length > 0
+          ? `<span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:600;">${dRules.length} กฎโควตา</span>`
+          : `<span style="color:#94a3b8; font-size:0.75rem;">ไม่จำกัด</span>`;
+        const safeJsDept = String(d.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 10px 8px; text-align: center; color: #64748b; font-weight: 500;">${idx + 1}</td>
           <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; text-align: left;">
@@ -7458,20 +7665,24 @@ staff_template = r'''<!DOCTYPE html>
               ${d.user_count || 0} ท่าน
             </span>
           </td>
+          <td style="padding: 10px 8px; text-align: center;">${quotaBadge}</td>
           <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${escapeHtml(d.name)}')">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px; color: #b45309; border-color: #fcd34d; background: #fffbeb;" onclick="openQuotaModal('DEPT', '${safeJsDept}')">
+              ตั้งโควตา
+            </button>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${safeJsDept}')">
               ${vIcons.pen} แก้ไขชื่อ
             </button>
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${escapeHtml(d.name)}', ${d.user_count || 0})">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${safeJsDept}', ${d.user_count || 0})">
               ${vIcons.trash} ลบ
             </button>
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
 
       Swal.fire({
         title: 'จัดการกลุ่มงาน / หน่วยงาน (สวท.)',
-        width: '760px',
+        width: '880px',
         html: `
           <div style="text-align: left; margin-top: 0.5rem; font-size: 0.9rem;">
             <!-- เพิ่มกลุ่มงานใหม่ -->
@@ -7490,12 +7701,13 @@ staff_template = r'''<!DOCTYPE html>
                   <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0; z-index: 1;">
                     <th style="padding: 10px 8px; text-align: center; width: 45px; color: #475569;">#</th>
                     <th style="padding: 10px 8px; text-align: left; color: #475569;">ชื่อกลุ่มงาน / หน่วยงาน</th>
-                    <th style="padding: 10px 8px; text-align: center; width: 120px; color: #475569;">จำนวนบุคลากร</th>
-                    <th style="padding: 10px 8px; text-align: right; width: 170px; color: #475569;">จัดการ</th>
+                    <th style="padding: 10px 8px; text-align: center; width: 110px; color: #475569;">บุคลากร</th>
+                    <th style="padding: 10px 8px; text-align: center; width: 120px; color: #475569;">โควตาประจำเดือน</th>
+                    <th style="padding: 10px 8px; text-align: right; width: 245px; color: #475569;">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody id="manageDeptsTbody">
-                  ${rowsHtml || '<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: #94a3b8;">ยังไม่มีกลุ่มงานในระบบ</td></tr>'}
+                  ${rowsHtml || '<tr><td colspan="5" style="text-align: center; padding: 1.5rem; color: #94a3b8;">ยังไม่มีกลุ่มงานในระบบ</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -7706,6 +7918,287 @@ staff_template = r'''<!DOCTYPE html>
       }
     }
 
+    // Per-Personnel & Per-Department Quota Management (Staff Portal)
+    let currentQuotaFilterType = 'ALL';
+
+    function filterQuotaRulesType(qType, btn) {
+      currentQuotaFilterType = qType || 'ALL';
+      document.querySelectorAll('.quota-filter-btn').forEach(b => {
+        const isActive = b.getAttribute('data-qtype') === currentQuotaFilterType;
+        b.style.background = isActive ? 'var(--primary)' : 'white';
+        b.style.color = isActive ? 'white' : '#334155';
+        b.style.borderColor = isActive ? 'var(--primary)' : '#cbd5e1';
+      });
+      renderQuotaRulesSection();
+    }
+
+    function getMonthlyUsageForQuotaRule(targetType, targetKey, itemId) {
+      const reqs = getReqsDB();
+      const now = new Date();
+      const curYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const curBeYm = `REQ-${now.getFullYear() + 543}${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const cleanTarget = String(targetKey || '').trim().toLowerCase();
+      let totalUsed = 0;
+
+      reqs.forEach(r => {
+        if (r.status === 'REJECTED') return;
+        const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+        if (!isThisMonth) return;
+        const matchesTarget = targetType === 'DEPT'
+          ? String(r.dept || '').trim().toLowerCase() === cleanTarget
+          : String(r.requester || '').trim().toLowerCase() === cleanTarget;
+        if (!matchesTarget) return;
+        (r.items || []).forEach(it => {
+          if (Number(itemId) === 0 || Number(it.itemId) === Number(itemId)) {
+            totalUsed += Number(it.totalPieces || 0);
+          }
+        });
+      });
+      return totalUsed;
+    }
+
+    function renderQuotaRulesSection() {
+      const tbody = document.getElementById('quotaRulesTableBody');
+      if (!tbody) return;
+      const quotas = getQuotasDB();
+      const items = getItemsDB();
+      const itemsMap = new Map(items.map(i => [Number(i.id), i]));
+
+      const filtered = quotas.filter(q => {
+        const t = String(q.targetType || q.target_type || '').toUpperCase();
+        return currentQuotaFilterType === 'ALL' || t === currentQuotaFilterType;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--neutral-400);">
+              ยังไม่มีกฎโควต้าเฉพาะตามบุคลากรหรือกลุ่มงาน (คลิก "+ กำหนดโควตากลุ่มงาน" หรือ "+ กำหนดโควตารายบุคลากร" เพื่อตั้งค่า)
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(q => {
+        const tType = String(q.targetType || q.target_type || 'DEPT').toUpperCase();
+        const tKey = q.targetKey || q.target_key || '';
+        const iId = Number(q.itemId ?? q.item_id ?? 0);
+        const lim = Number(q.monthlyLimit ?? q.monthly_limit ?? 0);
+        const itemObj = iId > 0 ? itemsMap.get(iId) : null;
+        const itemName = iId === 0 ? 'ทุกพัสดุในคลัง (ค่าเริ่มต้นต่อรายการ)' : (itemObj ? itemObj.name : (q.itemName || `พัสดุ #${iId}`));
+        const unitName = itemObj ? (itemObj.unit_piece_name || 'ชิ้น') : (q.unitPiece || 'ชิ้น');
+        const used = getMonthlyUsageForQuotaRule(tType, tKey, iId);
+        const pct = lim > 0 ? Math.min(100, Math.round((used / lim) * 100)) : 0;
+
+        const typeBadge = tType === 'DEPT'
+          ? `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">กลุ่มงาน</span>`
+          : `<span style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">รายบุคลากร</span>`;
+
+        const limitDisplay = lim > 0
+          ? `<strong style="color: #b45309;">${lim.toLocaleString()} ${escapeHtml(unitName)}</strong>`
+          : `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">ไม่จำกัด (ยกเว้น)</span>`;
+
+        const usageColor = lim > 0 && used >= lim ? '#dc2626' : (lim > 0 && pct >= 80 ? '#d97706' : '#0f766e');
+
+        return `
+          <tr>
+            <td>${typeBadge}</td>
+            <td><strong>${escapeHtml(tKey)}</strong></td>
+            <td style="color: var(--neutral-700);">${escapeHtml(itemName)}</td>
+            <td>${limitDisplay}</td>
+            <td>
+              <span style="font-weight: 600; color: ${usageColor};">${used.toLocaleString()} ${escapeHtml(unitName)}</span>
+              ${lim > 0 ? `<small style="color: var(--neutral-500);">(${pct}%)</small>` : ''}
+            </td>
+            <td style="color: var(--neutral-600); font-size: 0.825rem;">${escapeHtml(q.note || '-')}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 4px;" onclick="openQuotaModal('${tType}', '', ${q.id})">
+                แก้ไข
+              </button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; color: var(--danger);" onclick="deleteQuotaRule(${q.id})">
+                ลบ
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openQuotaModal(defaultType = 'DEPT', defaultKey = '', ruleId = null) {
+      const quotas = getQuotasDB();
+      const existing = ruleId !== null ? quotas.find(q => Number(q.id) === Number(ruleId)) : null;
+      const initType = existing ? String(existing.targetType || existing.target_type || 'DEPT').toUpperCase() : (defaultType || 'DEPT');
+      const initKey = existing ? (existing.targetKey || existing.target_key || '') : (defaultKey || '');
+      const initItemId = existing ? Number(existing.itemId ?? existing.item_id ?? 0) : 0;
+      const initLimit = existing ? Number(existing.monthlyLimit ?? existing.monthly_limit ?? 0) : 500;
+      const initNote = existing ? (existing.note || '') : '';
+
+      const deptNames = getAllDeptNames();
+      const users = getUsersDB();
+      const items = getItemsDB();
+
+      const buildTargetOptions = (tType, selectedKey) => {
+        if (tType === 'DEPT') {
+          return deptNames.map(d =>
+            `<option value="${escapeHtml(d)}" ${d === selectedKey ? 'selected' : ''}>${escapeHtml(d)}</option>`
+          ).join('');
+        }
+        return users.map(u =>
+          `<option value="${escapeHtml(u.name)}" ${u.name === selectedKey ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.dept || '-')})</option>`
+        ).join('');
+      };
+
+      const itemOptions = `<option value="0" ${initItemId === 0 ? 'selected' : ''}>ทุกพัสดุในคลัง (กำหนดเพดานต่อรายการ)</option>` +
+        items.map(it =>
+          `<option value="${it.id}" ${Number(it.id) === initItemId ? 'selected' : ''}>${escapeHtml(it.name)} (หน่วย: ${escapeHtml(it.unit_piece_name || 'ชิ้น')})</option>`
+        ).join('');
+
+      Swal.fire({
+        title: existing ? 'แก้ไขกฎโควตาประจำเดือน' : 'กำหนดโควต้าประจำเดือน (บุคลากร / กลุ่มงาน)',
+        width: '560px',
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ประเภทเป้าหมาย *</label>
+              <select id="swal-quota-type" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                <option value="DEPT" ${initType === 'DEPT' ? 'selected' : ''}>กลุ่มงาน / หน่วยงาน (ควบคุมยอดรวมทั้งหน่วยงาน)</option>
+                <option value="USER" ${initType === 'USER' ? 'selected' : ''}>บุคลากรรายบุคคล (กำหนดสิทธิ์เฉพาะท่าน)</option>
+              </select>
+            </div>
+            <div>
+              <label id="swal-quota-target-label" style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">${initType === 'DEPT' ? 'เลือกกลุ่มงาน / หน่วยงาน *' : 'เลือกบุคลากร *'}</label>
+              <select id="swal-quota-target" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                ${buildTargetOptions(initType, initKey)}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รายการพัสดุที่กำหนดโควตา *</label>
+              <select id="swal-quota-item" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                ${itemOptions}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #b45309; display: block; margin-bottom: 4px;">โควตาเบิกสูงสุดต่อเดือน (หน่วยย่อย / ชิ้น) *</label>
+              <input type="number" id="swal-quota-limit" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.95rem;" value="${initLimit}">
+              <div style="font-size: 0.76rem; color: #64748b; margin-top: 4px;">ใส่ <strong>0</strong> หากต้องการยกเว้นไม่จำกัดโควตาเฉพาะเป้าหมายนี้ (สำหรับบุคลากร: จะแทนที่ค่ามาตรฐานของคลัง)</div>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">หมายเหตุ</label>
+              <input type="text" id="swal-quota-note" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;" placeholder="เช่น โควตาจัดสอบกลางภาค หรือ สิทธิ์หัวหน้างาน" value="${escapeHtml(initNote)}">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'บันทึกกฎโควตา',
+        cancelButtonText: 'ยกเลิก',
+        didOpen: () => {
+          const typeSel = document.getElementById('swal-quota-type');
+          const targetSel = document.getElementById('swal-quota-target');
+          const lbl = document.getElementById('swal-quota-target-label');
+          if (typeSel && targetSel) {
+            typeSel.addEventListener('change', () => {
+              const t = typeSel.value;
+              if (lbl) lbl.innerText = t === 'DEPT' ? 'เลือกกลุ่มงาน / หน่วยงาน *' : 'เลือกบุคลากร *';
+              targetSel.innerHTML = buildTargetOptions(t, '');
+            });
+          }
+        },
+        preConfirm: () => {
+          const targetType = document.getElementById('swal-quota-type').value;
+          const targetKey = document.getElementById('swal-quota-target').value.trim();
+          const itemId = Math.max(0, parseInt(document.getElementById('swal-quota-item').value, 10) || 0);
+          const rawLimit = document.getElementById('swal-quota-limit').value;
+          const monthlyLimit = Math.max(0, parseInt(rawLimit, 10));
+          const note = document.getElementById('swal-quota-note').value.trim();
+          if (!targetKey) {
+            Swal.showValidationMessage('กรุณาเลือกกลุ่มงานหรือบุคลากร');
+            return false;
+          }
+          if (isNaN(monthlyLimit) || monthlyLimit < 0) {
+            Swal.showValidationMessage('จำนวนโควตาต้องเป็นตัวเลข 0 ขึ้นไป');
+            return false;
+          }
+          return { id: existing ? existing.id : null, targetType, targetKey, itemId, monthlyLimit, note };
+        }
+      }).then(async (res) => {
+        if (!res.isConfirmed || !res.value) return;
+        const staff = getLoggedInStaff();
+        const payload = { ...res.value, updatedBy: staff.name || staff.username || 'เจ้าหน้าที่พัสดุ สวท.' };
+        const apiRes = await postToMySQLAPI('saveQuota', payload);
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: apiRes.message || 'ไม่สามารถบันทึกกฎโควตาได้' });
+          return;
+        }
+        const list = getQuotasDB();
+        const itemMatch = items.find(i => Number(i.id) === Number(payload.itemId));
+        const savedRecord = {
+          id: (apiRes && apiRes.id) ? Number(apiRes.id) : (payload.id || (list.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1)),
+          targetType: payload.targetType,
+          target_type: payload.targetType,
+          targetKey: payload.targetKey,
+          target_key: payload.targetKey,
+          itemId: payload.itemId,
+          item_id: payload.itemId,
+          itemName: payload.itemId === 0 ? 'ทุกพัสดุในคลัง (ค่าเริ่มต้น)' : (itemMatch ? itemMatch.name : ''),
+          unitPiece: itemMatch ? (itemMatch.unit_piece_name || 'ชิ้น') : 'ชิ้น',
+          monthlyLimit: payload.monthlyLimit,
+          monthly_limit: payload.monthlyLimit,
+          note: payload.note,
+          updatedBy: payload.updatedBy
+        };
+        const updatedList = list.filter(q =>
+          Number(q.id) !== Number(savedRecord.id) &&
+          !(String(q.targetType || q.target_type || '').toUpperCase() === payload.targetType &&
+            String(q.targetKey || q.target_key || '').trim() === payload.targetKey &&
+            Number(q.itemId ?? q.item_id ?? 0) === Number(payload.itemId))
+        );
+        updatedList.push(savedRecord);
+        saveQuotasDB(updatedList);
+        renderStaffUsersTable();
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกกฎโควตาสำเร็จ',
+          text: `ตั้งค่าโควตาสำหรับ "${payload.targetKey}" เรียบร้อยแล้ว`,
+          timer: 1600,
+          showConfirmButton: false
+        });
+      });
+    }
+
+    function deleteQuotaRule(ruleId) {
+      const list = getQuotasDB();
+      const target = list.find(q => Number(q.id) === Number(ruleId));
+      if (!target) return;
+      Swal.fire({
+        title: 'ยืนยันการลบกฎโควต้า?',
+        text: `ต้องการลบกฎโควตาของ "${target.targetKey || target.target_key}" ใช่หรือไม่ (ระบบจะกลับไปใช้ค่ามาตรฐานของคลัง)`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ลบกฎโควตา',
+        cancelButtonText: 'ยกเลิก'
+      }).then(async (res) => {
+        if (!res.isConfirmed) return;
+        const apiRes = await postToMySQLAPI('deleteQuota', {
+          id: ruleId,
+          targetType: target.targetType || target.target_type,
+          targetKey: target.targetKey || target.target_key,
+          itemId: target.itemId ?? target.item_id ?? 0
+        });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({ icon: 'error', title: 'ลบกฎไม่สำเร็จ', text: apiRes.message || 'ไม่สามารถลบกฎโควตาได้' });
+          return;
+        }
+        saveQuotasDB(list.filter(q => Number(q.id) !== Number(ruleId)));
+        renderStaffUsersTable();
+        Swal.fire({ icon: 'success', title: 'ลบกฎโควตาเรียบร้อยแล้ว', timer: 1400, showConfirmButton: false });
+      });
+    }
+
     function openAddDeptModal() {
       openManageDeptsModal();
     }
@@ -7714,6 +8207,7 @@ staff_template = r'''<!DOCTYPE html>
       renderStaffRequisitions(currentStaffStatus);
       renderInventoryTable();
       renderStaffUsersTable();
+      renderQuotaRulesSection();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -7742,7 +8236,7 @@ staff_template = r'''<!DOCTYPE html>
 
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {
-      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY) {
+      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY || e.key === DB_QUOTAS_KEY) {
         loadStaffDashboard();
       }
     });

@@ -724,17 +724,24 @@
             <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> กลุ่มงาน / หน่วยงานภายใน สวท. (คลิกจัดการ)</div>
             <span class="metric-val" style="color: var(--primary);" id="metricTotalDepts">5 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small></span>
           </div>
+          <div class="metric-card" onclick="openQuotaModal()" style="cursor: pointer;" title="คลิกเพื่อเพิ่มกฎโควต้าประจำเดือนสำหรับบุคลากรหรือกลุ่มงาน">
+            <div class="metric-header" style="color: #b45309;"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> กฎโควต้าเฉพาะ (บุคลากร / กลุ่มงาน)</div>
+            <span class="metric-val" style="color: #b45309;" id="metricTotalQuotas">0 <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">กฎ</small></span>
+          </div>
         </div>
 
         <div style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm);">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
             <div>
               <h3 style="font-size: 1.1rem; font-weight: 700;">ทำเนียบรายชื่อบุคลากรและกลุ่มงาน สวท.</h3>
-              <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข หรือลบรายชื่อบุคลากรและกลุ่มงานได้ตลอดเวลา</p>
+              <p style="font-size: 0.825rem; color: var(--neutral-600);">ข้อมูลตั้งต้นจากไฟล์ รายนามบุคลากร สวท.docx — เจ้าหน้าที่สามารถเพิ่ม แก้ไข ลบ และกำหนดโควตาเฉพาะบุคลากร/กลุ่มงานได้ตลอดเวลา</p>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-outline" onclick="openManageDeptsModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> จัดการกลุ่มงาน / หน่วยงาน
+              </button>
+              <button class="btn btn-outline" style="border-color: #f59e0b; color: #b45309; background: #fffbeb;" onclick="openQuotaModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> กำหนดโควตาบุคลากร / กลุ่มงาน
               </button>
               <button class="btn btn-primary" onclick="openUserModal()">
                 <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg> เพิ่มรายชื่อบุคลากร (User)
@@ -766,10 +773,57 @@
                   <th>ตำแหน่ง</th>
                   <th>กลุ่มงาน / หน่วยงานที่สังกัด</th>
                   <th style="width: 120px;">เบอร์โทรศัพท์</th>
-                  <th style="width: 140px; text-align: right;">จัดการ</th>
+                  <th style="width: 170px;">โควตาเฉพาะบุคคล</th>
+                  <th style="width: 195px; text-align: right;">จัดการ</th>
                 </tr>
               </thead>
               <tbody id="staffUsersTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- QUOTA RULES MANAGEMENT SECTION (DEPT & PERSONNEL) -->
+        <div id="quotaRulesCard" style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.5rem; box-shadow: var(--shadow-sm); margin-top: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                ระบบกำหนดโควต้าประจำเดือน (แยกตามกลุ่มงาน และรายบุคลากร)
+              </h3>
+              <p style="font-size: 0.825rem; color: var(--neutral-600);">กำหนดเพดานการเบิกพัสดุรายเดือนเฉพาะเจาะจง (รายบุคลากรมีผลสำคัญกว่าค่ามาตรฐานคลัง และกลุ่มงานคุมเพดานรวมทั้งหน่วยงาน)</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-outline" style="border-color: #93c5fd; color: #1e40af; background: #eff6ff;" onclick="openQuotaModal('DEPT')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg> + กำหนดโควตากลุ่มงาน
+              </button>
+              <button class="btn btn-primary" onclick="openQuotaModal('USER')">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> + กำหนดโควตารายบุคลากร
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <button type="button" class="pill-btn active quota-filter-btn" data-qtype="ALL" onclick="filterQuotaRulesType('ALL', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: var(--primary); color: white; font-size: 0.825rem; font-weight: 600; cursor: pointer;">ทั้งหมด</button>
+            <button type="button" class="pill-btn quota-filter-btn" data-qtype="DEPT" onclick="filterQuotaRulesType('DEPT', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 0.825rem; font-weight: 600; cursor: pointer;">โควตากลุ่มงาน / หน่วยงาน</button>
+            <button type="button" class="pill-btn quota-filter-btn" data-qtype="USER" onclick="filterQuotaRulesType('USER', this)" style="padding: 6px 14px; border-radius: 999px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 0.825rem; font-weight: 600; cursor: pointer;">โควตารายบุคลากร</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="req-table" style="font-size: 0.875rem;">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">ประเภท</th>
+                  <th>กลุ่มงาน / บุคลากรเป้าหมาย</th>
+                  <th>ขอบเขตรายการพัสดุ</th>
+                  <th style="width: 150px;">โควตาสูงสุด / เดือน</th>
+                  <th style="width: 150px;">เบิกใช้แล้วเดือนนี้</th>
+                  <th>หมายเหตุ</th>
+                  <th style="width: 130px; text-align: right;">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody id="quotaRulesTableBody">
                 <!-- Rendered by JS -->
               </tbody>
             </table>
@@ -977,13 +1031,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.2.5) | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต (Staff Portal v3.3.0) | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.2.5';
+    const APP_VERSION = '3.3.0';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = true;
     const vIcons = {
@@ -1014,6 +1068,20 @@
     const DB_REQS_KEY = 'inventory_requisitions';
     const DB_USERS_KEY = 'inventory_users';
     const DB_DEPTS_KEY = 'inventory_departments';
+    const DB_QUOTAS_KEY = 'inventory_quotas';
+
+    function getQuotasDB() {
+      try {
+        const raw = localStorage.getItem(DB_QUOTAS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    function saveQuotasDB(list) {
+      localStorage.setItem(DB_QUOTAS_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+    }
 
     const defaultItems = [{"id": 1, "name": "ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารสีขาว 7´10 (500 ซองต่อกล่อง) กล่อง.jpeg"}, {"id": 2, "name": "ซองเอกสารน้ำตาล (มสด) 9´12.3", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 ซอง.jpeg", "image_box": "assets/images/ซองเอกสารน้ำตาล (มสด) 9´12.3 กล่อง.jpeg"}, {"id": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ใบ", "pieces_per_box": 2000, "on_hand_pieces": 32000, "reserved_pieces": 0, "min_alert": 5000, "image_piece": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) ใบ.jpeg", "image_box": "assets/images/กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ) กล่อง.jpeg"}, {"id": 4, "name": "ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1250, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองขยายข้างมีครุฑ 279´432 (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 5, "name": "กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 4500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย แผ่น.jpeg", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวนอน ตัดหน้าซองจดหมาย กล่อง.jpeg"}, {"id": 6, "name": "กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 500, "reserved_pieces": 0, "min_alert": 250, "image_piece": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์แนวตั้ง ติดหน้าซองข้อสอบ กล่อง.jpeg"}, {"id": 7, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 23000, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) แผ่น.jpeg", "image_box": "assets/images/กระดาษลายเส้น (ห่อละ 500 แผ่น) กล่อง.jpeg"}, {"id": 8, "name": "กระดาษสติ๊กเกอร์ เต็มแผ่น", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ห่อ", "unit_piece_name": "แผ่น", "pieces_per_box": 500, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 100, "image_piece": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น แผ่น.png", "image_box": "assets/images/กระดาษสติ๊กเกอร์ เต็มแผ่น กล่อง.jpeg"}, {"id": 9, "name": "แบบฟอร์มแก้ I", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ชิ้น", "pieces_per_box": 500, "on_hand_pieces": 2500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มแก้ I ชิ้น.jpeg", "image_box": "assets/images/แบบฟอร์มแก้ I กล่อง.jpeg"}, {"id": 10, "name": "ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 3700, "reserved_pieces": 0, "min_alert": 1000, "image_piece": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) ซอง.jpeg", "image_box": "assets/images/ซองข้อสอบน้ำตาลไม่ขยายข้างพิมพ์ข้อความ (มสด) กล่อง.jpeg"}, {"id": 11, "name": "ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง)", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 250, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) ซอง.jpeg", "image_box": "assets/images/ซองเอกสารไม่ขยายข้าง สีน้ำตาล 10´15 นิ้ว (มสด) (กล่องละ 250 ซอง) กล่อง.jpeg"}, {"id": 12, "name": "แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/แบบฟอร์มทรานสคริป(ไทย)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 13, "name": "แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3500, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/แบบฟอร์มทรานสคริป(อังกฤษ)ป.ตรี ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 14, "name": "ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1000, "reserved_pieces": 0, "min_alert": 200, "image_piece": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(ไทย) ซองละ 500 ใบ กล่อง.png"}, {"id": 15, "name": "ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 1500, "reserved_pieces": 0, "min_alert": 300, "image_piece": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ทรานสคริป ป.โท(อังกฤษ) ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 16, "name": "ใบรับรอง(ไทย)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 2000, "reserved_pieces": 0, "min_alert": 400, "image_piece": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ ใบ.jpeg", "image_box": "assets/images/ใบรับรอง(ไทย)ซองละ 500 ใบ กล่อง.jpeg"}, {"id": 17, "name": "ใบรับรอง(อังกฤษ)ซองละ 500 ใบ", "category": "กระดาษและแบบฟอร์ม", "is_multi_unit": true, "unit_box_name": "ซอง", "unit_piece_name": "ใบ", "pieces_per_box": 500, "on_hand_pieces": 3000, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ ใบ.png", "image_box": "assets/images/ใบรับรอง(อังกฤษ)ซองละ 500 ใบ กล่อง.png"}, {"id": 18, "name": "คลิปดำNO.108", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 72, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.108 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.108 ลัง.jpeg"}, {"id": 19, "name": "คลิปดำNO.110", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 12, "on_hand_pieces": 60, "reserved_pieces": 0, "min_alert": 24, "image_piece": "assets/images/คลิปดำNO.110 กล่อง.jpeg", "image_box": "assets/images/คลิปดำNO.110 ลัง.jpeg"}, {"id": 20, "name": "ไส้MAX 10 MM", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 10 MM กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 10 MM ลัง.jpeg"}, {"id": 21, "name": "ไส้MAX 12", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "ลัง", "unit_piece_name": "กล่อง", "pieces_per_box": 20, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/ไส้MAX 12 กล่อง.jpeg", "image_box": "assets/images/ไส้MAX 12 ลัง.jpeg"}, {"id": 22, "name": "ซองกันกระแทก 270´327", "category": "ซองเอกสาร", "is_multi_unit": true, "unit_box_name": "กล่อง", "unit_piece_name": "ซอง", "pieces_per_box": 80, "on_hand_pieces": 2400, "reserved_pieces": 0, "min_alert": 500, "image_piece": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg", "image_box": "assets/images/ซองกันกระแทก 270´327 ซอง.jpeg"}, {"id": 23, "name": "แฟ้มเสนอ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "เล่ม", "unit_piece_name": "เล่ม", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/แฟ้มเสนอ เล่ม.jpeg", "image_box": "assets/images/แฟ้มเสนอ เล่ม.jpeg"}, {"id": 24, "name": "แม็กเล็ก", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กเล็ก อัน.jpeg", "image_box": "assets/images/แม็กเล็ก กล่อง.jpeg"}, {"id": 25, "name": "แม็กใหญ่", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 5, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/แม็กใหญ่ อัน.jpeg", "image_box": "assets/images/แม็กใหญ่ กล่อง.png"}, {"id": 26, "name": "สก็อตเทปใส", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 4, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปใส ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปใส กล่อง.jpeg"}, {"id": 27, "name": "สก็อตเทปขุ่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 25, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปขุ่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปขุ่น กล่อง.png"}, {"id": 28, "name": "สก็อตเทปย่น", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": true, "unit_box_name": "แพ็ค", "unit_piece_name": "ม้วน", "pieces_per_box": 6, "on_hand_pieces": 0, "reserved_pieces": 0, "min_alert": 6, "image_piece": "assets/images/สก็อตเทปย่น ม้วน.jpeg", "image_box": "assets/images/สก็อตเทปย่น กล่อง.jpeg"}, {"id": 29, "name": "กาวแท่ง", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "แท่ง", "pieces_per_box": 1, "on_hand_pieces": 8, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กาวแท่ง แท่ง.jpeg", "image_box": "assets/images/กาวแท่ง กล่อง.png"}, {"id": 30, "name": "กาวขวด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "ขวด", "pieces_per_box": 1, "on_hand_pieces": 4, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/กาวขวด ขวด.jpeg", "image_box": "assets/images/กาวขวด กล่อง.png"}, {"id": 31, "name": "กรรไกร", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 20, "reserved_pieces": 0, "min_alert": 5, "image_piece": "assets/images/กรรไกร อัน.jpeg", "image_box": "assets/images/กรรไกร กล่อง.png"}, {"id": 32, "name": "คัตเตอร์", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 12, "reserved_pieces": 0, "min_alert": 3, "image_piece": "assets/images/คัตเตอร์ อัน.jpeg", "image_box": "assets/images/คัตเตอร์ กล่อง.png"}, {"id": 33, "name": "เครื่องเจาะกระดาษ", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "เครื่อง", "pieces_per_box": 1, "on_hand_pieces": 2, "reserved_pieces": 0, "min_alert": 1, "image_piece": "assets/images/เครื่องเจาะกระดาษ เครื่อง.jpeg", "image_box": "assets/images/เครื่องเจาะกระดาษ กล่อง.png"}, {"id": 34, "name": "ไม้บรรทัด", "category": "เครื่องเขียนและแฟ้ม", "is_multi_unit": false, "unit_box_name": "กล่อง", "unit_piece_name": "อัน", "pieces_per_box": 1, "on_hand_pieces": 7, "reserved_pieces": 0, "min_alert": 2, "image_piece": "assets/images/ไม้บรรทัด อัน.jpeg", "image_box": "assets/images/ไม้บรรทัด กล่อง.png"}];
     const defaultReqs = [{"id": "REQ-256910-0001", "dept": "โรงเรียนการเรือน", "requester": "อาจารย์ผู้แทน โรงเรียนการเรือน", "phone": "", "purpose": "ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "1 ต.ค. 2569 09:30 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน", "reject_reason": "", "completed_at": "2026-10-01T03:00:00.000Z", "completed_date": "1 ต.ค. 2569 10:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-01T02:30:00.000Z", "updated_at": "2026-10-01T03:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 500, "piecesPerBoxSnapshot": 2000}, {"itemId": 7, "name": "กระดาษลายเส้น (ห่อละ 500 แผ่น)", "qtyBoxes": 1, "qtyPieces": 0, "totalPieces": 500, "unitBox": "ห่อ", "unitPiece": "แผ่น", "approvedPieces": 500, "piecesPerBoxSnapshot": 500}]}, {"id": "REQ-256910-0002", "dept": "คณะพยาบาลศาสตร์", "requester": "อาจารย์ผู้แทน คณะพยาบาลศาสตร์", "phone": "", "purpose": "ใช้สำหรับการสอบประเมินความรู้ทางการพยาบาล ภาคเรียน 1/2569", "date": "2 ต.ค. 2569 10:15 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะพยาบาลศาสตร์", "reject_reason": "", "completed_at": "2026-10-02T04:00:00.000Z", "completed_date": "2 ต.ค. 2569 11:00 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-02T03:15:00.000Z", "updated_at": "2026-10-02T04:00:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}, {"id": "REQ-256910-0003", "dept": "คณะวิทยาศาสตร์และเทคโนโลยี", "requester": "อาจารย์ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "phone": "", "purpose": "ใช้สำหรับการจัดสอบวัดผลภาคบรรยายและปฏิบัติการ ประจำภาคการศึกษา 1/2569", "date": "5 ต.ค. 2569 13:45 น.", "status": "COMPLETED", "signature": "ผู้รับพัสดุ: อ.ผู้แทน คณะวิทยาศาสตร์และเทคโนโลยี", "reject_reason": "", "completed_at": "2026-10-05T07:30:00.000Z", "completed_date": "5 ต.ค. 2569 14:30 น.", "rejected_at": null, "rejected_date": "", "created_at": "2026-10-05T06:45:00.000Z", "updated_at": "2026-10-05T07:30:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 1000, "totalPieces": 1000, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 1000, "piecesPerBoxSnapshot": 2000}]}, {"id": "REQ-256911-0004", "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน", "requester": "อาจารย์ผู้แทน สำนักงานผู้อำนวยการ สวท.", "phone": "02-244-5200", "purpose": "ใช้สำหรับงานประชุมวิชาการและการจัดสอบภาคเรียนที่ 1/2569", "date": "10 พ.ย. 2569 11:20 น.", "status": "VERIFIED", "signature": "", "reject_reason": "", "completed_at": null, "completed_date": "", "rejected_at": null, "rejected_date": "", "verified_by": "เจ้าหน้าที่พัสดุ สวท.", "verified_at": "2026-11-10T04:30:00.000Z", "verified_date": "10 พ.ย. 2569 11:30 น.", "approved_by": "", "approved_at": null, "approved_date": "", "created_at": "2026-11-10T04:20:00.000Z", "updated_at": "2026-11-10T04:30:00.000Z", "items": [{"itemId": 3, "name": "กระดาษคำตอบ (กล่องละ 2000 ใบ 1 กล่องมี 4 ห่อ ห่อละ 500 ใบ)", "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200, "unitBox": "กล่อง", "unitPiece": "ใบ", "approvedPieces": 200, "piecesPerBoxSnapshot": 2000}]}];
@@ -1209,12 +1277,17 @@
     async function syncFromMySQLAPI() {
       if (!MYSQL_API_URL || !navigator.onLine) return;
       try {
-        const [itemsRes, reqsRes, usersRes, deptsRes] = await Promise.all([
+        const [itemsRes, reqsRes, usersRes, deptsRes, quotasRes] = await Promise.all([
           fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getRequisitions`).then(r => r.json()).catch(() => null),
           fetch(`${MYSQL_API_URL}?action=getUsers`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null)
+          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getQuotas`).then(r => r.json()).catch(() => null)
         ]);
+        if (quotasRes && quotasRes.status === 'success' && Array.isArray(quotasRes.data)) {
+          saveQuotasDB(quotasRes.data);
+          if (typeof renderCatalog === 'function') renderCatalog();
+        }
         if (itemsRes && itemsRes.status === 'success' && Array.isArray(itemsRes.data) && itemsRes.data.length > 0) {
           saveItemsDB(itemsRes.data);
         }
@@ -3919,6 +3992,11 @@
       if (totalDeptsEl) {
         totalDeptsEl.innerHTML = `${deptNames.length.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">หน่วยงาน</small>`;
       }
+      const allQuotas = getQuotasDB();
+      const totalQuotasEl = document.getElementById('metricTotalQuotas');
+      if (totalQuotasEl) {
+        totalQuotasEl.innerHTML = `${allQuotas.length.toLocaleString()} <small style="font-size: 0.9rem; font-weight: normal; color: var(--neutral-400);">กฎ</small>`;
+      }
 
       const filterSelect = document.getElementById('staffUserDeptFilter');
       if (filterSelect) {
@@ -3949,11 +4027,12 @@
       if (filtered.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
+            <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--neutral-400);">
               ไม่พบรายชื่อบุคลากรที่ตรงกับเงื่อนไขการค้นหา
             </td>
           </tr>
         `;
+        renderQuotaRulesSection();
         return;
       }
 
@@ -3967,6 +4046,20 @@
         } else if (uRole === 'ADMIN') {
           roleBadge = `<span style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ดูแลระบบ (ADMIN)</span>`;
         }
+        const userRules = allQuotas.filter(q =>
+          String(q.targetType || q.target_type || '').toUpperCase() === 'USER' &&
+          String(q.targetKey || q.target_key || '').trim().toLowerCase() === String(u.name || '').trim().toLowerCase()
+        );
+        let userQuotaBadge = `<span style="color: var(--neutral-400); font-size: 0.78rem;">ตามมาตรฐานคลัง</span>`;
+        if (userRules.length === 1) {
+          const r = userRules[0];
+          const lim = Number(r.monthlyLimit ?? r.monthly_limit ?? 0);
+          const itemLbl = Number(r.itemId ?? r.item_id ?? 0) === 0 ? 'ทุกพัสดุ' : (r.itemName || 'เฉพาะรายการ');
+          userQuotaBadge = `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.74rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-block;">${escapeHtml(itemLbl)}: ${lim > 0 ? lim.toLocaleString() + '/ด.' : 'ไม่จำกัด'}</span>`;
+        } else if (userRules.length > 1) {
+          userQuotaBadge = `<span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.74rem; font-weight: 600; padding: 3px 8px; border-radius: 6px; display: inline-block;">กำหนดเฉพาะ ${userRules.length} รายการ</span>`;
+        }
+        const safeJsName = String(u.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `
         <tr>
           <td style="text-align: center; color: var(--neutral-600);">${idx + 1}</td>
@@ -3974,15 +4067,19 @@
             <code style="background: var(--neutral-100); color: var(--primary); padding: 3px 8px; border-radius: 6px; font-size: 0.825rem; font-weight: 600; border: 1px solid var(--neutral-200);">${u.username || '-'}</code>
           </td>
           <td>${roleBadge}</td>
-          <td><strong>${u.name}</strong></td>
-          <td style="color: var(--neutral-700);">${u.position || '-'}</td>
+          <td><strong>${escapeHtml(u.name)}</strong></td>
+          <td style="color: var(--neutral-700);">${escapeHtml(u.position || '-')}</td>
           <td>
             <span style="background: var(--primary-light); color: var(--primary); font-size: 0.775rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--primary-border); display: inline-block;">
-              ${u.dept || '-'}
+              ${escapeHtml(u.dept || '-')}
             </span>
           </td>
-          <td style="color: var(--neutral-600);">${u.phone || '-'}</td>
+          <td style="color: var(--neutral-600);">${escapeHtml(u.phone || '-')}</td>
+          <td>${userQuotaBadge}</td>
           <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; margin-right: 4px; color: #b45309; border-color: #fcd34d; background: #fffbeb;" onclick="openQuotaModal('USER', '${safeJsName}')">
+              โควตา
+            </button>
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="openUserModal(${u.id})">
               แก้ไข
             </button>
@@ -3992,6 +4089,7 @@
           </td>
         </tr>
       `;}).join('');
+      renderQuotaRulesSection();
     }
 
     function openUserModal(userId = null) {
@@ -4197,7 +4295,17 @@
         }));
       }
 
-      const rowsHtml = deptsList.map((d, idx) => `
+      const allQuotas = getQuotasDB();
+      const rowsHtml = deptsList.map((d, idx) => {
+        const dRules = allQuotas.filter(q =>
+          String(q.targetType || q.target_type || '').toUpperCase() === 'DEPT' &&
+          String(q.targetKey || q.target_key || '').trim() === String(d.name || '').trim()
+        );
+        const quotaBadge = dRules.length > 0
+          ? `<span style="background:#fffbeb; color:#b45309; border:1px solid #fde68a; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:600;">${dRules.length} กฎโควตา</span>`
+          : `<span style="color:#94a3b8; font-size:0.75rem;">ไม่จำกัด</span>`;
+        const safeJsDept = String(d.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return `
         <tr style="border-bottom: 1px solid #e2e8f0;">
           <td style="padding: 10px 8px; text-align: center; color: #64748b; font-weight: 500;">${idx + 1}</td>
           <td style="padding: 10px 8px; font-weight: 600; color: #1e293b; text-align: left;">
@@ -4208,20 +4316,24 @@
               ${d.user_count || 0} ท่าน
             </span>
           </td>
+          <td style="padding: 10px 8px; text-align: center;">${quotaBadge}</td>
           <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${escapeHtml(d.name)}')">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px; color: #b45309; border-color: #fcd34d; background: #fffbeb;" onclick="openQuotaModal('DEPT', '${safeJsDept}')">
+              ตั้งโควตา
+            </button>
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; margin-right: 4px;" onclick="promptEditDepartment(${d.id}, '${safeJsDept}')">
               ${vIcons.pen} แก้ไขชื่อ
             </button>
-            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${escapeHtml(d.name)}', ${d.user_count || 0})">
+            <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.775rem; color: #dc2626; border-color: #fca5a5;" onclick="promptDeleteDepartment(${d.id}, '${safeJsDept}', ${d.user_count || 0})">
               ${vIcons.trash} ลบ
             </button>
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
 
       Swal.fire({
         title: 'จัดการกลุ่มงาน / หน่วยงาน (สวท.)',
-        width: '760px',
+        width: '880px',
         html: `
           <div style="text-align: left; margin-top: 0.5rem; font-size: 0.9rem;">
             <!-- เพิ่มกลุ่มงานใหม่ -->
@@ -4240,12 +4352,13 @@
                   <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0; z-index: 1;">
                     <th style="padding: 10px 8px; text-align: center; width: 45px; color: #475569;">#</th>
                     <th style="padding: 10px 8px; text-align: left; color: #475569;">ชื่อกลุ่มงาน / หน่วยงาน</th>
-                    <th style="padding: 10px 8px; text-align: center; width: 120px; color: #475569;">จำนวนบุคลากร</th>
-                    <th style="padding: 10px 8px; text-align: right; width: 170px; color: #475569;">จัดการ</th>
+                    <th style="padding: 10px 8px; text-align: center; width: 110px; color: #475569;">บุคลากร</th>
+                    <th style="padding: 10px 8px; text-align: center; width: 120px; color: #475569;">โควตาประจำเดือน</th>
+                    <th style="padding: 10px 8px; text-align: right; width: 245px; color: #475569;">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody id="manageDeptsTbody">
-                  ${rowsHtml || '<tr><td colspan="4" style="text-align: center; padding: 1.5rem; color: #94a3b8;">ยังไม่มีกลุ่มงานในระบบ</td></tr>'}
+                  ${rowsHtml || '<tr><td colspan="5" style="text-align: center; padding: 1.5rem; color: #94a3b8;">ยังไม่มีกลุ่มงานในระบบ</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -4456,6 +4569,287 @@
       }
     }
 
+    // Per-Personnel & Per-Department Quota Management (Staff Portal)
+    let currentQuotaFilterType = 'ALL';
+
+    function filterQuotaRulesType(qType, btn) {
+      currentQuotaFilterType = qType || 'ALL';
+      document.querySelectorAll('.quota-filter-btn').forEach(b => {
+        const isActive = b.getAttribute('data-qtype') === currentQuotaFilterType;
+        b.style.background = isActive ? 'var(--primary)' : 'white';
+        b.style.color = isActive ? 'white' : '#334155';
+        b.style.borderColor = isActive ? 'var(--primary)' : '#cbd5e1';
+      });
+      renderQuotaRulesSection();
+    }
+
+    function getMonthlyUsageForQuotaRule(targetType, targetKey, itemId) {
+      const reqs = getReqsDB();
+      const now = new Date();
+      const curYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const curBeYm = `REQ-${now.getFullYear() + 543}${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const cleanTarget = String(targetKey || '').trim().toLowerCase();
+      let totalUsed = 0;
+
+      reqs.forEach(r => {
+        if (r.status === 'REJECTED') return;
+        const isThisMonth = (r.created_at && r.created_at.startsWith(curYm)) || (r.id && r.id.startsWith(curBeYm));
+        if (!isThisMonth) return;
+        const matchesTarget = targetType === 'DEPT'
+          ? String(r.dept || '').trim().toLowerCase() === cleanTarget
+          : String(r.requester || '').trim().toLowerCase() === cleanTarget;
+        if (!matchesTarget) return;
+        (r.items || []).forEach(it => {
+          if (Number(itemId) === 0 || Number(it.itemId) === Number(itemId)) {
+            totalUsed += Number(it.totalPieces || 0);
+          }
+        });
+      });
+      return totalUsed;
+    }
+
+    function renderQuotaRulesSection() {
+      const tbody = document.getElementById('quotaRulesTableBody');
+      if (!tbody) return;
+      const quotas = getQuotasDB();
+      const items = getItemsDB();
+      const itemsMap = new Map(items.map(i => [Number(i.id), i]));
+
+      const filtered = quotas.filter(q => {
+        const t = String(q.targetType || q.target_type || '').toUpperCase();
+        return currentQuotaFilterType === 'ALL' || t === currentQuotaFilterType;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--neutral-400);">
+              ยังไม่มีกฎโควต้าเฉพาะตามบุคลากรหรือกลุ่มงาน (คลิก "+ กำหนดโควตากลุ่มงาน" หรือ "+ กำหนดโควตารายบุคลากร" เพื่อตั้งค่า)
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(q => {
+        const tType = String(q.targetType || q.target_type || 'DEPT').toUpperCase();
+        const tKey = q.targetKey || q.target_key || '';
+        const iId = Number(q.itemId ?? q.item_id ?? 0);
+        const lim = Number(q.monthlyLimit ?? q.monthly_limit ?? 0);
+        const itemObj = iId > 0 ? itemsMap.get(iId) : null;
+        const itemName = iId === 0 ? 'ทุกพัสดุในคลัง (ค่าเริ่มต้นต่อรายการ)' : (itemObj ? itemObj.name : (q.itemName || `พัสดุ #${iId}`));
+        const unitName = itemObj ? (itemObj.unit_piece_name || 'ชิ้น') : (q.unitPiece || 'ชิ้น');
+        const used = getMonthlyUsageForQuotaRule(tType, tKey, iId);
+        const pct = lim > 0 ? Math.min(100, Math.round((used / lim) * 100)) : 0;
+
+        const typeBadge = tType === 'DEPT'
+          ? `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">กลุ่มงาน</span>`
+          : `<span style="background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">รายบุคลากร</span>`;
+
+        const limitDisplay = lim > 0
+          ? `<strong style="color: #b45309;">${lim.toLocaleString()} ${escapeHtml(unitName)}</strong>`
+          : `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">ไม่จำกัด (ยกเว้น)</span>`;
+
+        const usageColor = lim > 0 && used >= lim ? '#dc2626' : (lim > 0 && pct >= 80 ? '#d97706' : '#0f766e');
+
+        return `
+          <tr>
+            <td>${typeBadge}</td>
+            <td><strong>${escapeHtml(tKey)}</strong></td>
+            <td style="color: var(--neutral-700);">${escapeHtml(itemName)}</td>
+            <td>${limitDisplay}</td>
+            <td>
+              <span style="font-weight: 600; color: ${usageColor};">${used.toLocaleString()} ${escapeHtml(unitName)}</span>
+              ${lim > 0 ? `<small style="color: var(--neutral-500);">(${pct}%)</small>` : ''}
+            </td>
+            <td style="color: var(--neutral-600); font-size: 0.825rem;">${escapeHtml(q.note || '-')}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; margin-right: 4px;" onclick="openQuotaModal('${tType}', '', ${q.id})">
+                แก้ไข
+              </button>
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem; color: var(--danger);" onclick="deleteQuotaRule(${q.id})">
+                ลบ
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openQuotaModal(defaultType = 'DEPT', defaultKey = '', ruleId = null) {
+      const quotas = getQuotasDB();
+      const existing = ruleId !== null ? quotas.find(q => Number(q.id) === Number(ruleId)) : null;
+      const initType = existing ? String(existing.targetType || existing.target_type || 'DEPT').toUpperCase() : (defaultType || 'DEPT');
+      const initKey = existing ? (existing.targetKey || existing.target_key || '') : (defaultKey || '');
+      const initItemId = existing ? Number(existing.itemId ?? existing.item_id ?? 0) : 0;
+      const initLimit = existing ? Number(existing.monthlyLimit ?? existing.monthly_limit ?? 0) : 500;
+      const initNote = existing ? (existing.note || '') : '';
+
+      const deptNames = getAllDeptNames();
+      const users = getUsersDB();
+      const items = getItemsDB();
+
+      const buildTargetOptions = (tType, selectedKey) => {
+        if (tType === 'DEPT') {
+          return deptNames.map(d =>
+            `<option value="${escapeHtml(d)}" ${d === selectedKey ? 'selected' : ''}>${escapeHtml(d)}</option>`
+          ).join('');
+        }
+        return users.map(u =>
+          `<option value="${escapeHtml(u.name)}" ${u.name === selectedKey ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.dept || '-')})</option>`
+        ).join('');
+      };
+
+      const itemOptions = `<option value="0" ${initItemId === 0 ? 'selected' : ''}>ทุกพัสดุในคลัง (กำหนดเพดานต่อรายการ)</option>` +
+        items.map(it =>
+          `<option value="${it.id}" ${Number(it.id) === initItemId ? 'selected' : ''}>${escapeHtml(it.name)} (หน่วย: ${escapeHtml(it.unit_piece_name || 'ชิ้น')})</option>`
+        ).join('');
+
+      Swal.fire({
+        title: existing ? 'แก้ไขกฎโควตาประจำเดือน' : 'กำหนดโควต้าประจำเดือน (บุคลากร / กลุ่มงาน)',
+        width: '560px',
+        html: `
+          <div style="text-align: left; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">ประเภทเป้าหมาย *</label>
+              <select id="swal-quota-type" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                <option value="DEPT" ${initType === 'DEPT' ? 'selected' : ''}>กลุ่มงาน / หน่วยงาน (ควบคุมยอดรวมทั้งหน่วยงาน)</option>
+                <option value="USER" ${initType === 'USER' ? 'selected' : ''}>บุคลากรรายบุคคล (กำหนดสิทธิ์เฉพาะท่าน)</option>
+              </select>
+            </div>
+            <div>
+              <label id="swal-quota-target-label" style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">${initType === 'DEPT' ? 'เลือกกลุ่มงาน / หน่วยงาน *' : 'เลือกบุคลากร *'}</label>
+              <select id="swal-quota-target" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                ${buildTargetOptions(initType, initKey)}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">รายการพัสดุที่กำหนดโควตา *</label>
+              <select id="swal-quota-item" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;">
+                ${itemOptions}
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #b45309; display: block; margin-bottom: 4px;">โควตาเบิกสูงสุดต่อเดือน (หน่วยย่อย / ชิ้น) *</label>
+              <input type="number" id="swal-quota-limit" min="0" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.95rem;" value="${initLimit}">
+              <div style="font-size: 0.76rem; color: #64748b; margin-top: 4px;">ใส่ <strong>0</strong> หากต้องการยกเว้นไม่จำกัดโควตาเฉพาะเป้าหมายนี้ (สำหรับบุคลากร: จะแทนที่ค่ามาตรฐานของคลัง)</div>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">หมายเหตุ</label>
+              <input type="text" id="swal-quota-note" class="swal2-input" style="margin: 0; width: 100%; height: 40px; font-size: 0.9rem;" placeholder="เช่น โควตาจัดสอบกลางภาค หรือ สิทธิ์หัวหน้างาน" value="${escapeHtml(initNote)}">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#1e40af',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'บันทึกกฎโควตา',
+        cancelButtonText: 'ยกเลิก',
+        didOpen: () => {
+          const typeSel = document.getElementById('swal-quota-type');
+          const targetSel = document.getElementById('swal-quota-target');
+          const lbl = document.getElementById('swal-quota-target-label');
+          if (typeSel && targetSel) {
+            typeSel.addEventListener('change', () => {
+              const t = typeSel.value;
+              if (lbl) lbl.innerText = t === 'DEPT' ? 'เลือกกลุ่มงาน / หน่วยงาน *' : 'เลือกบุคลากร *';
+              targetSel.innerHTML = buildTargetOptions(t, '');
+            });
+          }
+        },
+        preConfirm: () => {
+          const targetType = document.getElementById('swal-quota-type').value;
+          const targetKey = document.getElementById('swal-quota-target').value.trim();
+          const itemId = Math.max(0, parseInt(document.getElementById('swal-quota-item').value, 10) || 0);
+          const rawLimit = document.getElementById('swal-quota-limit').value;
+          const monthlyLimit = Math.max(0, parseInt(rawLimit, 10));
+          const note = document.getElementById('swal-quota-note').value.trim();
+          if (!targetKey) {
+            Swal.showValidationMessage('กรุณาเลือกกลุ่มงานหรือบุคลากร');
+            return false;
+          }
+          if (isNaN(monthlyLimit) || monthlyLimit < 0) {
+            Swal.showValidationMessage('จำนวนโควตาต้องเป็นตัวเลข 0 ขึ้นไป');
+            return false;
+          }
+          return { id: existing ? existing.id : null, targetType, targetKey, itemId, monthlyLimit, note };
+        }
+      }).then(async (res) => {
+        if (!res.isConfirmed || !res.value) return;
+        const staff = getLoggedInStaff();
+        const payload = { ...res.value, updatedBy: staff.name || staff.username || 'เจ้าหน้าที่พัสดุ สวท.' };
+        const apiRes = await postToMySQLAPI('saveQuota', payload);
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: apiRes.message || 'ไม่สามารถบันทึกกฎโควตาได้' });
+          return;
+        }
+        const list = getQuotasDB();
+        const itemMatch = items.find(i => Number(i.id) === Number(payload.itemId));
+        const savedRecord = {
+          id: (apiRes && apiRes.id) ? Number(apiRes.id) : (payload.id || (list.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1)),
+          targetType: payload.targetType,
+          target_type: payload.targetType,
+          targetKey: payload.targetKey,
+          target_key: payload.targetKey,
+          itemId: payload.itemId,
+          item_id: payload.itemId,
+          itemName: payload.itemId === 0 ? 'ทุกพัสดุในคลัง (ค่าเริ่มต้น)' : (itemMatch ? itemMatch.name : ''),
+          unitPiece: itemMatch ? (itemMatch.unit_piece_name || 'ชิ้น') : 'ชิ้น',
+          monthlyLimit: payload.monthlyLimit,
+          monthly_limit: payload.monthlyLimit,
+          note: payload.note,
+          updatedBy: payload.updatedBy
+        };
+        const updatedList = list.filter(q =>
+          Number(q.id) !== Number(savedRecord.id) &&
+          !(String(q.targetType || q.target_type || '').toUpperCase() === payload.targetType &&
+            String(q.targetKey || q.target_key || '').trim() === payload.targetKey &&
+            Number(q.itemId ?? q.item_id ?? 0) === Number(payload.itemId))
+        );
+        updatedList.push(savedRecord);
+        saveQuotasDB(updatedList);
+        renderStaffUsersTable();
+        Swal.fire({
+          icon: 'success',
+          title: 'บันทึกกฎโควตาสำเร็จ',
+          text: `ตั้งค่าโควตาสำหรับ "${payload.targetKey}" เรียบร้อยแล้ว`,
+          timer: 1600,
+          showConfirmButton: false
+        });
+      });
+    }
+
+    function deleteQuotaRule(ruleId) {
+      const list = getQuotasDB();
+      const target = list.find(q => Number(q.id) === Number(ruleId));
+      if (!target) return;
+      Swal.fire({
+        title: 'ยืนยันการลบกฎโควต้า?',
+        text: `ต้องการลบกฎโควตาของ "${target.targetKey || target.target_key}" ใช่หรือไม่ (ระบบจะกลับไปใช้ค่ามาตรฐานของคลัง)`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'ลบกฎโควตา',
+        cancelButtonText: 'ยกเลิก'
+      }).then(async (res) => {
+        if (!res.isConfirmed) return;
+        const apiRes = await postToMySQLAPI('deleteQuota', {
+          id: ruleId,
+          targetType: target.targetType || target.target_type,
+          targetKey: target.targetKey || target.target_key,
+          itemId: target.itemId ?? target.item_id ?? 0
+        });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({ icon: 'error', title: 'ลบกฎไม่สำเร็จ', text: apiRes.message || 'ไม่สามารถลบกฎโควตาได้' });
+          return;
+        }
+        saveQuotasDB(list.filter(q => Number(q.id) !== Number(ruleId)));
+        renderStaffUsersTable();
+        Swal.fire({ icon: 'success', title: 'ลบกฎโควตาเรียบร้อยแล้ว', timer: 1400, showConfirmButton: false });
+      });
+    }
+
     function openAddDeptModal() {
       openManageDeptsModal();
     }
@@ -4464,6 +4858,7 @@
       renderStaffRequisitions(currentStaffStatus);
       renderInventoryTable();
       renderStaffUsersTable();
+      renderQuotaRulesSection();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -4492,7 +4887,7 @@
 
     // Real-time synchronization across tabs/windows
     window.addEventListener('storage', (e) => {
-      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY) {
+      if (e.key === DB_REQS_KEY || e.key === DB_ITEMS_KEY || e.key === DB_USERS_KEY || e.key === DB_DEPTS_KEY || e.key === DB_QUOTAS_KEY) {
         loadStaffDashboard();
       }
     });

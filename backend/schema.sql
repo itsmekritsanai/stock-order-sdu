@@ -1,5 +1,5 @@
 -- =============================================================================
--- ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.2.4)
+-- ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.3.0)
 -- MySQL 8.0+ / MariaDB 10.5+ Database Schema & Initial Seed Data
 -- =============================================================================
 
@@ -144,6 +144,24 @@ CREATE TABLE `stock_transactions` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_tx_item_id` (`item_id`),
   CONSTRAINT `fk_tx_inventory` FOREIGN KEY (`item_id`) REFERENCES `inventory_items` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------------------------------
+-- 7. ตาราง quota_rules (กำหนดโควตารายเดือนแยกตามบุคลากรและกลุ่มงาน/หน่วยงาน)
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS `quota_rules`;
+CREATE TABLE `quota_rules` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `target_type` ENUM('USER', 'DEPT') NOT NULL COMMENT 'ประเภทเป้าหมาย (USER=บุคลากร, DEPT=กลุ่มงาน)',
+  `target_key` VARCHAR(255) NOT NULL COMMENT 'ชื่อบุคลากร/Username หรือชื่อกลุ่มงาน',
+  `item_id` INT NOT NULL DEFAULT 0 COMMENT 'รหัสพัสดุ (0 = ทุกพัสดุในคลัง)',
+  `monthly_limit` INT NOT NULL DEFAULT 0 COMMENT 'โควตาสูงสุดต่อเดือน (0 = ยกเว้นไม่จำกัด)',
+  `note` VARCHAR(255) DEFAULT '' COMMENT 'หมายเหตุ',
+  `updated_by` VARCHAR(150) DEFAULT '' COMMENT 'ผู้ตั้งค่าล่าสุด',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uq_quota_target_item` (`target_type`, `target_key`, `item_id`),
+  INDEX `idx_quota_target` (`target_type`, `target_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =============================================================================

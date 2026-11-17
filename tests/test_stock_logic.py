@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.2.5"
+        assert SYSTEM_VERSION == "3.3.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1110,6 +1110,83 @@ class TestPhase8ExtendedRequirements:
             stf_html = f.read()
         assert "const AUTH_BYPASS =" in stf_html
         assert "staffAuthBypassBadge" in stf_html
+
+    def test_custom_user_and_department_quota_rules(self):
+        """Verify per-personnel and per-department monthly quota resolution, enforcement, and Staff/Requester UI."""
+        import server
+        from unittest.mock import MagicMock, patch
+
+        # 1. Test resolve_effective_monthly_limits precedence:
+        # USER+item overrides USER+all(0) and item_default; DEPT+item overrides DEPT+all(0)
+        mock_cur = MagicMock()
+        mock_cur.fetchall.return_value = [
+            {"target_type": "USER", "target_key": "สมชาย", "item_id": 0, "monthly_limit": 800},
+            {"target_type": "USER", "target_key": "สมชาย", "item_id": 3, "monthly_limit": 200},
+            {"target_type": "DEPT", "target_key": "กลุ่มงานบริการวิชาการ", "item_id": 0, "monthly_limit": 2000},
+            {"target_type": "DEPT", "target_key": "กลุ่มงานบริการวิชาการ", "item_id": 3, "monthly_limit": 1000},
+        ]
+        u_lim, d_lim, u_src, d_src = server.resolve_effective_monthly_limits(mock_cur, 3, 500, "สมชาย", "กลุ่มงานบริการวิชาการ")
+        assert u_lim == 200
+        assert d_lim == 1000
+        assert u_src == "USER_ITEM"
+        assert d_src == "DEPT_ITEM"
+
+        # Fallback to item_id=0 general rule for another item
+        mock_cur.fetchall.return_value = [
+            {"target_type": "USER", "target_key": "สมชาย", "item_id": 0, "monthly_limit": 800},
+            {"target_type": "DEPT", "target_key": "กลุ่มงานบริการวิชาการ", "item_id": 0, "monthly_limit": 2000},
+        ]
+        u_lim2, d_lim2, u_src2, d_src2 = server.resolve_effective_monthly_limits(mock_cur, 7, 500, "สมชาย", "กลุ่มงานบริการวิชาการ")
+        assert u_lim2 == 800
+        assert d_lim2 == 2000
+        assert u_src2 == "USER_ALL"
+        assert d_src2 == "DEPT_ALL"
+
+        # 2. Test handle_create_requisition blocking when DEPT monthly quota exceeded
+        mock_conn = MagicMock()
+        mock_cur_req = MagicMock()
+        mock_cur_req.fetchall.return_value = [
+            {"target_type": "DEPT", "target_key": "กลุ่มงานบริการวิชาการ", "item_id": 3, "monthly_limit": 1000},
+        ]
+        mock_cur_req.fetchone.side_effect = [
+            {
+                "id": 3,
+                "name": "กระดาษคำตอบ",
+                "is_multi_unit": 1,
+                "on_hand_pieces": 32000,
+                "reserved_pieces": 0,
+                "pieces_per_box": 2000,
+                "monthly_limit": 0,
+                "unit_piece_name": "ใบ",
+            },
+            {"month_total": 850},  # department already used 850 out of 1000
+        ]
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur_req
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res_dept = server.handle_create_requisition({
+                "requester": "นางสาวพัชราภรณ์ ขำแป้ง",
+                "dept": "กลุ่มงานบริการวิชาการ",
+                "purpose": "ทดสอบโควตารายกลุ่มงาน",
+                "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200}],
+            })
+            assert res_dept["status"] == "error"
+            assert res_dept["code"] == "DEPT_QUOTA_EXCEEDED"
+            assert res_dept["details"]["remainingQuota"] == 150
+
+        # 3. Verify Staff UI & Requester UI integration
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "openQuotaModal" in stf_html
+        assert "renderQuotaRulesSection" in stf_html
+        assert "quotaRulesTableBody" in stf_html
+        assert "saveQuota" in stf_html
+        assert "deleteQuota" in stf_html
+
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "getQuotas" in idx_html
+        assert "qInfo.deptLimit" in idx_html
 
 
 

@@ -4,6 +4,7 @@
 -- =============================================================================
 
 -- Drop existing tables in reverse dependency order
+DROP TABLE IF EXISTS quota_rules CASCADE;
 DROP TABLE IF EXISTS stock_transactions CASCADE;
 DROP TABLE IF EXISTS requisition_items CASCADE;
 DROP TABLE IF EXISTS requisitions CASCADE;
@@ -141,6 +142,24 @@ CREATE TABLE stock_transactions (
 );
 
 CREATE INDEX idx_tx_item_id ON stock_transactions (item_id);
+
+-- -----------------------------------------------------------------------------
+-- 7. ตาราง quota_rules (กำหนดโควตารายเดือนแยกตามบุคลากรและกลุ่มงาน/หน่วยงาน)
+-- -----------------------------------------------------------------------------
+CREATE TABLE quota_rules (
+  id SERIAL PRIMARY KEY,
+  target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('USER', 'DEPT')),
+  target_key VARCHAR(255) NOT NULL,
+  item_id INT NOT NULL DEFAULT 0,
+  monthly_limit INT NOT NULL DEFAULT 0,
+  note VARCHAR(255) DEFAULT '',
+  updated_by VARCHAR(150) DEFAULT '',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (target_type, target_key, item_id)
+);
+
+CREATE INDEX idx_quota_target ON quota_rules (target_type, target_key);
 
 -- -----------------------------------------------------------------------------
 -- ฟังก์ชันและ Trigger สำหรับอัปเดต updated_at อัตโนมัติ
