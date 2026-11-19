@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.7.0"
+SYSTEM_VERSION = "3.7.1"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -6215,6 +6215,14 @@ __SEARCHABLE_SELECT_CSS__
 
     function openStockInModal(preselectedItemId = null) {
       const items = getItemsDB();
+      const defaultItem = (preselectedItemId !== null ? items.find(i => Number(i.id) === Number(preselectedItemId)) : null) || items[0];
+      const initId = defaultItem ? Number(defaultItem.id) : '';
+      const stockItemOptions = items.length > 0
+        ? items.map(i => {
+            const ratioTxt = i.is_multi_unit ? `1 ${i.unit_box_name} = ${i.pieces_per_box} ${i.unit_piece_name}` : `1 ${i.unit_piece_name}`;
+            return `<option value="${i.id}" ${Number(i.id) === initId ? 'selected' : ''}>${escapeHtml(i.name)} (${escapeHtml(i.category || 'พัสดุทั่วไป')} • ${escapeHtml(ratioTxt)} • คงเหลือ ${Number(i.on_hand_pieces).toLocaleString()} ${escapeHtml(i.unit_piece_name || 'ชิ้น')})</option>`;
+          }).join('')
+        : '<option value="">-- ไม่มีรายการพัสดุ --</option>';
 
       Swal.fire({
         title: 'บันทึกรับเข้าพัสดุใหม่',
@@ -6224,25 +6232,9 @@ __SEARCHABLE_SELECT_CSS__
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">
                 เลือกรายการพัสดุ: *
               </label>
-              <div style="position: relative;">
-                <div style="position: relative; display: flex; align-items: center;">
-                  <input type="text" id="swalStockSearchInput" class="swal2-input" 
-                         placeholder="พิมพ์ชื่อพัสดุเพื่อค้นหา (เช่น ซอง, กระดาษ, แม็ก)..." 
-                         autocomplete="off"
-                         style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
-                  <button type="button" id="swalStockToggleBtn" 
-                          style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center;">
-                    <svg class="svg-icon" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;"><polyline points="6 9 12 15 18 9"/></svg>
-                  </button>
-                </div>
-                <!-- Hidden input swalStockItem to maintain backward compatibility -->
-                <input type="hidden" id="swalStockItem" value="">
-
-                <!-- Dropdown list -->
-                <div id="swalStockDropdownList" 
-                     style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 220px; overflow-y: auto; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); z-index: 9999; display: none;">
-                </div>
-              </div>
+              <select id="swalStockItem" class="swal2-input" style="margin: 0; width: 100%; height: 42px; font-size: 0.925rem;">
+                ${stockItemOptions}
+              </select>
 
               <!-- Selected Item Info Badge -->
               <div id="swalStockItemBadge" 
@@ -6297,11 +6289,8 @@ __SEARCHABLE_SELECT_CSS__
         confirmButtonText: 'ยืนยันรับเข้าคลัง',
         cancelButtonText: 'ยกเลิก',
         didOpen: () => {
-          const searchInput = document.getElementById('swalStockSearchInput');
-          const dropdownList = document.getElementById('swalStockDropdownList');
-          const hiddenInput = document.getElementById('swalStockItem');
+          const itemSelectEl = document.getElementById('swalStockItem');
           const badgeEl = document.getElementById('swalStockItemBadge');
-          const toggleBtn = document.getElementById('swalStockToggleBtn');
           const boxLabelEl = document.getElementById('swalStockBoxLabel');
           const pieceLabelEl = document.getElementById('swalStockPieceLabel');
           const boxesEl = document.getElementById('swalStockBoxes');
@@ -6339,7 +6328,7 @@ __SEARCHABLE_SELECT_CSS__
           }
 
           function updateCostPreview() {
-            const id = parseInt(hiddenInput.value, 10);
+            const id = parseInt(itemSelectEl?.value, 10);
             const itm = items.find(i => Number(i.id) === id);
             const pUnit = itm ? (itm.unit_piece_name || 'ชิ้น') : 'ชิ้น';
             const bUnit = itm ? (itm.unit_box_name || 'กล่อง') : 'กล่อง';
@@ -6359,81 +6348,25 @@ __SEARCHABLE_SELECT_CSS__
             }
           }
 
-          function renderList(query = '') {
-            const cleanQuery = query.trim().toLowerCase();
-            const filtered = items.filter(i =>
-              !cleanQuery ||
-              (i.name && i.name.toLowerCase().includes(cleanQuery)) ||
-              (i.category && i.category.toLowerCase().includes(cleanQuery))
-            );
-
-            if (filtered.length === 0) {
-              dropdownList.innerHTML = `
-                <div style="padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.875rem;">
-                  ไม่พบรายการพัสดุที่ตรงกับ "${query}"
-                </div>
-              `;
-              return;
-            }
-
-            dropdownList.innerHTML = filtered.map(i => {
-              const isSelected = Number(hiddenInput.value) === Number(i.id);
-              const ratioTxt = i.is_multi_unit ? `1 ${i.unit_box_name} = ${i.pieces_per_box} ${i.unit_piece_name}` : `1 ${i.unit_piece_name}`;
-              return `
-                <div class="swal-stock-item-row" data-id="${i.id}" style="
-                  padding: 8px 12px;
-                  cursor: pointer;
-                  border-bottom: 1px solid #f1f5f9;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  background: ${isSelected ? '#eff6ff' : 'white'};
-                  transition: background 0.15s;
-                ">
-                  <div style="text-align: left;">
-                    <div style="font-weight: 600; font-size: 0.875rem; color: ${isSelected ? '#1e40af' : '#1e293b'};">${i.name}</div>
-                    <div style="font-size: 0.75rem; color: #64748b;">${i.category || 'พัสดุทั่วไป'} • <span style="color: #475569;">[${ratioTxt}]</span></div>
-                  </div>
-                  <span style="font-size: 0.75rem; background: ${i.on_hand_pieces > 0 ? '#dcfce7' : '#fee2e2'}; color: ${i.on_hand_pieces > 0 ? '#166534' : '#991b1b'}; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; margin-left: 8px;">
-                    ${Number(i.on_hand_pieces).toLocaleString()} ${i.unit_piece_name}
-                  </span>
-                </div>
-              `;
-            }).join('');
-
-            dropdownList.querySelectorAll('.swal-stock-item-row').forEach(row => {
-              row.addEventListener('click', () => {
-                const id = parseInt(row.getAttribute('data-id'), 10);
-                selectItem(id);
-              });
-              row.addEventListener('mouseenter', () => {
-                row.style.background = '#f8fafc';
-              });
-              row.addEventListener('mouseleave', () => {
-                const id = parseInt(row.getAttribute('data-id'), 10);
-                row.style.background = (Number(hiddenInput.value) === id) ? '#eff6ff' : 'white';
-              });
-            });
-          }
-
           function selectItem(id) {
             const itm = items.find(i => Number(i.id) === Number(id));
             if (!itm) return;
-            hiddenInput.value = itm.id;
-            searchInput.value = itm.name;
+            if (itemSelectEl && Number(itemSelectEl.value) !== Number(itm.id)) {
+              itemSelectEl.value = String(itm.id);
+            }
 
             const ratioTxt = itm.is_multi_unit ? `1 ${itm.unit_box_name} = ${itm.pieces_per_box} ${itm.unit_piece_name}` : `1 ${itm.unit_piece_name}`;
             if (badgeEl) {
               badgeEl.innerHTML = `
-                <span>คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
-                <span style="font-size: 0.75rem; color: #64748b;">อัตราส่วน: ${ratioTxt}</span>
+                <span>คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${escapeHtml(itm.unit_piece_name)}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">อัตราส่วน: ${escapeHtml(ratioTxt)}</span>
               `;
             }
             if (boxLabelEl) {
-              boxLabelEl.innerHTML = `จำนวนหน่วยใหญ่ (<strong>${itm.unit_box_name || 'กล่อง'}</strong>):`;
+              boxLabelEl.innerHTML = `จำนวนหน่วยใหญ่ (<strong>${escapeHtml(itm.unit_box_name || 'กล่อง')}</strong>):`;
             }
             if (pieceLabelEl) {
-              pieceLabelEl.innerHTML = `จำนวนหน่วยย่อย (<strong>${itm.unit_piece_name || 'ชิ้น'}</strong>):`;
+              pieceLabelEl.innerHTML = `จำนวนหน่วยย่อย (<strong>${escapeHtml(itm.unit_piece_name || 'ชิ้น')}</strong>):`;
             }
             if (priceHintEl) {
               const lastP = Number(itm.last_unit_price || 0);
@@ -6441,7 +6374,6 @@ __SEARCHABLE_SELECT_CSS__
                 ? `ราคาล่าสุดในระบบ: ${lastP.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท/${itm.unit_piece_name || 'ชิ้น'} (ใส่ 0 หากไม่ระบุราคา)`
                 : 'ใส่ 0 หากยังไม่ทราบราคาหรือไม่คิดค่าใช้จ่าย';
             }
-            dropdownList.style.display = 'none';
             updateCostPreview();
           }
 
@@ -6449,35 +6381,9 @@ __SEARCHABLE_SELECT_CSS__
           if (piecesEl) piecesEl.addEventListener('input', updateCostPreview);
           if (priceModeEl) priceModeEl.addEventListener('change', updateCostPreview);
           if (priceInputEl) priceInputEl.addEventListener('input', updateCostPreview);
-          enhanceAllSearchableSelects();
+          if (itemSelectEl) itemSelectEl.addEventListener('change', () => selectItem(itemSelectEl.value));
+          enhanceAllSearchableSelects(Swal.getPopup() || document);
 
-          searchInput.addEventListener('focus', () => {
-            renderList(searchInput.value);
-            dropdownList.style.display = 'block';
-          });
-          searchInput.addEventListener('input', (e) => {
-            renderList(e.target.value);
-            dropdownList.style.display = 'block';
-          });
-          toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (dropdownList.style.display === 'block') {
-              dropdownList.style.display = 'none';
-            } else {
-              renderList(searchInput.value);
-              dropdownList.style.display = 'block';
-              searchInput.focus();
-            }
-          });
-
-          document.addEventListener('click', (e) => {
-            if (!e.target.closest('#swalStockDropdownList') && e.target !== searchInput && e.target !== toggleBtn) {
-              dropdownList.style.display = 'none';
-            }
-          });
-
-          // Preselect first item or preselectedItemId
-          const initId = preselectedItemId || (items.length > 0 ? items[0].id : null);
           if (initId) {
             selectItem(initId);
           }
@@ -6577,6 +6483,13 @@ __SEARCHABLE_SELECT_CSS__
 
     function openStockAdjustModal(preselectedItemId = null) {
       const items = getItemsDB();
+      const defaultItem = (preselectedItemId !== null ? items.find(i => Number(i.id) === Number(preselectedItemId)) : null) || items[0];
+      const initItemId = defaultItem ? Number(defaultItem.id) : '';
+      const adjItemOptions = items.length > 0
+        ? items.map(i =>
+            `<option value="${i.id}" ${Number(i.id) === initItemId ? 'selected' : ''}>${escapeHtml(i.name)} (${escapeHtml(i.category || 'พัสดุทั่วไป')} • คงเหลือ ${Number(i.on_hand_pieces).toLocaleString()} ${escapeHtml(i.unit_piece_name || 'ชิ้น')})</option>`
+          ).join('')
+        : '<option value="">-- ไม่มีรายการพัสดุ --</option>';
 
       Swal.fire({
         title: 'ปรับยอดสต๊อกจริง',
@@ -6586,24 +6499,9 @@ __SEARCHABLE_SELECT_CSS__
               <label style="font-size: 0.85rem; font-weight: 600; color: #334155; display: block; margin-bottom: 4px;">
                 เลือกรายการพัสดุ: *
               </label>
-              <div style="position: relative;">
-                <div style="position: relative; display: flex; align-items: center;">
-                  <input type="text" id="swalAdjSearchInput" class="swal2-input" 
-                         placeholder="พิมพ์ชื่อพัสดุเพื่อค้นหา..." 
-                         autocomplete="off"
-                         style="width: 100%; margin: 0; height: 42px; font-size: 0.95rem; padding: 0.5rem 2.4rem 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;">
-                  <button type="button" id="swalAdjToggleBtn" 
-                          style="position: absolute; right: 8px; background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; display: flex; align-items: center;">
-                    <svg class="svg-icon" viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2;"><polyline points="6 9 12 15 18 9"/></svg>
-                  </button>
-                </div>
-                <input type="hidden" id="swalAdjItem" value="">
-
-                <!-- Dropdown list -->
-                <div id="swalAdjDropdownList" 
-                     style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 220px; overflow-y: auto; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); z-index: 9999; display: none;">
-                </div>
-              </div>
+              <select id="swalAdjItem" class="swal2-input" style="margin: 0; width: 100%; height: 42px; font-size: 0.925rem;">
+                ${adjItemOptions}
+              </select>
 
               <!-- Selected Item Info Badge -->
               <div id="swalAdjItemBadge" 
@@ -6639,78 +6537,20 @@ __SEARCHABLE_SELECT_CSS__
         confirmButtonText: 'บันทึกการปรับยอด',
         cancelButtonText: 'ยกเลิก',
         didOpen: () => {
-          const searchInput = document.getElementById('swalAdjSearchInput');
-          const dropdownList = document.getElementById('swalAdjDropdownList');
-          const hiddenInput = document.getElementById('swalAdjItem');
+          const itemSelectEl = document.getElementById('swalAdjItem');
           const badgeEl = document.getElementById('swalAdjItemBadge');
           const unitLabelEl = document.getElementById('swalAdjUnitLabel');
-          const toggleBtn = document.getElementById('swalAdjToggleBtn');
-
-          function renderList(query = '') {
-            const cleanQuery = query.trim().toLowerCase();
-            const filtered = items.filter(i =>
-              !cleanQuery ||
-              (i.name && i.name.toLowerCase().includes(cleanQuery)) ||
-              (i.category && i.category.toLowerCase().includes(cleanQuery))
-            );
-
-            if (filtered.length === 0) {
-              dropdownList.innerHTML = `
-                <div style="padding: 1rem; text-align: center; color: #94a3b8; font-size: 0.875rem;">
-                  ไม่พบรายการพัสดุที่ตรงกับคำค้น "${query}"
-                </div>
-              `;
-              return;
-            }
-
-            dropdownList.innerHTML = filtered.map(i => {
-              const isSelected = Number(hiddenInput.value) === Number(i.id);
-              return `
-                <div class="swal-adj-item-row" data-id="${i.id}" style="
-                  padding: 8px 12px;
-                  cursor: pointer;
-                  border-bottom: 1px solid #f1f5f9;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  background: ${isSelected ? '#eff6ff' : 'white'};
-                  transition: background 0.15s;
-                ">
-                  <div style="text-align: left;">
-                    <div style="font-weight: 600; font-size: 0.875rem; color: ${isSelected ? '#1e40af' : '#1e293b'};">${i.name}</div>
-                    <div style="font-size: 0.75rem; color: #64748b;">${i.category || 'พัสดุทั่วไป'}</div>
-                  </div>
-                  <span style="font-size: 0.75rem; background: ${i.on_hand_pieces > 0 ? '#dcfce7' : '#fee2e2'}; color: ${i.on_hand_pieces > 0 ? '#166534' : '#991b1b'}; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; margin-left: 8px;">
-                    ${Number(i.on_hand_pieces).toLocaleString()} ${i.unit_piece_name}
-                  </span>
-                </div>
-              `;
-            }).join('');
-
-            dropdownList.querySelectorAll('.swal-adj-item-row').forEach(row => {
-              row.addEventListener('click', () => {
-                const id = parseInt(row.getAttribute('data-id'), 10);
-                selectItem(id);
-              });
-              row.addEventListener('mouseenter', () => {
-                row.style.background = '#f8fafc';
-              });
-              row.addEventListener('mouseleave', () => {
-                const id = parseInt(row.getAttribute('data-id'), 10);
-                row.style.background = (Number(hiddenInput.value) === id) ? '#eff6ff' : 'white';
-              });
-            });
-          }
 
           function selectItem(id) {
             const itm = items.find(i => Number(i.id) === Number(id));
             if (!itm) return;
-            hiddenInput.value = itm.id;
-            searchInput.value = itm.name;
+            if (itemSelectEl && Number(itemSelectEl.value) !== Number(itm.id)) {
+              itemSelectEl.value = String(itm.id);
+            }
             if (badgeEl) {
               badgeEl.innerHTML = `
-                <span>ยอดคงคลังปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
-                <span style="font-size: 0.75rem; color: #64748b;">หมวด: ${itm.category || 'ทั่วไป'}</span>
+                <span>ยอดคงคลังปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${escapeHtml(itm.unit_piece_name)}</span>
+                <span style="font-size: 0.75rem; color: #64748b;">หมวด: ${escapeHtml(itm.category || 'ทั่วไป')}</span>
               `;
             }
             if (unitLabelEl) {
@@ -6720,46 +6560,13 @@ __SEARCHABLE_SELECT_CSS__
             if (qtyInput) {
               qtyInput.placeholder = `ระบุยอดใหม่ (ปัจจุบัน: ${itm.on_hand_pieces.toLocaleString()} ${itm.unit_piece_name})`;
             }
-            closeDropdown();
           }
 
-          function openDropdown() {
-            dropdownList.style.display = 'block';
-            renderList(searchInput.value);
+          if (itemSelectEl) {
+            itemSelectEl.addEventListener('change', () => selectItem(itemSelectEl.value));
           }
+          enhanceAllSearchableSelects(Swal.getPopup() || document);
 
-          function closeDropdown() {
-            dropdownList.style.display = 'none';
-          }
-
-          searchInput.addEventListener('focus', () => {
-            openDropdown();
-          });
-
-          searchInput.addEventListener('input', (e) => {
-            dropdownList.style.display = 'block';
-            renderList(e.target.value);
-          });
-
-          if (toggleBtn) {
-            toggleBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              if (dropdownList.style.display === 'block') {
-                closeDropdown();
-              } else {
-                searchInput.focus();
-                openDropdown();
-              }
-            });
-          }
-
-          document.addEventListener('click', (e) => {
-            if (!dropdownList.contains(e.target) && e.target !== searchInput && e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
-              closeDropdown();
-            }
-          });
-
-          const defaultItem = (preselectedItemId !== null ? items.find(i => Number(i.id) === Number(preselectedItemId)) : null) || items[0];
           if (defaultItem) {
             selectItem(defaultItem.id);
           }

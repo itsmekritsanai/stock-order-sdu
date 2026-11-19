@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.7.0"
+        assert SYSTEM_VERSION == "3.7.1"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1198,6 +1198,13 @@ class TestPhase8ExtendedRequirements:
             assert "sdu-ss-search-input" in html, f"{fname} missing searchable select input styling/markup"
             assert "selectEl.id === 'swal2-select'" in html, f"{fname} missing hidden swal2-select guard"
             assert "opt.selected = true;" in html, f"{fname} missing explicit opt.selected assignment"
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert '<select id="swalStockItem"' in stf_html
+        assert '<select id="swalAdjItem"' in stf_html
+        assert "swalAdjDropdownList" not in stf_html
+        assert "swalStockDropdownList" not in stf_html
 
     def test_save_user_role_persistence_and_await_guard(self):
         """Verify openUserModal awaits saveUser API and backend preserves explicit role changes."""

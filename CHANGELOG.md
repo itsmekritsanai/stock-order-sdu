@@ -18,6 +18,13 @@
 
 ---
 
+## [3.7.1] - 2026-11-19
+### Fixed
+- ปรับปรุง Dropdown เลือกรายการพัสดุในหน้าต่าง **"ปรับยอดสต๊อกจริง" (`swalAdjItem`)** และ **"บันทึกรับเข้าพัสดุใหม่" (`swalStockItem`)** บน [staff.html](staff.html) / [scripts/generate_separated_portals.py](scripts/generate_separated_portals.py) ให้ใช้ `<select>` ร่วมกับ Universal Searchable Dropdown (`enhanceSearchableSelect` / `.sdu-ss-wrapper`) เหมือน Dropdown อื่นๆ ทั้งระบบ เพื่อแก้ปัญหารูปแบบไม่สอดคล้องกันและอาการแสดงตัวเลือกเหลือรายการเดียวเมื่อเปิดซ้ำ
+- เพิ่มการตรวจสอบใน `test_universal_searchable_dropdowns_in_portals` ([tests/test_stock_logic.py](tests/test_stock_logic.py)) ให้ยืนยันว่า `swalStockItem` และ `swalAdjItem` ใช้ `<select>` มาตรฐานทั้งหมด
+
+---
+
 ## [3.7.0] - 2026-11-17
 ### Added
 - เพิ่มชุด **Containerized 1-Command Deploy (`Dockerfile`, `.dockerignore`, และ service `app` ใน `docker-compose.yml`)** เพื่อให้สามารถนำโปรเจกต์ไป Deploy พร้อมฐานข้อมูล PostgreSQL 17 และ pgAdmin 4 ได้ทันทีด้วยคำสั่งเดียว (`docker compose up -d --build`)
