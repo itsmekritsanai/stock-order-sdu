@@ -50,7 +50,7 @@
 
 ## [3.7.2] - 2026-11-24
 ### Security
-- บังคับตรวจสอบ Token สำหรับ Endpoint ข้อมูลภายในฝั่ง Backend (`getMonthlyAnalytics`, `exportMonthlyAnalyticsExcel`, `getItemTransactions` สำหรับเจ้าหน้าที่ และ `getRequisitions`, `getUsers`, `getQuotas`, `createRequisition` สำหรับผู้ที่เข้าสู่ระบบแล้ว) พร้อมจำกัด `trackRequisition` ให้ค้นหาเฉพาะเลขที่เอกสารที่ตรงตัว
+- เปิดใช้งานระบบเข้าสู่ระบบ (Login) เต็มรูปแบบ (`AUTH_BYPASS="false"`) และบังคับตรวจสอบ Token สำหรับ Endpoint ข้อมูลภายในฝั่ง Backend (`getMonthlyAnalytics`, `exportMonthlyAnalyticsExcel`, `getItemTransactions` สำหรับเจ้าหน้าที่ และ `getRequisitions`, `getUsers`, `getQuotas`, `createRequisition` สำหรับผู้ที่เข้าสู่ระบบแล้ว) พร้อมจำกัด `trackRequisition` ให้ค้นหาเฉพาะเลขที่เอกสารที่ตรงตัว
 - แก้ไขระบบ Login Fallback ใน `index.html` และ `staff.html` ให้ใช้โหมดออฟไลน์ (`localStorage`) เฉพาะเมื่อเชื่อมต่อ API ไม่ได้เท่านั้น ไม่ให้ทับผลปฏิเสธรหัสผ่านจาก Backend, บันทึกและส่ง `requester_token` / `staff_token` ทุกคำขอ, และไม่เรียก `syncFromMySQLAPI()` ก่อนเข้าสู่ระบบ
 - นำฟิลด์ `"password"` ออกจาก `defaultUsers` ที่ฝังลงไฟล์ HTML สาธารณะ, เข้ารหัสรหัสผ่านตั้งต้นใน PostgreSQL migration ด้วย PBKDF2-SHA256 และใช้ `ON CONFLICT (id) DO NOTHING` ไม่ให้เขียนทับบัญชี Demo User ทุกครั้งที่รีสตาร์ท
 - ปิดจุดเสี่ยง XSS ใน `innerHTML` (`escapeHtml(filterText)`, `isSafeSignatureDataUrl`, และหน่วยนับพัสดุ), เพิ่ม HTTP Security Headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`), และไม่ส่ง raw database exception กลับให้ Client
@@ -66,9 +66,10 @@
 
 ---
 
-## [3.7.1] - 2026-11-24
-### Changed
-- เปิดใช้งานระบบเข้าสู่ระบบ (Login) เต็มรูปแบบ โดยปิดโหมดทดสอบ `AUTH_BYPASS` (`AUTH_BYPASS="false"` ใน `.env`) และสร้างไฟล์พอร์ทัล `index.html`, `staff.html`, และ `portal.html` ใหม่ผ่าน `scripts/generate_separated_portals.py` ให้แสดงหน้าจอเข้าสู่ระบบและตรวจสอบสิทธิ์ Token ตามปกติ
+## [3.7.1] - 2026-11-19
+### Fixed
+- ปรับปรุง Dropdown เลือกรายการพัสดุในหน้าต่าง **"ปรับยอดสต๊อกจริง" (`swalAdjItem`)** และ **"บันทึกรับเข้าพัสดุใหม่" (`swalStockItem`)** บน [staff.html](staff.html) / [scripts/generate_separated_portals.py](scripts/generate_separated_portals.py) ให้ใช้ `<select>` ร่วมกับ Universal Searchable Dropdown (`enhanceSearchableSelect` / `.sdu-ss-wrapper`) เหมือน Dropdown อื่นๆ ทั้งระบบ เพื่อแก้ปัญหารูปแบบไม่สอดคล้องกันและอาการแสดงตัวเลือกเหลือรายการเดียวเมื่อเปิดซ้ำ
+- เพิ่มการตรวจสอบใน `test_universal_searchable_dropdowns_in_portals` ([tests/test_stock_logic.py](tests/test_stock_logic.py)) ให้ยืนยันว่า `swalStockItem` และ `swalAdjItem` ใช้ `<select>` มาตรฐานทั้งหมด
 
 ---
 
