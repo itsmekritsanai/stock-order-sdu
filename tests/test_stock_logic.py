@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.7.6"
+        assert SYSTEM_VERSION == "3.7.7"
 
 
 class TestPostgresSchemaAndConfiguration:

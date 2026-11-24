@@ -18,6 +18,12 @@
 
 ---
 
+## [3.7.7] - 2026-11-25
+### Fixed
+- แก้ไขคำเตือน Static Analyzer / Pylance ใน `backend/server.py` (`Optional[str]` สำหรับ `generate_staff_token` และ `# type: ignore[import-not-found]` สำหรับ fallback import `mysql.connector` / `excel_export`) พร้อมตั้งค่า workspace `.vscode/settings.json` ให้ชี้ไปที่ `.venv\Scripts\python.exe` และ `backend` path
+
+---
+
 ## [3.7.6] - 2026-11-24
 ### Added
 - เพิ่มปุ่มสลับพอร์ทัลแบบ 1 คลิก (**Cross-Portal SSO**) โดยไม่ต้องกรอกรหัสผ่านซ้ำ: ปุ่ม **"ขอเบิกพัสดุ"** บน Header ของ `staff.html` สำหรับหัวหน้าหน่วยงาน/เจ้าหน้าที่/ผู้ดูแลระบบ และปุ่ม **"หน้าอนุมัติคำขอ (หัวหน้า)" / "หน้าจัดการคลังพัสดุ" / "หน้าผู้ดูแลระบบคลัง"** บน Header ของ `index.html` (แสดงเฉพาะผู้ที่มีสิทธิ์ `HEAD`/`STAFF`/`ADMIN`)

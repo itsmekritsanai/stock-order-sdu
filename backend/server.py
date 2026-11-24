@@ -20,14 +20,15 @@ import threading
 import time
 from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from typing import Optional
 from urllib.parse import parse_qs, urlparse
 
 try:
-    from excel_export import build_monthly_analytics_xlsx
+    from excel_export import build_monthly_analytics_xlsx  # type: ignore[import-not-found]
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.7.6"
+SYSTEM_VERSION = "3.7.7"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -435,7 +436,7 @@ def get_db_connection(include_db=True):
             ensure_database_schema(conn)
         return conn
     except ImportError:
-        import mysql.connector
+        import mysql.connector  # type: ignore[import-not-found]
 
         conn = mysql.connector.connect(
             host=CONFIG["DB_HOST"],
@@ -2652,7 +2653,7 @@ def verify_requester_token(token: str, username: str = "") -> bool:
         return False
 
 
-def generate_staff_token(username: str = None) -> str:
+def generate_staff_token(username: Optional[str] = None) -> str:
     """Generate HMAC-SHA256 signed session token for staff."""
     username = username or CONFIG.get("STAFF_USERNAME", "admin_staff")
     ts = str(int(time.time()))
