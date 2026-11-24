@@ -9,6 +9,28 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: sdu_inventory
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_TYPE: postgres
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgrespassword
+      DB_NAME: sdu_inventory
+      AUTH_BYPASS: "false"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -22,6 +44,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Initialize PostgreSQL Schema
+        run: |
+          python backend/init_db.py
 
       - name: Run Project Rule Verification
         run: |

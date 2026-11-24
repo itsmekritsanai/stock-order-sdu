@@ -18,6 +18,60 @@
 
 ---
 
+## [3.7.6] - 2026-11-24
+### Added
+- เพิ่มปุ่มสลับพอร์ทัลแบบ 1 คลิก (**Cross-Portal SSO**) โดยไม่ต้องกรอกรหัสผ่านซ้ำ: ปุ่ม **"ขอเบิกพัสดุ"** บน Header ของ `staff.html` สำหรับหัวหน้าหน่วยงาน/เจ้าหน้าที่/ผู้ดูแลระบบ และปุ่ม **"หน้าอนุมัติคำขอ (หัวหน้า)" / "หน้าจัดการคลังพัสดุ" / "หน้าผู้ดูแลระบบคลัง"** บน Header ของ `index.html` (แสดงเฉพาะผู้ที่มีสิทธิ์ `HEAD`/`STAFF`/`ADMIN`)
+- อัปเดต `handle_login_staff` และ `handle_login_requester` ใน `backend/server.py` ให้ส่ง Token คู่ขนานสำหรับบัญชีที่มีสิทธิ์เข้าได้ทั้ง 2 พอร์ทัล พร้อมเปิดแท็บ **"รอหัวหน้าอนุมัติ (`VERIFIED`)"** อัตโนมัติทันทีที่หัวหน้าเข้าสู่หน้า `staff.html`
+
+---
+
+## [3.7.5] - 2026-11-24
+### Changed
+- ปรับหน้าจอเข้าสู่ระบบ (Login) ของทั้ง `index.html` และ `staff.html` ให้เหลือเฉพาะช่องกรอก **ชื่อผู้ใช้งาน + รหัสผ่าน** (นำแผงปุ่มเลือก 4 บทบาทออก) โดยระบบจะตรวจสอบ Role จริงจากบัญชีและนำเข้าสู่พอร์ทัล/สิทธิ์ที่ตรงกับผู้ใช้งานโดยอัตโนมัติ (`STAFF`, `HEAD`, `ADMIN`, `REQUESTER`)
+
+---
+
+## [3.7.4] - 2026-11-24
+### Changed
+- จัดเรียงและปรับโฉม UI หน้า `portal.html` ใหม่ทั้งหมดให้สมดุลภายใต้กริดความกว้างเดียวกัน (`1060px`), เพิ่มแถบ Hero สถิติภาพรวมของระบบ, จัดหัวการ์ดพอร์ทัลแบบกะทัดรัดพร้อมอัปเดตข้อความคุณสมบัติให้ตรงกับระบบปัจจุบัน, ปรับโซนทางลัด 4 บทบาทเป็นกริด 4 คอลัมน์สมมาตร, เพิ่มแถบลำดับขั้นตอนการเบิกจ่าย 4 ขั้นตอน, และเพิ่มการตรวจสอบสถานะเซิร์ฟเวอร์แบบเรียลไทม์ผ่าน `/api?action=health`
+
+---
+
+## [3.7.3] - 2026-11-24
+### Fixed
+- แก้ไขฟังก์ชันบันทึกข้อมูลทั้งหมดใน `staff.html` (`rejectRequisition`, `confirmCompleteRequisition`, `openStockInModal`, `openStockAdjustModal`, `openItemModal`, `promptSetMinAlert`, `ensureDeptExists`) ให้ `await postToMySQLAPI(...)` และตรวจสอบข้อผิดพลาดจาก Database ก่อนบันทึก `localStorage` พร้อมปิดช่องโหว่ข้าม `DB_ERROR` ใน `verifyRequisition`/`approveRequisition` และซิงค์ `apiRes.docNo` ใน `submitRequisition`
+- แก้ไขการสร้างพัสดุและบุคลากรใหม่ (`openItemModal` / `openUserModal`) ให้ส่ง `id: null` เพื่อใช้ `SERIAL RETURNING id` จากฐานข้อมูล ป้องกันปัญหา ID ชนแถวที่ลบแล้ว (`is_active = 0`) และซิงค์ PostgreSQL sequence (`setval`) รวมถึงเพิ่ม `SAVEPOINT` retry กรณีสุ่มเลขที่เอกสาร `docNo` ซ้ำใน `handle_create_requisition`
+
+### Added
+- บันทึก Audit Trail (`INITIAL_STOCK`) ลงตาราง `stock_transactions` อัตโนมัติเมื่อเพิ่มรายการพัสดุใหม่พร้อมสต๊อกตั้งต้น (`on_hand_pieces > 0`) ใน `handle_save_item`
+- เพิ่ม `CHECK` constraints (`on_hand_pieces >= 0`, `reserved_pieces >= 0`, `pieces_per_box >= 1`, `total_pieces > 0`), เปลี่ยน `stock_transactions.item_id` เป็น `ON DELETE RESTRICT`, เพิ่มดัชนี (`idx_req_dept`, `idx_tx_created_at`, `idx_tx_type_created_at`) และ Trigger `trg_quota_rules_updated_at` ใน `backend/schema_postgres.sql`, `backend/schema.sql`, และ `ensure_database_schema` พร้อมเพิ่มชุดทดสอบ `test_db_persistence_and_schema_hardening_v373`
+
+---
+
+## [3.7.2] - 2026-11-24
+### Security
+- บังคับตรวจสอบ Token สำหรับ Endpoint ข้อมูลภายในฝั่ง Backend (`getMonthlyAnalytics`, `exportMonthlyAnalyticsExcel`, `getItemTransactions` สำหรับเจ้าหน้าที่ และ `getRequisitions`, `getUsers`, `getQuotas`, `createRequisition` สำหรับผู้ที่เข้าสู่ระบบแล้ว) พร้อมจำกัด `trackRequisition` ให้ค้นหาเฉพาะเลขที่เอกสารที่ตรงตัว
+- แก้ไขระบบ Login Fallback ใน `index.html` และ `staff.html` ให้ใช้โหมดออฟไลน์ (`localStorage`) เฉพาะเมื่อเชื่อมต่อ API ไม่ได้เท่านั้น ไม่ให้ทับผลปฏิเสธรหัสผ่านจาก Backend, บันทึกและส่ง `requester_token` / `staff_token` ทุกคำขอ, และไม่เรียก `syncFromMySQLAPI()` ก่อนเข้าสู่ระบบ
+- นำฟิลด์ `"password"` ออกจาก `defaultUsers` ที่ฝังลงไฟล์ HTML สาธารณะ, เข้ารหัสรหัสผ่านตั้งต้นใน PostgreSQL migration ด้วย PBKDF2-SHA256 และใช้ `ON CONFLICT (id) DO NOTHING` ไม่ให้เขียนทับบัญชี Demo User ทุกครั้งที่รีสตาร์ท
+- ปิดจุดเสี่ยง XSS ใน `innerHTML` (`escapeHtml(filterText)`, `isSafeSignatureDataUrl`, และหน่วยนับพัสดุ), เพิ่ม HTTP Security Headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`), และไม่ส่ง raw database exception กลับให้ Client
+- ยกระดับความปลอดภัย Docker (`USER appuser` ใน `Dockerfile`, ผูกพอร์ต PostgreSQL/pgAdmin ไว้ที่ `127.0.0.1`, เปิด `PGADMIN_CONFIG_SERVER_MODE: "True"` และแยก `pgadmin` ไว้ใต้ `profiles: ["tools"]`) และให้ `backend/server.py` bind ตาม `CONFIG["HOST"]`
+
+### Fixed
+- รวมยอดพัสดุกรณีส่ง `itemId` ซ้ำใน `handle_create_requisition` เพื่อป้องกันการหลบการตรวจสต๊อก/โควตา, บังคับค่า `approved_pieces = total_pieces` และตรวจสอบรูปแบบเลขที่เอกสารฝั่งเซิร์ฟเวอร์, รวมถึงเรียงลำดับ `item_id` ก่อน `SELECT ... FOR UPDATE` เพื่อลดความเสี่ยง Deadlock
+- แก้ไขความเข้ากันได้กับ MySQL ใน `handle_get_departments` และ `handle_add_department` รวมถึงปรับข้อความตอบกลับฐานข้อมูลให้ตรงกับระบบ PostgreSQL 17
+
+### Changed
+- เพิ่ม `ThreadedConnectionPool` สำหรับ PostgreSQL, กรอง `requisition_items` เฉพาะใบเบิกที่ตรงเงื่อนไขใน `handle_get_requisitions`, และเปลี่ยนตัวกรองเดือนเป็นช่วงเวลา (`created_at >= ... AND created_at < ...`) เพื่อให้ใช้ดัชนีได้เต็มประสิทธิภาพ
+- เพิ่มบริการ `postgres:17-alpine` ใน `.github/workflows/ci.yml` เพื่อให้ชุดทดสอบ Integration Tests ทำงานครบทุกข้อใน CI พร้อมเพิ่มชุดทดสอบ `test_security_and_correctness_hardening_v372`
+
+---
+
+## [3.7.1] - 2026-11-24
+### Changed
+- เปิดใช้งานระบบเข้าสู่ระบบ (Login) เต็มรูปแบบ โดยปิดโหมดทดสอบ `AUTH_BYPASS` (`AUTH_BYPASS="false"` ใน `.env`) และสร้างไฟล์พอร์ทัล `index.html`, `staff.html`, และ `portal.html` ใหม่ผ่าน `scripts/generate_separated_portals.py` ให้แสดงหน้าจอเข้าสู่ระบบและตรวจสอบสิทธิ์ Token ตามปกติ
+
+---
+
 ## [3.7.0] - 2026-11-17
 ### Added
 - เพิ่มชุด **Containerized 1-Command Deploy (`Dockerfile`, `.dockerignore`, และ service `app` ใน `docker-compose.yml`)** เพื่อให้สามารถนำโปรเจกต์ไป Deploy พร้อมฐานข้อมูล PostgreSQL 17 และ pgAdmin 4 ได้ทันทีด้วยคำสั่งเดียว (`docker compose up -d --build`)

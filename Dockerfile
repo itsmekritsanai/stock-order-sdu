@@ -11,6 +11,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN addgroup --system appuser && adduser --system --ingroup appuser appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=3 \

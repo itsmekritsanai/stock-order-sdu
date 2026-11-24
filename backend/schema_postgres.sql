@@ -58,11 +58,11 @@ CREATE TABLE inventory_items (
   is_multi_unit SMALLINT NOT NULL DEFAULT 1,
   unit_box_name VARCHAR(50) DEFAULT NULL,
   unit_piece_name VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
-  pieces_per_box INT NOT NULL DEFAULT 1,
-  on_hand_pieces INT NOT NULL DEFAULT 0,
-  reserved_pieces INT NOT NULL DEFAULT 0,
-  min_alert INT NOT NULL DEFAULT 500,
-  monthly_limit INT NOT NULL DEFAULT 0,
+  pieces_per_box INT NOT NULL DEFAULT 1 CHECK (pieces_per_box >= 1),
+  on_hand_pieces INT NOT NULL DEFAULT 0 CHECK (on_hand_pieces >= 0),
+  reserved_pieces INT NOT NULL DEFAULT 0 CHECK (reserved_pieces >= 0),
+  min_alert INT NOT NULL DEFAULT 500 CHECK (min_alert >= 0),
+  monthly_limit INT NOT NULL DEFAULT 0 CHECK (monthly_limit >= 0),
   last_unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   last_restocked_at TIMESTAMP DEFAULT NULL,
   image_piece TEXT DEFAULT NULL,
@@ -104,6 +104,7 @@ CREATE TABLE requisitions (
 
 CREATE INDEX idx_req_status ON requisitions (status);
 CREATE INDEX idx_req_requester ON requisitions (requester);
+CREATE INDEX idx_req_dept ON requisitions (dept);
 CREATE INDEX idx_req_created_at ON requisitions (created_at);
 
 -- -----------------------------------------------------------------------------
@@ -114,13 +115,13 @@ CREATE TABLE requisition_items (
   requisition_id VARCHAR(50) NOT NULL REFERENCES requisitions(id) ON DELETE CASCADE,
   item_id INT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
   name VARCHAR(255) NOT NULL,
-  qty_boxes INT NOT NULL DEFAULT 0,
-  qty_pieces INT NOT NULL DEFAULT 0,
-  total_pieces INT NOT NULL DEFAULT 0,
+  qty_boxes INT NOT NULL DEFAULT 0 CHECK (qty_boxes >= 0),
+  qty_pieces INT NOT NULL DEFAULT 0 CHECK (qty_pieces >= 0),
+  total_pieces INT NOT NULL DEFAULT 0 CHECK (total_pieces > 0),
   unit_box VARCHAR(50) DEFAULT NULL,
   unit_piece VARCHAR(50) NOT NULL DEFAULT 'ชิ้น',
-  approved_pieces INT NOT NULL DEFAULT 0,
-  pieces_per_box_snapshot INT NOT NULL DEFAULT 1
+  approved_pieces INT NOT NULL DEFAULT 0 CHECK (approved_pieces >= 0),
+  pieces_per_box_snapshot INT NOT NULL DEFAULT 1 CHECK (pieces_per_box_snapshot >= 1)
 );
 
 CREATE INDEX idx_req_items_req_id ON requisition_items (requisition_id);
@@ -131,12 +132,12 @@ CREATE INDEX idx_req_items_item_id ON requisition_items (item_id);
 -- -----------------------------------------------------------------------------
 CREATE TABLE stock_transactions (
   id SERIAL PRIMARY KEY,
-  item_id INT NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE,
+  item_id INT NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
   transaction_type VARCHAR(10) NOT NULL CHECK (transaction_type IN ('IN', 'OUT', 'ADJUST')),
   change_pieces INT NOT NULL,
-  balance_after INT NOT NULL DEFAULT 0,
-  unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-  total_cost DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  balance_after INT NOT NULL DEFAULT 0 CHECK (balance_after >= 0),
+  unit_price DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (unit_price >= 0),
+  total_cost DECIMAL(12, 2) NOT NULL DEFAULT 0.00 CHECK (total_cost >= 0),
   reference_type VARCHAR(50) NOT NULL,
   reference_id VARCHAR(50) DEFAULT NULL,
   reason VARCHAR(255) DEFAULT NULL,
@@ -145,6 +146,8 @@ CREATE TABLE stock_transactions (
 );
 
 CREATE INDEX idx_tx_item_id ON stock_transactions (item_id);
+CREATE INDEX idx_tx_created_at ON stock_transactions (created_at);
+CREATE INDEX idx_tx_type_created_at ON stock_transactions (transaction_type, created_at);
 
 -- -----------------------------------------------------------------------------
 -- 7. ตาราง quota_rules (กำหนดโควตารายเดือนแยกตามบุคลากรและกลุ่มงาน/หน่วยงาน)
@@ -183,6 +186,9 @@ CREATE TRIGGER trg_inventory_items_updated_at BEFORE UPDATE ON inventory_items F
 
 DROP TRIGGER IF EXISTS trg_requisitions_updated_at ON requisitions;
 CREATE TRIGGER trg_requisitions_updated_at BEFORE UPDATE ON requisitions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_quota_rules_updated_at ON quota_rules;
+CREATE TRIGGER trg_quota_rules_updated_at BEFORE UPDATE ON quota_rules FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================================================
 -- ข้อมูลตั้งต้น (SEED DATA)

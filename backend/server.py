@@ -15,6 +15,8 @@ import hmac
 import json
 import os
 import random
+import re
+import threading
 import time
 from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -25,7 +27,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.7.0"
+SYSTEM_VERSION = "3.7.6"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -145,17 +147,18 @@ def ensure_database_schema(conn=None):
                 cur.execute("ALTER TABLE requisitions DROP CONSTRAINT IF EXISTS requisitions_status_check;")
                 cur.execute("ALTER TABLE requisitions ADD CONSTRAINT requisitions_status_check CHECK (status IN ('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED'));")
                 default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
-                cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (default_user_pass,))
-                cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (default_user_pass,))
-                cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (default_user_pass,))
-                cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (default_user_pass,))
+                hashed_default = hash_password(default_user_pass)
+                cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (hashed_default,))
+                cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (hashed_default,))
+                cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (hashed_default,))
+                cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (hashed_default,))
                 if not had_role_col:
                     cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
                 cur.execute("""
                     INSERT INTO users (id, name, username, password, position, dept, phone, is_active)
                     VALUES (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', %s, 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1)
-                    ON CONFLICT (id) DO UPDATE SET username = 'user', password = %s, is_active = 1;
-                """, (default_user_pass, default_user_pass))
+                    ON CONFLICT (id) DO NOTHING;
+                """, (hashed_default,))
                 cur.execute("""
                     INSERT INTO requisitions (id, date, requester, dept, phone, purpose, status, signature, reject_reason, completed_at, completed_date, rejected_at, rejected_date, created_at, updated_at)
                     VALUES ('REQ-256910-0001', '1 ต.ค. 2569 09:30 น.', 'อาจารย์ผู้แทน โรงเรียนการเรือน', 'โรงเรียนการเรือน', '', 'ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569', 'COMPLETED', 'ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน', '', '2026-10-01 03:00:00', '1 ต.ค. 2569 10:00 น.', NULL, '', '2026-10-01 02:30:00', '2026-10-01 03:00:00')
@@ -193,6 +196,20 @@ def ensure_database_schema(conn=None):
                     );
                 """)
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_quota_target ON quota_rules (target_type, target_key);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_req_dept ON requisitions (dept);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_tx_created_at ON stock_transactions (created_at);")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_tx_type_created_at ON stock_transactions (transaction_type, created_at);")
+                cur.execute("""
+                    CREATE OR REPLACE FUNCTION update_updated_at_column()
+                    RETURNS TRIGGER AS $$
+                    BEGIN
+                        NEW.updated_at = CURRENT_TIMESTAMP;
+                        RETURN NEW;
+                    END;
+                    $$ LANGUAGE plpgsql;
+                """)
+                cur.execute("DROP TRIGGER IF EXISTS trg_quota_rules_updated_at ON quota_rules;")
+                cur.execute("CREATE TRIGGER trg_quota_rules_updated_at BEFORE UPDATE ON quota_rules FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();")
             else:
                 default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
                 cur.execute("""
@@ -290,25 +307,113 @@ def ensure_database_schema(conn=None):
             conn.close()
 
 
+_PG_POOL = None
+_PG_POOL_KEY = None
+_PG_POOL_LOCK = threading.Lock()
+
+
+class _PooledPgConnection:
+    """Wrapper around a psycopg2 pooled connection so conn.close() safely returns it to the pool."""
+
+    def __init__(self, pool, raw_conn):
+        self._pool = pool
+        self._conn = raw_conn
+        self._returned = False
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def cursor(self, *args, **kwargs):
+        return self._conn.cursor(*args, **kwargs)
+
+    def commit(self):
+        return self._conn.commit()
+
+    def rollback(self):
+        return self._conn.rollback()
+
+    def close(self):
+        if self._returned:
+            return
+        self._returned = True
+        try:
+            if not self._conn.closed:
+                try:
+                    self._conn.rollback()
+                except Exception:
+                    pass
+                self._pool.putconn(self._conn)
+            else:
+                self._pool.putconn(self._conn, close=True)
+        except Exception:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+
+
+def _get_pg_pool():
+    """Return or lazily initialize a ThreadedConnectionPool for PostgreSQL."""
+    global _PG_POOL, _PG_POOL_KEY
+    from psycopg2.extras import RealDictCursor
+    from psycopg2.pool import ThreadedConnectionPool
+
+    pool_key = (
+        CONFIG["DB_HOST"],
+        CONFIG["DB_PORT"],
+        CONFIG["DB_USER"],
+        CONFIG["DB_PASSWORD"],
+        CONFIG["DB_NAME"],
+    )
+    with _PG_POOL_LOCK:
+        if _PG_POOL is None or _PG_POOL_KEY != pool_key:
+            if _PG_POOL is not None:
+                try:
+                    _PG_POOL.closeall()
+                except Exception:
+                    pass
+            _PG_POOL = ThreadedConnectionPool(
+                minconn=1,
+                maxconn=20,
+                host=CONFIG["DB_HOST"],
+                port=CONFIG["DB_PORT"],
+                user=CONFIG["DB_USER"],
+                password=CONFIG["DB_PASSWORD"],
+                dbname=CONFIG["DB_NAME"],
+                cursor_factory=RealDictCursor,
+            )
+            _PG_POOL_KEY = pool_key
+        return _PG_POOL
+
+
 def get_db_connection(include_db=True):
-    """Create a database connection (PostgreSQL 17 or MySQL)."""
+    """Create or borrow a database connection (PostgreSQL 17 with ThreadedConnectionPool or MySQL)."""
     db_type = CONFIG.get("DB_TYPE", "postgres").lower()
     if db_type in ("postgres", "postgresql"):
         import psycopg2
         from psycopg2.extras import RealDictCursor
 
-        db_name = CONFIG["DB_NAME"] if include_db else "postgres"
+        if include_db:
+            pool = _get_pg_pool()
+            raw_conn = pool.getconn()
+            if raw_conn.closed:
+                pool.putconn(raw_conn, close=True)
+                raw_conn = pool.getconn()
+            raw_conn.autocommit = False
+            conn = _PooledPgConnection(pool, raw_conn)
+            if not _SCHEMA_CHECKED:
+                ensure_database_schema(conn)
+            return conn
+
         conn = psycopg2.connect(
             host=CONFIG["DB_HOST"],
             port=CONFIG["DB_PORT"],
             user=CONFIG["DB_USER"],
             password=CONFIG["DB_PASSWORD"],
-            dbname=db_name,
+            dbname="postgres",
             cursor_factory=RealDictCursor,
         )
         conn.autocommit = False
-        if not _SCHEMA_CHECKED and include_db:
-            ensure_database_schema(conn)
         return conn
 
     db_name = CONFIG["DB_NAME"] if include_db else None
@@ -418,6 +523,24 @@ def handle_get_items(params):
         conn.close()
 
 
+def parse_month_date_range(month_filter: str):
+    """Parse YYYY-MM (CE or BE) into SARGable (start_dt, end_dt, doc_prefix) bounds for index-friendly queries."""
+    try:
+        parts = str(month_filter).strip().split("-")
+        y = int(parts[0])
+        m = int(parts[1]) if len(parts) > 1 else 1
+        if not (1 <= m <= 12):
+            return None, None, None
+        y_be = y + 543 if y < 2400 else y
+        y_ce = y if y < 2400 else y - 543
+        start_dt = datetime(y_ce, m, 1, 0, 0, 0)
+        end_dt = datetime(y_ce + 1, 1, 1, 0, 0, 0) if m == 12 else datetime(y_ce, m + 1, 1, 0, 0, 0)
+        doc_pfx = f"REQ-{y_be}{m:02d}-"
+        return start_dt, end_dt, doc_pfx
+    except Exception:
+        return None, None, None
+
+
 def handle_get_requisitions(params):
     status_filter = params.get("status", ["ALL"])[0]
     month_filter = params.get("month", ["ALL"])[0].strip()
@@ -430,27 +553,33 @@ def handle_get_requisitions(params):
                 query += " AND status = %s"
                 q_params.append(status_filter)
             if month_filter and month_filter != "ALL":
-                # Match ISO YYYY-MM or Buddhist doc prefix REQ-YYYYMM-
-                try:
-                    parts = month_filter.split("-")
-                    y = int(parts[0])
-                    m = int(parts[1]) if len(parts) > 1 else 1
-                    y_be = y + 543 if y < 2400 else y
-                    y_ce = y if y < 2400 else y - 543
-                    iso_pfx = f"{y_ce:04d}-{m:02d}"
-                    doc_pfx = f"REQ-{y_be}{m:02d}-"
-                except Exception:
-                    iso_pfx = month_filter
-                    doc_pfx = f"REQ-%{month_filter}%"
-                query += " AND ((created_at IS NOT NULL AND created_at::text LIKE %s) OR id LIKE %s)" if IS_POSTGRES else " AND ((created_at IS NOT NULL AND DATE_FORMAT(created_at, '%%Y-%%m') = %s) OR id LIKE %s)"
-                q_params.extend([f"{iso_pfx}%" if IS_POSTGRES else iso_pfx, f"{doc_pfx}%"])
+                start_dt, end_dt, doc_pfx = parse_month_date_range(month_filter)
+                if start_dt and end_dt:
+                    query += " AND ((created_at IS NOT NULL AND created_at >= %s AND created_at < %s) OR id LIKE %s)"
+                    q_params.extend([start_dt, end_dt, f"{doc_pfx}%"])
+                else:
+                    query += " AND id LIKE %s"
+                    q_params.append(f"REQ-%{month_filter}%")
 
             query += " ORDER BY created_at DESC"
             cur.execute(query, tuple(q_params))
             req_rows = cur.fetchall()
 
-            cur.execute("SELECT * FROM requisition_items ORDER BY id ASC")
-            item_rows = cur.fetchall()
+            req_ids = [r["id"] for r in req_rows if r.get("id")]
+            item_rows = []
+            if req_ids:
+                if IS_POSTGRES:
+                    cur.execute(
+                        "SELECT * FROM requisition_items WHERE requisition_id = ANY(%s) ORDER BY id ASC",
+                        (req_ids,),
+                    )
+                else:
+                    placeholders = ", ".join(["%s"] * len(req_ids))
+                    cur.execute(
+                        f"SELECT * FROM requisition_items WHERE requisition_id IN ({placeholders}) ORDER BY id ASC",
+                        tuple(req_ids),
+                    )
+                item_rows = cur.fetchall()
 
         items_map = {}
         for it in item_rows:
@@ -511,8 +640,8 @@ def handle_track_requisition(params):
     try:
         with dict_cursor(conn) as cur:
             cur.execute(
-                "SELECT * FROM requisitions WHERE LOWER(id) = LOWER(%s) OR requester LIKE %s LIMIT 1",
-                (doc_no, f"%{doc_no}%"),
+                "SELECT * FROM requisitions WHERE LOWER(id) = LOWER(%s) LIMIT 1",
+                (doc_no,),
             )
             req = cur.fetchone()
             if not req:
@@ -569,7 +698,7 @@ def handle_get_departments():
         with dict_cursor(conn) as cur:
             cur.execute("""
                 SELECT d.id, d.category, d.name, d.parent_name, d.full_label, d.is_active,
-                       COUNT(u.id) FILTER (WHERE u.is_active = 1) AS user_count
+                       COALESCE(SUM(CASE WHEN u.is_active = 1 THEN 1 ELSE 0 END), 0) AS user_count
                 FROM departments d
                 LEFT JOIN users u ON (u.dept = d.name OR u.dept = d.full_label)
                 WHERE d.is_active = 1
@@ -800,29 +929,21 @@ def handle_get_monthly_analytics(params):
             where_req_clause = ""
             query_args = []
             be_doc_pattern = "REQ-%"
+            start_dt, end_dt, parsed_doc_pfx = (None, None, None)
             if not is_all:
-                if IS_POSTGRES:
+                start_dt, end_dt, parsed_doc_pfx = parse_month_date_range(month_filter)
+                if start_dt and end_dt:
+                    be_doc_pattern = f"{parsed_doc_pfx}%"
                     where_req_clause = """
                     WHERE (
-                        (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
+                        (r.created_at IS NOT NULL AND r.created_at >= %s AND r.created_at < %s)
                         OR (r.created_at IS NULL AND r.id LIKE %s)
                     )
                     """
+                    query_args = [start_dt, end_dt, be_doc_pattern]
                 else:
-                    where_req_clause = """
-                    WHERE (
-                        (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
-                        OR (r.created_at IS NULL AND r.id LIKE %s)
-                    )
-                    """
-                try:
-                    parts = month_filter.split("-")
-                    be_year = int(parts[0]) + 543
-                    be_m = int(parts[1])
-                    be_doc_pattern = f"REQ-{be_year}{be_m:02d}-%"
-                except Exception:
-                    be_doc_pattern = "REQ-%"
-                query_args = [month_filter, be_doc_pattern]
+                    where_req_clause = "WHERE r.id LIKE %s"
+                    query_args = [f"REQ-%{month_filter}%"]
 
             status_query = f"""
                 SELECT r.status, COUNT(*) as count
@@ -858,12 +979,12 @@ def handle_get_monthly_analytics(params):
             if is_all:
                 item_join_cond = ""
                 item_args = []
+            elif start_dt and end_dt:
+                item_join_cond = "AND ((r.created_at IS NOT NULL AND r.created_at >= %s AND r.created_at < %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                item_args = [start_dt, end_dt, be_doc_pattern]
             else:
-                if IS_POSTGRES:
-                    item_join_cond = "AND ((r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
-                else:
-                    item_join_cond = "AND ((r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
-                item_args = [month_filter, be_doc_pattern]
+                item_join_cond = "AND r.id LIKE %s"
+                item_args = [f"REQ-%{month_filter}%"]
 
             items_query = f"""
                 SELECT 
@@ -902,10 +1023,10 @@ def handle_get_monthly_analytics(params):
             try:
                 person_where_and = ""
                 if not is_all:
-                    if IS_POSTGRES:
-                        person_where_and = "AND ((r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                    if start_dt and end_dt:
+                        person_where_and = "AND ((r.created_at IS NOT NULL AND r.created_at >= %s AND r.created_at < %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
                     else:
-                        person_where_and = "AND ((r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s) OR (r.created_at IS NULL AND r.id LIKE %s))"
+                        person_where_and = "AND r.id LIKE %s"
 
                 person_summary_query = f"""
                     SELECT
@@ -977,12 +1098,9 @@ def handle_get_monthly_analytics(params):
             try:
                 purchase_where_and = ""
                 purchase_args = []
-                if not is_all:
-                    if IS_POSTGRES:
-                        purchase_where_and = "AND st.created_at IS NOT NULL AND TO_CHAR(st.created_at, 'YYYY-MM') = %s"
-                    else:
-                        purchase_where_and = "AND st.created_at IS NOT NULL AND DATE_FORMAT(st.created_at, '%%Y-%%m') = %s"
-                    purchase_args = [month_filter]
+                if not is_all and start_dt and end_dt:
+                    purchase_where_and = "AND st.created_at IS NOT NULL AND st.created_at >= %s AND st.created_at < %s"
+                    purchase_args = [start_dt, end_dt]
 
                 purchase_summary_query = f"""
                     SELECT
@@ -1165,34 +1283,52 @@ def handle_create_requisition(payload):
     purpose = str(payload.get("purpose", "")).strip()
     items = payload.get("items", [])
 
-    if not requester or not dept or not purpose or not items:
+    if not requester or not dept or not purpose or not items or not isinstance(items, list):
         return {"status": "error", "message": "ข้อมูลคำขอเบิกไม่ครบถ้วน (ผู้เบิก, หน่วยงาน, วัตถุประสงค์, รายการพัสดุ)"}
 
-    doc_no = str(payload.get("id") or generate_doc_no()).strip()
+    raw_doc_no = str(payload.get("id") or "").strip()
+    if raw_doc_no and re.fullmatch(r"REQ-\d{6}-\d{4}", raw_doc_no):
+        doc_no = raw_doc_no
+    else:
+        doc_no = generate_doc_no()
     thai_date = str(payload.get("date") or format_thai_datetime()).strip()
+
+    # Pre-validate input shapes and aggregate duplicate itemId entries so duplicates cannot bypass stock/quota
+    parsed_items = []
+    agg_totals_by_item = {}
+    for req_item in items:
+        try:
+            item_id = int(req_item.get("itemId") or 0)
+            qty_boxes = int(req_item.get("qtyBoxes") or 0)
+            qty_pieces = int(req_item.get("qtyPieces") or 0)
+            total_pieces = int(req_item.get("totalPieces") or 0)
+        except (ValueError, TypeError):
+            return {"status": "error", "message": "จำนวนพัสดุต้องเป็นตัวเลขจำนวนเต็มที่ถูกต้อง"}
+
+        if item_id <= 0:
+            return {"status": "error", "message": "รหัสพัสดุ (itemId) ไม่ถูกต้อง"}
+
+        if qty_boxes < 0 or qty_pieces < 0 or total_pieces <= 0 or (qty_boxes == 0 and qty_pieces == 0):
+            return {"status": "error", "message": "จำนวนพัสดุที่ขอเบิกต้องมากกว่า 0 และไม่สามารถเป็นค่าลบได้"}
+
+        parsed_items.append({
+            "itemId": item_id,
+            "qtyBoxes": qty_boxes,
+            "qtyPieces": qty_pieces,
+            "totalPieces": total_pieces,
+            "name": req_item.get("name", ""),
+            "unitBox": req_item.get("unitBox", ""),
+            "unitPiece": req_item.get("unitPiece", "ชิ้น"),
+            "piecesPerBoxSnapshot": int(req_item.get("piecesPerBoxSnapshot") or 1),
+        })
+        agg_totals_by_item[item_id] = agg_totals_by_item.get(item_id, 0) + total_pieces
 
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
-            # Verify stock availability, bounds, and arithmetic consistency with row-level read check
-            for req_item in items:
-                try:
-                    item_id = int(req_item.get("itemId") or 0)
-                    qty_boxes = int(req_item.get("qtyBoxes") or 0)
-                    qty_pieces = int(req_item.get("qtyPieces") or 0)
-                    total_pieces = int(req_item.get("totalPieces") or 0)
-                except (ValueError, TypeError):
-                    conn.rollback()
-                    return {"status": "error", "message": "จำนวนพัสดุต้องเป็นตัวเลขจำนวนเต็มที่ถูกต้อง"}
-
-                if item_id <= 0:
-                    conn.rollback()
-                    return {"status": "error", "message": "รหัสพัสดุ (itemId) ไม่ถูกต้อง"}
-
-                if qty_boxes < 0 or qty_pieces < 0 or total_pieces <= 0 or (qty_boxes == 0 and qty_pieces == 0):
-                    conn.rollback()
-                    return {"status": "error", "message": "จำนวนพัสดุที่ขอเบิกต้องมากกว่า 0 และไม่สามารถเป็นค่าลบได้"}
-
+            # Acquire inventory_items row locks in ascending item_id order to prevent deadlocks
+            db_items_map = {}
+            for item_id in sorted(agg_totals_by_item.keys()):
                 cur.execute(
                     "SELECT id, name, is_multi_unit, on_hand_pieces, reserved_pieces, pieces_per_box, monthly_limit, unit_piece_name FROM inventory_items WHERE id = %s FOR UPDATE",
                     (item_id,),
@@ -1201,72 +1337,63 @@ def handle_create_requisition(payload):
                 if not db_item:
                     conn.rollback()
                     return {"status": "error", "message": f"ไม่พบพัสดุรหัส {item_id} ในฐานข้อมูล"}
+                db_items_map[item_id] = db_item
 
-                # Arithmetic consistency validation
+            # Verify arithmetic consistency for every submitted row
+            for p_item in parsed_items:
+                db_item = db_items_map[p_item["itemId"]]
                 ratio = max(1, int(db_item.get("pieces_per_box") or 1))
-                expected_total = (qty_boxes * ratio) + qty_pieces if db_item.get("is_multi_unit") else qty_pieces
-                if total_pieces != expected_total or expected_total <= 0:
+                expected_total = (p_item["qtyBoxes"] * ratio) + p_item["qtyPieces"] if db_item.get("is_multi_unit") else p_item["qtyPieces"]
+                if p_item["totalPieces"] != expected_total or expected_total <= 0:
                     conn.rollback()
                     return {
                         "status": "error",
-                        "message": f"จำนวนรวมของพัสดุ ({total_pieces}) ไม่ตรงกับสูตรคำนวณจริง ({expected_total})",
+                        "message": f"จำนวนรวมของพัสดุ ({p_item['totalPieces']}) ไม่ตรงกับสูตรคำนวณจริง ({expected_total})",
                     }
 
+            # Verify aggregated stock availability and monthly quotas per unique item_id
+            cur_now = datetime.now()
+            cur_iso_month = cur_now.strftime("%Y-%m")
+            month_start, month_end, doc_pfx = parse_month_date_range(cur_iso_month)
+            cur_be_doc = f"{doc_pfx}%" if doc_pfx else f"REQ-{(cur_now.year + 543)}{cur_now.month:02d}-%"
+
+            for item_id in sorted(agg_totals_by_item.keys()):
+                db_item = db_items_map[item_id]
+                agg_requested = agg_totals_by_item[item_id]
                 available = max(0, int(db_item["on_hand_pieces"]) - int(db_item["reserved_pieces"]))
-                if total_pieces > available:
+                if agg_requested > available:
                     conn.rollback()
                     return {
                         "status": "error",
                         "code": "INSUFFICIENT_STOCK",
                         "message": "ยอดพัสดุคงเหลือพร้อมเบิกไม่เพียงพอ",
-                        "details": {"itemId": item_id, "requested": total_pieces, "available": available},
+                        "details": {"itemId": item_id, "requested": agg_requested, "available": available},
                     }
 
-                # Monthly quota enforcement (personal + department overrides with global item fallback)
                 eff_user_limit, eff_dept_limit, _, _ = resolve_effective_monthly_limits(
                     cur, item_id, int(db_item.get("monthly_limit") or 0), requester, dept
                 )
-                cur_now = datetime.now()
-                cur_iso_month = cur_now.strftime("%Y-%m")
-                cur_be_doc = f"REQ-{(cur_now.year + 543)}{cur_now.month:02d}-%"
                 unit_p = db_item.get("unit_piece_name") or "ชิ้น"
 
                 if eff_user_limit is not None and eff_user_limit > 0:
-                    if IS_POSTGRES:
-                        cur.execute(
-                            """
-                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
-                            FROM requisitions r
-                            JOIN requisition_items ri ON r.id = ri.requisition_id
-                            WHERE ri.item_id = %s
-                              AND r.requester = %s
-                              AND r.status != 'REJECTED'
-                              AND (
-                                (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
-                                OR (r.created_at IS NULL AND r.id LIKE %s)
-                              )
-                            """,
-                            (item_id, requester, cur_iso_month, cur_be_doc),
-                        )
-                    else:
-                        cur.execute(
-                            """
-                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
-                            FROM requisitions r
-                            JOIN requisition_items ri ON r.id = ri.requisition_id
-                            WHERE ri.item_id = %s
-                              AND r.requester = %s
-                              AND r.status != 'REJECTED'
-                              AND (
-                                (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
-                                OR (r.created_at IS NULL AND r.id LIKE %s)
-                              )
-                            """,
-                            (item_id, requester, cur_iso_month, cur_be_doc),
-                        )
+                    cur.execute(
+                        """
+                        SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                        FROM requisitions r
+                        JOIN requisition_items ri ON r.id = ri.requisition_id
+                        WHERE ri.item_id = %s
+                          AND r.requester = %s
+                          AND r.status != 'REJECTED'
+                          AND (
+                            (r.created_at IS NOT NULL AND r.created_at >= %s AND r.created_at < %s)
+                            OR (r.created_at IS NULL AND r.id LIKE %s)
+                          )
+                        """,
+                        (item_id, requester, month_start, month_end, cur_be_doc),
+                    )
                     month_row = cur.fetchone()
                     current_month_total = int(month_row["month_total"] or 0) if month_row else 0
-                    if current_month_total + total_pieces > eff_user_limit:
+                    if current_month_total + agg_requested > eff_user_limit:
                         conn.rollback()
                         rem = max(0, eff_user_limit - current_month_total)
                         return {
@@ -1279,46 +1406,29 @@ def handle_create_requisition(payload):
                                 "monthlyLimit": eff_user_limit,
                                 "currentMonthTotal": current_month_total,
                                 "remainingQuota": rem,
-                                "requested": total_pieces,
+                                "requested": agg_requested,
                             },
                         }
 
                 if eff_dept_limit is not None and eff_dept_limit > 0:
-                    if IS_POSTGRES:
-                        cur.execute(
-                            """
-                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
-                            FROM requisitions r
-                            JOIN requisition_items ri ON r.id = ri.requisition_id
-                            WHERE ri.item_id = %s
-                              AND r.dept = %s
-                              AND r.status != 'REJECTED'
-                              AND (
-                                (r.created_at IS NOT NULL AND TO_CHAR(r.created_at, 'YYYY-MM') = %s)
-                                OR (r.created_at IS NULL AND r.id LIKE %s)
-                              )
-                            """,
-                            (item_id, dept, cur_iso_month, cur_be_doc),
-                        )
-                    else:
-                        cur.execute(
-                            """
-                            SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
-                            FROM requisitions r
-                            JOIN requisition_items ri ON r.id = ri.requisition_id
-                            WHERE ri.item_id = %s
-                              AND r.dept = %s
-                              AND r.status != 'REJECTED'
-                              AND (
-                                (r.created_at IS NOT NULL AND DATE_FORMAT(r.created_at, '%%Y-%%m') = %s)
-                                OR (r.created_at IS NULL AND r.id LIKE %s)
-                              )
-                            """,
-                            (item_id, dept, cur_iso_month, cur_be_doc),
-                        )
+                    cur.execute(
+                        """
+                        SELECT COALESCE(SUM(ri.total_pieces), 0) AS month_total
+                        FROM requisitions r
+                        JOIN requisition_items ri ON r.id = ri.requisition_id
+                        WHERE ri.item_id = %s
+                          AND r.dept = %s
+                          AND r.status != 'REJECTED'
+                          AND (
+                            (r.created_at IS NOT NULL AND r.created_at >= %s AND r.created_at < %s)
+                            OR (r.created_at IS NULL AND r.id LIKE %s)
+                          )
+                        """,
+                        (item_id, dept, month_start, month_end, cur_be_doc),
+                    )
                     dept_row = cur.fetchone()
                     dept_month_total = int(dept_row["month_total"] or 0) if dept_row else 0
-                    if dept_month_total + total_pieces > eff_dept_limit:
+                    if dept_month_total + agg_requested > eff_dept_limit:
                         conn.rollback()
                         dept_rem = max(0, eff_dept_limit - dept_month_total)
                         return {
@@ -1331,24 +1441,43 @@ def handle_create_requisition(payload):
                                 "monthlyLimit": eff_dept_limit,
                                 "currentMonthTotal": dept_month_total,
                                 "remainingQuota": dept_rem,
-                                "requested": total_pieces,
+                                "requested": agg_requested,
                             },
                         }
 
-            cur.execute(
-                """
-                INSERT INTO requisitions (id, date, requester, dept, phone, purpose, status, signature, reject_reason)
-                VALUES (%s, %s, %s, %s, %s, %s, 'PENDING', NULL, '')
-                """,
-                (doc_no, thai_date, requester, dept, phone, purpose),
-            )
+            inserted_req = False
+            for _attempt in range(5):
+                try:
+                    cur.execute("SAVEPOINT sp_req_insert")
+                    cur.execute(
+                        """
+                        INSERT INTO requisitions (id, date, requester, dept, phone, purpose, status, signature, reject_reason)
+                        VALUES (%s, %s, %s, %s, %s, %s, 'PENDING', NULL, '')
+                        """,
+                        (doc_no, thai_date, requester, dept, phone, purpose),
+                    )
+                    cur.execute("RELEASE SAVEPOINT sp_req_insert")
+                    inserted_req = True
+                    break
+                except Exception as ins_err:
+                    err_txt = str(ins_err).lower()
+                    if "unique" in err_txt or "duplicate" in err_txt:
+                        try:
+                            cur.execute("ROLLBACK TO SAVEPOINT sp_req_insert")
+                        except Exception:
+                            pass
+                        doc_no = generate_doc_no()
+                        continue
+                    raise
+            if not inserted_req:
+                conn.rollback()
+                return {"status": "error", "message": "ไม่สามารถสร้างเลขที่เอกสารคำขอที่ไม่ซ้ำได้ กรุณาลองใหม่อีกครั้ง"}
 
-            for req_item in items:
-                item_id = int(req_item.get("itemId"))
-                qty_boxes = int(req_item.get("qtyBoxes") or 0)
-                qty_pieces = int(req_item.get("qtyPieces") or 0)
-                total_pieces = int(req_item.get("totalPieces") or 0)
-                approved_pieces = int(req_item.get("approvedPieces") or total_pieces)
+            for p_item in parsed_items:
+                db_item = db_items_map[p_item["itemId"]]
+                # Always initialize approved_pieces to total_pieces server-side (ignore client-spoofed approvedPieces)
+                approved_pieces = p_item["totalPieces"]
+                ratio_snap = max(1, int(db_item.get("pieces_per_box") or p_item["piecesPerBoxSnapshot"] or 1))
                 cur.execute(
                     """
                     INSERT INTO requisition_items
@@ -1357,22 +1486,22 @@ def handle_create_requisition(payload):
                     """,
                     (
                         doc_no,
-                        item_id,
-                        req_item.get("name", ""),
-                        qty_boxes,
-                        qty_pieces,
-                        total_pieces,
-                        req_item.get("unitBox", ""),
-                        req_item.get("unitPiece", "ชิ้น"),
+                        p_item["itemId"],
+                        p_item["name"] or db_item.get("name", ""),
+                        p_item["qtyBoxes"],
+                        p_item["qtyPieces"],
+                        p_item["totalPieces"],
+                        p_item["unitBox"],
+                        p_item["unitPiece"],
                         approved_pieces,
-                        int(req_item.get("piecesPerBoxSnapshot") or 1),
+                        ratio_snap,
                     ),
                 )
 
         conn.commit()
         return {
             "status": "success",
-            "message": "สร้างคำขอเบิกพัสดุในฐานข้อมูล MySQL สำเร็จ",
+            "message": "สร้างคำขอเบิกพัสดุในฐานข้อมูลสำเร็จ",
             "docNo": doc_no,
             "createdAt": datetime.now().isoformat(),
         }
@@ -1421,7 +1550,7 @@ def handle_verify_requisition(payload):
                     "message": f"ไม่สามารถคัดกรองได้เนื่องจากคำขอเลขที่ {doc_no} อยู่ในสถานะ {current_status} (ต้องอยู่ในสถานะ PENDING)",
                 }
 
-            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
+            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s ORDER BY item_id ASC, id ASC FOR UPDATE", (doc_no,))
             req_items = cur.fetchall()
 
             for ri in req_items:
@@ -1511,7 +1640,7 @@ def handle_approve_requisition(payload):
                     "message": f"ไม่สามารถอนุมัติได้เนื่องจากคำขอเลขที่ {doc_no} อยู่ในสถานะ {current_status}",
                 }
 
-            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
+            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s ORDER BY item_id ASC, id ASC FOR UPDATE", (doc_no,))
             req_items = cur.fetchall()
 
             for ri in req_items:
@@ -1607,7 +1736,7 @@ def handle_complete_requisition(payload):
                     "message": f"คำขอเลขที่ {doc_no} ต้องได้รับการอนุมัติ (APPROVED) ก่อนดำเนินการจ่ายพัสดุ (สถานะปัจจุบัน: {current_status})",
                 }
 
-            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
+            cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s ORDER BY item_id ASC, id ASC FOR UPDATE", (doc_no,))
             req_items = cur.fetchall()
 
             for ri in req_items:
@@ -1692,7 +1821,7 @@ def handle_reject_requisition(payload):
                 }
 
             if current_status == "APPROVED":
-                cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s FOR UPDATE", (doc_no,))
+                cur.execute("SELECT * FROM requisition_items WHERE requisition_id = %s ORDER BY item_id ASC, id ASC FOR UPDATE", (doc_no,))
                 req_items = cur.fetchall()
                 for ri in req_items:
                     item_id = int(ri["item_id"])
@@ -1791,7 +1920,7 @@ def handle_restock_item(payload):
         conn.commit()
         return {
             "status": "success",
-            "message": "รับพัสดุเข้าคลัง MySQL สำเร็จ",
+            "message": "รับพัสดุเข้าคลังสำเร็จ",
             "itemId": item_id,
             "on_hand_pieces": new_on_hand,
             "unit_price": unit_price,
@@ -1842,7 +1971,7 @@ def handle_adjust_stock(payload):
         conn.commit()
         return {
             "status": "success",
-            "message": "ปรับยอดสต๊อกจริงใน MySQL สำเร็จ",
+            "message": "ปรับยอดสต๊อกจริงในฐานข้อมูลสำเร็จ",
             "itemId": item_id,
             "on_hand_pieces": new_qty,
             "reason": reason,
@@ -1915,6 +2044,8 @@ def handle_save_user(payload):
                         "INSERT INTO users (id, name, username, password, role, position, dept, phone, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)",
                         (int(user_id), name, username, final_pass, role, position, dept, phone),
                     )
+                    if IS_POSTGRES:
+                        cur.execute("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 1)) FROM users;")
             else:
                 final_pass = hash_password(raw_pass) if raw_pass else hash_password(default_user_pass)
                 if IS_POSTGRES:
@@ -1964,7 +2095,7 @@ def handle_login_requester(payload):
     try:
         with dict_cursor(conn) as cur:
             cur.execute(
-                "SELECT id, name, username, password, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
                 (username, username),
             )
             row = cur.fetchone()
@@ -1984,20 +2115,30 @@ def handle_login_requester(payload):
                     "message": "รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบหรือติดต่อเจ้าหน้าที่พัสดุ"
                 }
 
-            req_token = generate_requester_token(row.get("username") or username, row["name"])
-            return {
+            uname_final = row.get("username") or username
+            db_role = str(row.get("role") or "").strip().upper()
+            if db_role not in ("REQUESTER", "STAFF", "HEAD", "ADMIN"):
+                db_role = "HEAD" if uname_final.lower() in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l") else "REQUESTER"
+
+            req_token = generate_requester_token(uname_final, row["name"])
+            resp = {
                 "status": "success",
                 "message": "เข้าสู่ระบบสำเร็จ",
                 "token": req_token,
                 "user": {
                     "id": int(row["id"]),
                     "name": row["name"],
-                    "username": row.get("username") or username,
+                    "username": uname_final,
+                    "role": db_role,
                     "position": row.get("position") or "",
                     "dept": row.get("dept") or "",
                     "phone": row.get("phone") or "",
                 }
             }
+            if db_role in ("STAFF", "HEAD", "ADMIN"):
+                resp["staff_token"] = generate_staff_token(uname_final)
+                resp["staff_role"] = db_role
+            return resp
     finally:
         conn.close()
 
@@ -2039,12 +2180,19 @@ def handle_add_department(payload):
                     return {"status": "success", "message": f"เปิดใช้งานกลุ่มงาน/หน่วยงาน '{name}' สำเร็จ", "id": existing["id"], "name": name}
                 return {"status": "error", "code": "DUPLICATE_DEPT", "message": f"มีกลุ่มงาน/หน่วยงานชื่อ '{name}' อยู่แล้ว"}
 
-            cur.execute(
-                "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1) RETURNING id",
-                (cat, name, cat, name),
-            )
-            inserted = cur.fetchone()
-            dept_id = inserted["id"] if inserted else None
+            if IS_POSTGRES:
+                cur.execute(
+                    "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1) RETURNING id",
+                    (cat, name, cat, name),
+                )
+                inserted = cur.fetchone()
+                dept_id = inserted["id"] if inserted else None
+            else:
+                cur.execute(
+                    "INSERT INTO departments (category, name, parent_name, full_label, is_active) VALUES (%s, %s, %s, %s, 1)",
+                    (cat, name, cat, name),
+                )
+                dept_id = cur.lastrowid
         conn.commit()
         return {"status": "success", "message": "เพิ่มกลุ่มงาน/หน่วยงานสำเร็จ", "id": dept_id, "name": name}
     except Exception as e:
@@ -2181,6 +2329,7 @@ def handle_save_item(payload):
     monthly_limit = max(0, int(payload.get("monthly_limit") or payload.get("monthlyLimit") or 0))
     image_piece = str(payload.get("image_piece") or "assets/images/แฟ้มเสนอ เล่ม.jpeg").strip()
     image_box = str(payload.get("image_box") or image_piece).strip()
+    recorded_by = str(payload.get("recordedBy") or payload.get("recorded_by") or "เจ้าหน้าที่พัสดุ สวท.").strip()
 
     if not item_id and not name:
         return {"status": "error", "message": "กรุณาระบุชื่อรายการพัสดุ"}
@@ -2188,6 +2337,7 @@ def handle_save_item(payload):
     conn = get_db_connection()
     try:
         with dict_cursor(conn) as cur:
+            is_new_insert = False
             if item_id:
                 cur.execute("SELECT * FROM inventory_items WHERE id = %s", (int(item_id),))
                 existing = cur.fetchone()
@@ -2232,6 +2382,7 @@ def handle_save_item(payload):
                         ),
                     )
                 else:
+                    is_new_insert = True
                     cur.execute(
                         """
                         INSERT INTO inventory_items
@@ -2245,7 +2396,10 @@ def handle_save_item(payload):
                             pieces_per_box, on_hand_pieces, min_alert, monthly_limit, image_piece, image_box,
                         ),
                     )
+                    if IS_POSTGRES:
+                        cur.execute("SELECT setval(pg_get_serial_sequence('inventory_items', 'id'), COALESCE(MAX(id), 1)) FROM inventory_items;")
             else:
+                is_new_insert = True
                 if IS_POSTGRES:
                     cur.execute(
                         """
@@ -2278,6 +2432,16 @@ def handle_save_item(payload):
                         ),
                     )
                     item_id = cur.lastrowid
+
+            if is_new_insert and item_id and on_hand_pieces > 0:
+                cur.execute(
+                    """
+                    INSERT INTO stock_transactions
+                      (item_id, transaction_type, change_pieces, balance_after, unit_price, total_cost, reference_type, reference_id, reason, recorded_by)
+                    VALUES (%s, 'IN', %s, %s, 0.00, 0.00, 'INITIAL_STOCK', NULL, %s, %s)
+                    """,
+                    (int(item_id), on_hand_pieces, on_hand_pieces, "ยอดคงคลังตั้งต้นเมื่อเพิ่มรายการพัสดุใหม่", recorded_by),
+                )
         conn.commit()
         return {"status": "success", "message": "บันทึกรายการพัสดุสำเร็จ", "id": item_id}
     except Exception as e:
@@ -2614,6 +2778,7 @@ def handle_login_staff(payload):
     is_valid = False
     resolved_role = None
     display_name = username
+    matched_user_profile = None
 
     u_lower = username.lower()
     if u_lower in (staff_user.lower(), "admin_staff", "admin") and password in (staff_pass, "sdu1234"):
@@ -2633,7 +2798,7 @@ def handle_login_staff(payload):
             conn = get_db_connection()
             with dict_cursor(conn) as cur:
                 cur.execute(
-                    "SELECT id, name, username, password, role, position FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                    "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
                     (username, username)
                 )
                 row = cur.fetchone()
@@ -2644,10 +2809,28 @@ def handle_login_staff(payload):
                         is_valid = True
                         resolved_role = db_role
                         display_name = row.get("name") or username
+                        matched_user_profile = {
+                            "id": int(row["id"]),
+                            "name": row.get("name") or username,
+                            "username": row.get("username") or username,
+                            "role": db_role,
+                            "position": row.get("position") or "",
+                            "dept": row.get("dept") or "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+                            "phone": row.get("phone") or "",
+                        }
                     elif uname_db in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
                         is_valid = True
                         resolved_role = "HEAD"
                         display_name = row.get("name") or username
+                        matched_user_profile = {
+                            "id": int(row["id"]),
+                            "name": row.get("name") or username,
+                            "username": row.get("username") or username,
+                            "role": "HEAD",
+                            "position": row.get("position") or "",
+                            "dept": row.get("dept") or "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+                            "phone": row.get("phone") or "",
+                        }
                     else:
                         conn.close()
                         return {
@@ -2673,10 +2856,22 @@ def handle_login_staff(payload):
 
     active_role = requested_role if (final_role == "ADMIN" and requested_role in ("STAFF", "HEAD", "ADMIN")) else final_role
     token = generate_staff_token(username)
+    requester_profile = matched_user_profile or {
+        "id": 0,
+        "name": display_name,
+        "username": username,
+        "role": final_role,
+        "position": get_role_label(final_role),
+        "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+        "phone": "",
+    }
+    req_token = generate_requester_token(requester_profile["username"], requester_profile["name"])
     return {
         "status": "success",
         "message": f"เข้าสู่ระบบสำเร็จ ({get_role_label(active_role)})",
         "token": token,
+        "requester_token": req_token,
+        "requester_user": requester_profile,
         "username": username,
         "name": display_name,
         "role": final_role,
@@ -2747,6 +2942,12 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
             return os.path.join(PROJECT_ROOT, "__blocked_nonexistent_file__")
         return super().translate_path(path)
 
+    def end_headers(self):
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
+        super().end_headers()
+
     def send_cors_headers(self):
         origin = self.headers.get("Origin", "")
         allowed = [o.strip() for o in CONFIG.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
@@ -2756,7 +2957,27 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 self.send_header("Access-Control-Allow-Origin", origin)
                 self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Staff-Token, X-Staff-Role")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Staff-Token, X-Staff-Role, X-Requester-Token")
+
+    def _extract_auth_token(self, body=None, payload=None):
+        auth_header = self.headers.get("Authorization", "")
+        token = ""
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+        if not token:
+            token = self.headers.get("X-Staff-Token", "").strip()
+        if not token:
+            token = self.headers.get("X-Requester-Token", "").strip()
+        if not token and isinstance(body, dict):
+            token = str(
+                body.get("staff_token")
+                or body.get("requester_token")
+                or body.get("token")
+                or (payload.get("staff_token") if isinstance(payload, dict) else "")
+                or (payload.get("requester_token") if isinstance(payload, dict) else "")
+                or ""
+            ).strip()
+        return token
 
     def send_json(self, data, status_code=200):
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -2786,6 +3007,35 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
         if parsed.path.rstrip("/") == "/api":
             params = parse_qs(parsed.query)
             action = params.get("action", [""])[0]
+
+            STAFF_ONLY_GET_ACTIONS = {
+                "getMonthlyAnalytics",
+                "exportMonthlyAnalyticsExcel",
+                "getItemTransactions",
+            }
+            AUTH_REQUIRED_GET_ACTIONS = {
+                "getRequisitions",
+                "getUsers",
+                "getQuotas",
+            }
+
+            if action in STAFF_ONLY_GET_ACTIONS:
+                token = self._extract_auth_token()
+                if not verify_staff_token(token) and not is_auth_bypass_enabled():
+                    return self.send_json({
+                        "status": "error",
+                        "code": "UNAUTHORIZED",
+                        "message": "ต้องเข้าสู่ระบบในฐานะเจ้าหน้าที่พัสดุเพื่อเข้าถึงข้อมูลนี้",
+                    }, status_code=401)
+            elif action in AUTH_REQUIRED_GET_ACTIONS:
+                token = self._extract_auth_token()
+                if not (verify_staff_token(token) or verify_requester_token(token)) and not is_auth_bypass_enabled():
+                    return self.send_json({
+                        "status": "error",
+                        "code": "UNAUTHORIZED",
+                        "message": "กรุณาเข้าสู่ระบบก่อนเข้าถึงข้อมูลนี้",
+                    }, status_code=401)
+
             try:
                 if action == "getItems":
                     return self.send_json(handle_get_items(params))
@@ -2828,19 +3078,21 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                         "authBypass": is_auth_bypass_enabled(),
                     })
                 else:
+                    db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
                     return self.send_json({
                         "status": "success",
-                        "message": "SDU Stock Order MySQL REST API is operational.",
+                        "message": f"SDU Stock Order {db_label} REST API is operational.",
                         "version": SYSTEM_VERSION,
-                        "database": "MySQL",
+                        "database": db_label,
                         "db_name": CONFIG["DB_NAME"],
                         "authBypass": is_auth_bypass_enabled(),
                     })
             except Exception as err:
+                print(f"[ERROR] GET /api action={action}: {err}", flush=True)
                 return self.send_json({
                     "status": "error",
-                    "code": "MYSQL_CONNECTION_ERROR",
-                    "message": f"ไม่สามารถเชื่อมต่อฐานข้อมูล MySQL ได้ ({err}) ระบบสลับใช้โหมด Offline (localStorage) อัตโนมัติ",
+                    "code": "DB_CONNECTION_ERROR",
+                    "message": "ไม่สามารถเชื่อมต่อฐานข้อมูลได้ในขณะนี้ ระบบสลับใช้โหมด Offline (localStorage) อัตโนมัติ",
                 }, status_code=503)
 
         if not self.is_safe_static_path(self.path):
@@ -2886,15 +3138,17 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
             "saveItem", "deleteItem", "saveQuota", "deleteQuota"
         }
 
+        if action == "createRequisition":
+            token = self._extract_auth_token(body, payload)
+            if not (verify_requester_token(token) or verify_staff_token(token)) and not is_auth_bypass_enabled():
+                return self.send_json({
+                    "status": "error",
+                    "code": "UNAUTHORIZED",
+                    "message": "กรุณาเข้าสู่ระบบก่อนส่งคำขอเบิกพัสดุ",
+                }, status_code=401)
+
         if action in STAFF_ACTIONS:
-            auth_header = self.headers.get("Authorization", "")
-            token = ""
-            if auth_header.startswith("Bearer "):
-                token = auth_header[7:].strip()
-            if not token:
-                token = self.headers.get("X-Staff-Token", "")
-            if not token and isinstance(body, dict):
-                token = body.get("staff_token") or body.get("token") or (payload.get("staff_token") if isinstance(payload, dict) else "")
+            token = self._extract_auth_token(body, payload)
 
             if not verify_staff_token(str(token)):
                 if is_auth_bypass_enabled():
@@ -2967,19 +3221,22 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                 }, status_code=400)
         except Exception as err:
             db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
+            print(f"[ERROR] POST /api action={action}: {err}", flush=True)
             return self.send_json({
                 "status": "error",
                 "code": "DB_ERROR",
-                "message": f"ข้อผิดพลาดฐานข้อมูล {db_label}: {err}",
+                "message": f"เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล {db_label} กรุณาลองใหม่อีกครั้ง",
             }, status_code=503)
 
 
 def run_server(port=None):
     port = port or CONFIG["PORT"]
+    host = CONFIG.get("HOST", "127.0.0.1")
     ensure_database_schema()
-    server = ThreadingHTTPServer(("0.0.0.0", port), SDUInventoryRequestHandler)
+    server = ThreadingHTTPServer((host, port), SDUInventoryRequestHandler)
     print("=" * 70)
     print(f"  SDU Stock Order & e-Inventory Server (v{SYSTEM_VERSION}) - PostgreSQL 17 Edition")
+    print(f"  Bind Addr  : http://{host}:{port}")
     print(f"  Web Portal : http://localhost:{port}/portal.html")
     print(f"  Requester  : http://localhost:{port}/index.html")
     print(f"  Staff      : http://localhost:{port}/staff.html")

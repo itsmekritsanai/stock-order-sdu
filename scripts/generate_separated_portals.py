@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.7.0"
+SYSTEM_VERSION = "3.7.6"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -93,7 +93,7 @@ def parse_docx_depts_and_users(docx_path):
                 "id": idx,
                 "name": full_name,
                 "username": uname,
-                "password": DEFAULT_USER_PASSWORD,
+                "role": "HEAD",
                 "position": pos,
                 "dept": unit,
                 "phone": ""
@@ -104,7 +104,7 @@ def parse_docx_depts_and_users(docx_path):
         "id": len(users) + 1,
         "name": "ผู้ขอเบิกทดสอบ",
         "username": "user",
-        "password": DEFAULT_USER_PASSWORD,
+        "role": "REQUESTER",
         "position": "เจ้าหน้าที่บริการการศึกษา",
         "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
         "phone": "089-123-4567"
@@ -1431,81 +1431,46 @@ __SEARCHABLE_SELECT_CSS__
 </head>
 <body>
 
-  <!-- 1. UNIFIED ROLE LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
+  <!-- 1. AUTO-ROLE LOGIN SCREEN (SHOWN WHEN NOT LOGGED IN) -->
   <div id="requesterLoginScreen" class="login-wrapper">
-    <div class="login-card" style="max-width: 480px;">
-      <div class="login-header" style="padding: 1.75rem 1.75rem 1.25rem 1.75rem;">
-        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 60px; margin-bottom: 0.6rem; object-fit: contain;">
-        <h2 id="loginRoleTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบผู้ขอเบิกพัสดุ</h2>
+    <div class="login-card" style="max-width: 440px;">
+      <div class="login-header" style="padding: 1.85rem 1.75rem 1.25rem 1.75rem;">
+        <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 62px; margin-bottom: 0.65rem; object-fit: contain;">
+        <h2 id="loginRoleTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบขอเบิกพัสดุ</h2>
         <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
         <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
-          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span>สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)</span>
+          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+          <span>กรอกชื่อผู้ใช้งานและรหัสผ่าน ระบบจะเข้าตามสิทธิ์อัตโนมัติ</span>
         </div>
       </div>
       <div class="login-body" style="padding: 1.25rem 1.75rem 1.75rem 1.75rem;">
-        <div style="margin-bottom: 1.1rem;">
-          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน:</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="portalRoleTabs">
-            <button type="button" class="role-tab-btn active" data-role="REQUESTER" onclick="selectPortalLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #1e40af; background: #eff6ff; color: #1e40af; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              <div>
-                <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ส่งคำขอเบิก</div>
-              </div>
-            </button>
-            <button type="button" class="role-tab-btn" data-role="STAFF" onclick="selectPortalLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
-              <div>
-                <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้คัดกรอง</div>
-              </div>
-            </button>
-            <button type="button" class="role-tab-btn" data-role="HEAD" onclick="selectPortalLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-              <div>
-                <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้อนุมัติ</div>
-              </div>
-            </button>
-            <button type="button" class="role-tab-btn" data-role="ADMIN" onclick="selectPortalLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-              <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <div>
-                <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
-                <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้ดูแลระบบ</div>
-              </div>
-            </button>
-          </div>
-          <input type="hidden" id="selectedLoginRole" value="REQUESTER">
-        </div>
-
         <form id="requesterLoginForm" onsubmit="handleRequesterLogin(event)">
           <div class="login-input-group">
             <label for="loginUsername" id="loginUsernameLabel">ชื่อผู้ใช้งาน</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-              <input type="text" id="loginUsername" class="login-input" placeholder="กรอกชื่อผู้ใช้งานผู้ขอเบิก" required autocomplete="username">
+              <input type="text" id="loginUsername" class="login-input" placeholder="กรอกชื่อผู้ใช้งานของท่าน" required autocomplete="username">
             </div>
           </div>
           <div class="login-input-group">
             <label for="loginPassword">รหัสผ่าน</label>
             <div class="login-input-wrapper">
               <span class="input-icon"><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-              <input type="password" id="loginPassword" class="login-input" placeholder="กรอกรหัสผ่านของคุณ" required autocomplete="current-password">
+              <input type="password" id="loginPassword" class="login-input" placeholder="กรอกรหัสผ่านของท่าน" required autocomplete="current-password">
             </div>
           </div>
           <button type="submit" class="btn-login" id="btnLoginSubmit">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            <span id="btnLoginSubmitText">เข้าสู่ระบบผู้ขอเบิกพัสดุ</span>
+            <span id="btnLoginSubmitText">เข้าสู่ระบบ</span>
           </button>
         </form>
 
         <div class="login-notice-box" style="margin-top: 1rem;">
           <div style="font-weight: 600; color: var(--neutral-800); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> คำแนะนำการเข้าสู่ระบบตามบทบาท
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> การเข้าสู่ระบบอัตโนมัติตามสิทธิ์
           </div>
           <div id="loginNoticeRoleHint" style="font-size: 0.775rem; line-height: 1.5;">
-            เลือกบทบาทด้านบนเพื่อเข้าสู่ระบบตามสิทธิ์ของท่าน หรือกลับไปที่ <a href="portal.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">ศูนย์กลางพอร์ทัล</a>
+            ระบบจะตรวจสอบบทบาทจากบัญชีของท่านโดยอัตโนมัติ หรือกลับไปที่ <a href="portal.html" style="color: var(--primary); font-weight: 600; text-decoration: none;">ศูนย์กลางพอร์ทัล</a>
           </div>
         </div>
       </div>
@@ -1538,6 +1503,11 @@ __SEARCHABLE_SELECT_CSS__
 
           <button class="btn btn-outline" id="btnSwitchTestRequester" onclick="switchTestRequester()" style="display: none; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.4rem 0.7rem; border-color: #93c5fd; color: #1e40af; background: #eff6ff;">
             <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> สลับผู้ขอเบิก (ทดสอบ)
+          </button>
+
+          <button class="btn btn-outline" id="btnSwitchToStaffPortal" onclick="switchToStaffPortal()" style="display: none; align-items: center; gap: 0.4rem; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-color: #c4b5fd; color: #5b21b6; background: #f5f3ff; font-weight: 600;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            <span id="btnSwitchToStaffPortalText">หน้าอนุมัติ</span>
           </button>
 
           <button class="btn btn-outline" id="btnMyRequisitions" onclick="openMyRequisitionsModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600;">
@@ -1980,16 +1950,38 @@ __SEARCHABLE_SELECT_CSS__
       }
     }
 
+    const AUTH_TOKEN_KEY = 'sdu_requester_token_v1';
+
+    function getRequesterAuthHeaders() {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Requester-Token'] = token;
+      }
+      return headers;
+    }
+
+    function isSafeSignatureDataUrl(sig) {
+      return typeof sig === 'string' && /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(sig.trim());
+    }
+
     async function syncFromMySQLAPI() {
       if (!MYSQL_API_URL || !navigator.onLine) return;
+      const isLoggedIn = Boolean(localStorage.getItem('sdu_requester_auth_v1')) || AUTH_BYPASS;
+      const authHeaders = getRequesterAuthHeaders();
       try {
-        const [itemsRes, reqsRes, usersRes, deptsRes, quotasRes] = await Promise.all([
-          fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getRequisitions`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getUsers`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getQuotas`).then(r => r.json()).catch(() => null)
-        ]);
+        const publicPromises = [
+          fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.ok ? r.json() : null).catch(() => null),
+        ];
+        const authPromises = isLoggedIn ? [
+          fetch(`${MYSQL_API_URL}?action=getRequisitions`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getUsers`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getQuotas`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+        ] : [Promise.resolve(null), Promise.resolve(null), Promise.resolve(null)];
+
+        const [itemsRes, deptsRes, reqsRes, usersRes, quotasRes] = await Promise.all([...publicPromises, ...authPromises]);
         if (quotasRes && quotasRes.status === 'success' && Array.isArray(quotasRes.data)) {
           saveQuotasDB(quotasRes.data);
           if (typeof renderCatalog === 'function') renderCatalog();
@@ -2026,14 +2018,35 @@ __SEARCHABLE_SELECT_CSS__
     async function postToMySQLAPI(action, payload) {
       if (!MYSQL_API_URL || !navigator.onLine) return null;
       try {
+        const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+        const headers = { 'Content-Type': 'application/json;charset=utf-8' };
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+          headers['X-Requester-Token'] = token;
+        }
         const res = await fetch(MYSQL_API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action, payload })
+          headers,
+          body: JSON.stringify({ action, payload, requester_token: token })
         });
+        if (res.status === 401 && action !== 'loginRequester' && action !== 'loginStaff') {
+          localStorage.removeItem(AUTH_SESSION_KEY);
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          if (typeof checkRequesterAuth === 'function') checkRequesterAuth();
+          if (typeof Swal !== 'undefined') {
+            Swal.fire({
+              icon: 'warning',
+              title: 'เซสชันหมดอายุ',
+              text: 'กรุณาเข้าสู่ระบบผู้ขอเบิกพัสดุใหม่อีกครั้ง',
+              confirmButtonColor: '#1e40af',
+              confirmButtonText: 'ตกลง'
+            });
+          }
+          return { status: 'error', code: 'UNAUTHORIZED', message: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง' };
+        }
         return await res.json();
       } catch (err) {
-        console.warn('MySQL API unreachable, saved to localStorage fallback:', err);
+        console.warn('API unreachable, saved to localStorage fallback:', err);
         return null;
       }
     }
@@ -2175,7 +2188,7 @@ __SEARCHABLE_SELECT_CSS__
       );
 
       if (matched.length === 0) {
-        dropdown.innerHTML = `<div class="combobox-no-results">ไม่พบรายชื่อในระบบ (สามารถพิมพ์ชื่อ "${filterText}" เพื่อขอเบิกได้ทันที)</div>`;
+        dropdown.innerHTML = `<div class="combobox-no-results">ไม่พบรายชื่อในระบบ (สามารถพิมพ์ชื่อ "${escapeHtml(filterText)}" เพื่อขอเบิกได้ทันที)</div>`;
         return;
       }
 
@@ -2819,6 +2832,8 @@ __SEARCHABLE_SELECT_CSS__
             });
             return;
           }
+          const finalDocNo = (apiRes && apiRes.docNo) ? apiRes.docNo : newDocNo;
+          newReq.id = finalDocNo;
 
           // Save to shared localStorage DB
           const reqs = getReqsDB();
@@ -2839,7 +2854,7 @@ __SEARCHABLE_SELECT_CSS__
               <div style="margin: 0.75rem 0;">
                 <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;">เลขที่เอกสารคำขอเบิกของคุณ:</p>
                 <div style="font-size: 1.6rem; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 0.75rem 1rem; border-radius: 8px; border: 1px dashed #bfdbfe; letter-spacing: 1px;">
-                  ${newDocNo}
+                  ${finalDocNo}
                 </div>
                 <p style="font-size: 0.85rem; color: #475569; margin-top: 0.85rem; line-height: 1.6;">
                   คำขอของท่านเข้าสู่สถานะ <b>"รออนุมัติ"</b> และถูกส่งต่อไปยังเจ้าหน้าที่แผนกพัสดุเรียบร้อยแล้ว<br>
@@ -3179,8 +3194,8 @@ __SEARCHABLE_SELECT_CSS__
       const sigBox = document.getElementById('pdfSigOfficerBox');
       const recDateEl = document.getElementById('pdfSigReceiveDate');
       const payDate = req.completed_date || req.completedDate || (req.status === 'COMPLETED' ? req.date : '');
-      if (req.signature && req.signature.startsWith('data:image')) {
-        sigBox.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
+      if (isSafeSignatureDataUrl(req.signature)) {
+        sigBox.innerHTML = `<img src="${escapeHtml(req.signature.trim())}" class="sig-img-preview" alt="ลายเซ็นดิจิทัลผู้รับพัสดุ">`;
       } else if (req.status === 'COMPLETED') {
         sigBox.innerHTML = `<div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-bottom: 6px;">[ รับมอบพัสดุแล้ว ]</div>`;
       } else {
@@ -3481,6 +3496,33 @@ __SEARCHABLE_SELECT_CSS__
       if (navDept) navDept.innerText = user.dept ? '(' + user.dept + ')' : '';
       if (barLabel) barLabel.innerText = user.name + ' (' + (user.dept || 'สวท.') + ')';
 
+      const staffSwitchBtn = document.getElementById('btnSwitchToStaffPortal');
+      const staffSwitchText = document.getElementById('btnSwitchToStaffPortalText');
+      if (staffSwitchBtn) {
+        const uRole = String(user.role || sessionStorage.getItem('staff_role') || '').toUpperCase();
+        if (['HEAD', 'STAFF', 'ADMIN'].includes(uRole)) {
+          staffSwitchBtn.style.display = 'inline-flex';
+          if (uRole === 'HEAD') {
+            staffSwitchBtn.style.background = '#f5f3ff';
+            staffSwitchBtn.style.color = '#5b21b6';
+            staffSwitchBtn.style.borderColor = '#c4b5fd';
+            if (staffSwitchText) staffSwitchText.innerText = 'หน้าอนุมัติคำขอ (หัวหน้า)';
+          } else if (uRole === 'STAFF') {
+            staffSwitchBtn.style.background = '#ecfdf5';
+            staffSwitchBtn.style.color = '#047857';
+            staffSwitchBtn.style.borderColor = '#a7f3d0';
+            if (staffSwitchText) staffSwitchText.innerText = 'หน้าจัดการคลังพัสดุ';
+          } else {
+            staffSwitchBtn.style.background = '#f1f5f9';
+            staffSwitchBtn.style.color = '#0f172a';
+            staffSwitchBtn.style.borderColor = '#cbd5e1';
+            if (staffSwitchText) staffSwitchText.innerText = 'หน้าผู้ดูแลระบบคลัง';
+          }
+        } else {
+          staffSwitchBtn.style.display = 'none';
+        }
+      }
+
       const nameInput = document.getElementById('requesterName');
       if (nameInput) {
         nameInput.value = user.name || '';
@@ -3499,93 +3541,27 @@ __SEARCHABLE_SELECT_CSS__
       updateMyReqsBadge();
     }
 
-    function selectPortalLoginRole(role) {
-      const r = String(role || 'REQUESTER').toUpperCase();
-      const hiddenEl = document.getElementById('selectedLoginRole');
-      if (hiddenEl) hiddenEl.value = r;
-
-      const titleEl = document.getElementById('loginRoleTitle');
-      const badgeEl = document.getElementById('loginRoleBadge');
-      const unameEl = document.getElementById('loginUsername');
-      const btnEl = document.getElementById('btnLoginSubmit');
-      const btnTextEl = document.getElementById('btnLoginSubmitText');
-
-      const roleConfigs = {
-        REQUESTER: {
-          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
-          badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
-          badgeBg: '#eff6ff',
-          badgeColor: '#1e40af',
-          badgeBorder: '#bfdbfe',
-          placeholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
-          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
-          btnBg: '#1e40af'
-        },
-        STAFF: {
-          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
-          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)',
-          badgeBg: '#ecfdf5',
-          badgeColor: '#047857',
-          badgeBorder: '#a7f3d0',
-          placeholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่พัสดุ',
-          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
-          btnBg: '#059669'
-        },
-        HEAD: {
-          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน',
-          badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูรายงาน)',
-          badgeBg: '#f5f3ff',
-          badgeColor: '#6d28d9',
-          badgeBorder: '#ddd6fe',
-          placeholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
-          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ',
-          btnBg: '#4f46e5'
-        },
-        ADMIN: {
-          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
-          badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
-          badgeBg: '#f1f5f9',
-          badgeColor: '#0f172a',
-          badgeBorder: '#cbd5e1',
-          placeholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
-          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
-          btnBg: '#0f172a'
-        }
-      };
-
-      const cfg = roleConfigs[r] || roleConfigs.REQUESTER;
-      if (titleEl) titleEl.innerText = cfg.title;
-      if (badgeEl) {
-        badgeEl.style.background = cfg.badgeBg;
-        badgeEl.style.color = cfg.badgeColor;
-        badgeEl.style.borderColor = cfg.badgeBorder;
-        badgeEl.innerHTML = `<svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span>${cfg.badgeText}</span>`;
+    function switchToStaffPortal() {
+      const user = getLoggedInRequester();
+      const role = String((user && user.role) || sessionStorage.getItem('staff_role') || '').toUpperCase();
+      if (!['HEAD', 'STAFF', 'ADMIN'].includes(role)) {
+        window.location.href = 'staff.html';
+        return;
       }
-      if (unameEl) unameEl.placeholder = cfg.placeholder;
-      if (btnEl) btnEl.style.background = cfg.btnBg;
-      if (btnTextEl) btnTextEl.innerText = cfg.btnText;
-
-      document.querySelectorAll('#portalRoleTabs .role-tab-btn').forEach(btn => {
-        const bRole = btn.getAttribute('data-role');
-        if (bRole === r) {
-          btn.classList.add('active');
-          btn.style.border = `2px solid ${cfg.btnBg}`;
-          btn.style.background = cfg.badgeBg;
-          btn.style.color = cfg.badgeColor;
-        } else {
-          btn.classList.remove('active');
-          btn.style.border = '1px solid #cbd5e1';
-          btn.style.background = 'white';
-          btn.style.color = '#334155';
-        }
-      });
+      sessionStorage.setItem('staff_auth', 'true');
+      sessionStorage.setItem('staff_username', (user && user.username) || sessionStorage.getItem('staff_username') || '');
+      sessionStorage.setItem('staff_name', (user && user.name) || sessionStorage.getItem('staff_name') || '');
+      sessionStorage.setItem('staff_role', role);
+      sessionStorage.setItem('staff_active_role', role);
+      window.location.href = 'staff.html';
     }
+
+    const BUILTIN_STAFF_USERNAMES = ['admin_staff', 'admin', 'staff', 'warehouse_staff', 'screener', 'officer', 'head', 'head_approver', 'approver', 'director'];
 
     async function handleRequesterLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const unameEl = document.getElementById('loginUsername');
       const passEl = document.getElementById('loginPassword');
-      const selectedRole = (document.getElementById('selectedLoginRole')?.value || 'REQUESTER').toUpperCase();
       const username = (unameEl ? unameEl.value : '').trim();
       const password = (passEl ? passEl.value : '').trim();
 
@@ -3600,79 +3576,61 @@ __SEARCHABLE_SELECT_CSS__
         return;
       }
 
-      // If user selected STAFF, HEAD, or ADMIN on the login screen -> authenticate via loginStaff and redirect to staff.html
-      if (['STAFF', 'HEAD', 'ADMIN'].includes(selectedRole)) {
-        let staffRes = await postToMySQLAPI('loginStaff', { username, password, requested_role: selectedRole });
-        if (!staffRes) {
-          const uLow = username.toLowerCase();
+      const uLow = username.toLowerCase();
+
+      // Auto-route dedicated staff/head/admin accounts directly to staff.html with their detected role
+      if (BUILTIN_STAFF_USERNAMES.includes(uLow)) {
+        let staffRes = await postToMySQLAPI('loginStaff', { username, password });
+        if (staffRes === null) {
           let resolved = null;
           let dispName = username;
           if (['admin_staff', 'admin'].includes(uLow) && password === 'sdu1234') {
             resolved = 'ADMIN';
             dispName = 'ผู้ดูแลระบบคลังพัสดุ';
-          } else if (['staff', 'warehouse_staff', 'screener'].includes(uLow) && password === 'sdu1234') {
+          } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
             resolved = 'STAFF';
-            dispName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
-          } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+            dispName = 'เจ้าหน้าที่พัสดุ สวท.';
+          } else if (['head', 'head_approver', 'approver', 'director'].includes(uLow) && password === 'sdu1234') {
             resolved = 'HEAD';
-            dispName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
-          } else {
-            const localUsers = getUsersDB();
-            const foundUser = localUsers.find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
-            const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
-            if (foundUser && (password === validPass || password === 'sdu1234')) {
-              const uRole = String(foundUser.role || 'REQUESTER').toUpperCase();
-              if (['ADMIN', 'HEAD', 'STAFF'].includes(uRole)) {
-                resolved = uRole;
-                dispName = foundUser.name || username;
-              } else {
-                staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ' เพื่อเข้าสู่ระบบ` };
-              }
-            }
+            dispName = 'หัวหน้าหน่วยงาน สวท.';
           }
-          if (!staffRes && resolved) {
-            if (resolved !== 'ADMIN' && resolved !== selectedRole) {
-              staffRes = { status: 'error', message: `บัญชี '${username}' มีสิทธิ์เป็น ${resolved} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน` };
-            } else {
-              staffRes = { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: selectedRole };
-            }
-          } else if (!staffRes) {
-            staffRes = { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก' };
-          }
+          staffRes = resolved
+            ? { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: resolved }
+            : { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' };
         }
         if (staffRes && staffRes.status === 'success') {
-          const finalRole = (staffRes.role || selectedRole).toUpperCase();
-          const activeRole = (staffRes.active_role || selectedRole).toUpperCase();
+          const finalRole = (staffRes.role || 'STAFF').toUpperCase();
+          const activeRole = (staffRes.active_role || finalRole).toUpperCase();
           sessionStorage.setItem('staff_auth', 'true');
           sessionStorage.setItem('staff_token', staffRes.token || '');
           sessionStorage.setItem('staff_username', staffRes.username || username);
           sessionStorage.setItem('staff_name', staffRes.name || username);
           sessionStorage.setItem('staff_role', finalRole);
           sessionStorage.setItem('staff_active_role', activeRole);
+          if (staffRes.requester_token) sessionStorage.setItem('staff_requester_token', staffRes.requester_token);
+          if (staffRes.requester_user) sessionStorage.setItem('staff_requester_profile', JSON.stringify(staffRes.requester_user));
           window.location.href = 'staff.html';
           return;
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'เข้าสู่ระบบไม่สำเร็จ',
-            text: (staffRes && staffRes.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับบทบาทที่เลือก',
-            confirmButtonColor: '#1e40af',
-            confirmButtonText: 'ลองใหม่อีกครั้ง'
-          });
-          return;
         }
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: (staffRes && staffRes.message) || 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ลองใหม่อีกครั้ง'
+        });
+        return;
       }
 
-      // 1. Try MySQL/Postgres REST API for REQUESTER
+      // 1. Try PostgreSQL/MySQL REST API for personnel / requester login
       let loginResult = await postToMySQLAPI('loginRequester', { username, password });
 
-      // 2. Fallback to localStorage users DB
-      if (!loginResult || loginResult.status !== 'success') {
+      // 2. Fallback to localStorage users DB ONLY when API server is unreachable (offline)
+      if (loginResult === null) {
         const users = getUsersDB();
-        const cleanUname = username.toLowerCase();
         const found = users.find(u =>
-          (u.username && u.username.toLowerCase() === cleanUname) ||
-          (u.name && u.name.toLowerCase() === cleanUname)
+          (u.username && u.username.toLowerCase() === uLow) ||
+          (u.name && u.name.toLowerCase() === uLow)
         );
         if (found) {
           const validPass = found.password || 'password123';
@@ -3693,16 +3651,38 @@ __SEARCHABLE_SELECT_CSS__
       }
 
       if (loginResult && loginResult.status === 'success') {
-        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(loginResult.user));
+        const userObj = loginResult.user || {};
+        localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userObj));
+        if (loginResult.token) {
+          localStorage.setItem(AUTH_TOKEN_KEY, loginResult.token);
+        } else {
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+        }
+        const resolvedStaffRole = String(loginResult.staff_role || userObj.role || '').toUpperCase();
+        if (['HEAD', 'STAFF', 'ADMIN'].includes(resolvedStaffRole)) {
+          if (loginResult.staff_token) sessionStorage.setItem('staff_token', loginResult.staff_token);
+          sessionStorage.setItem('staff_role', resolvedStaffRole);
+          sessionStorage.setItem('staff_active_role', resolvedStaffRole);
+          sessionStorage.setItem('staff_username', userObj.username || username);
+          sessionStorage.setItem('staff_name', userObj.name || username);
+          sessionStorage.setItem('staff_requester_profile', JSON.stringify(userObj));
+          if (loginResult.token) sessionStorage.setItem('staff_requester_token', loginResult.token);
+        } else {
+          sessionStorage.removeItem('staff_auth');
+          sessionStorage.removeItem('staff_token');
+          sessionStorage.removeItem('staff_role');
+          sessionStorage.removeItem('staff_active_role');
+        }
         Swal.fire({
           icon: 'success',
           title: 'เข้าสู่ระบบสำเร็จ',
-          text: 'ยินดีต้อนรับ ' + loginResult.user.name,
+          text: 'ยินดีต้อนรับ ' + userObj.name,
           timer: 1500,
           showConfirmButton: false
         });
         checkRequesterAuth();
         renderCatalog();
+        syncFromMySQLAPI();
       } else {
         Swal.fire({
           icon: 'error',
@@ -3727,6 +3707,15 @@ __SEARCHABLE_SELECT_CSS__
       }).then((res) => {
         if (res.isConfirmed) {
           localStorage.removeItem(AUTH_SESSION_KEY);
+          localStorage.removeItem(AUTH_TOKEN_KEY);
+          sessionStorage.removeItem('staff_auth');
+          sessionStorage.removeItem('staff_token');
+          sessionStorage.removeItem('staff_username');
+          sessionStorage.removeItem('staff_name');
+          sessionStorage.removeItem('staff_role');
+          sessionStorage.removeItem('staff_active_role');
+          sessionStorage.removeItem('staff_requester_token');
+          sessionStorage.removeItem('staff_requester_profile');
           if (AUTH_BYPASS) {
             checkRequesterAuth(true);
           } else {
@@ -3745,19 +3734,17 @@ __SEARCHABLE_SELECT_CSS__
       try {
         const params = new URLSearchParams(window.location.search);
         const roleParam = (params.get('role') || '').toUpperCase();
-        if (['REQUESTER', 'STAFF', 'HEAD', 'ADMIN'].includes(roleParam)) {
-          if (roleParam !== 'REQUESTER') {
-            localStorage.removeItem(AUTH_SESSION_KEY);
-          }
-          selectPortalLoginRole(roleParam);
+        if (['STAFF', 'HEAD', 'ADMIN'].includes(roleParam)) {
+          window.location.href = `staff.html?role=${encodeURIComponent(roleParam)}`;
+          return;
         }
       } catch (e) {}
       const isAuth = checkRequesterAuth();
       if (isAuth) {
         renderCatalog();
         updateMyReqsBadge();
+        syncFromMySQLAPI();
       }
-      syncFromMySQLAPI();
     });
 
 __SEARCHABLE_SELECT_JS__
@@ -4267,70 +4254,34 @@ __SEARCHABLE_SELECT_CSS__
 
   <!-- LOGIN SCREEN (If not authenticated) -->
   <div id="loginScreen" class="login-container" style="display: none;">
-    <div style="text-align: center; margin-bottom: 1.25rem;">
-      <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.6rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
-      <h2 id="staffLoginTitle" style="font-size: 1.2rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</h2>
+    <div style="text-align: center; margin-bottom: 1.4rem;">
+      <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.65rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
+      <h2 id="staffLoginTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบบริหารคลังพัสดุ</h2>
       <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
-      <div id="staffLoginBadge" style="margin-top: 0.6rem; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
+      <div id="staffLoginBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
         <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <span>สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)</span>
+        <span>กรอกชื่อผู้ใช้งานและรหัสผ่าน ระบบจะตรวจสอบบทบาทให้อัตโนมัติ</span>
       </div>
-    </div>
-
-    <div style="margin-bottom: 1.1rem;">
-      <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--neutral-600); margin-bottom: 0.45rem;">เลือกบทบาทผู้ใช้งาน:</label>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;" id="staffRoleLoginTabs">
-        <button type="button" class="staff-role-tab-btn active" data-role="STAFF" onclick="selectStaffLoginRole('STAFF')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 2px solid #059669; background: #ecfdf5; color: #047857; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
-          <div>
-            <div style="line-height: 1.2;">เจ้าหน้าที่พัสดุ</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้คัดกรอง</div>
-          </div>
-        </button>
-        <button type="button" class="staff-role-tab-btn" data-role="HEAD" onclick="selectStaffLoginRole('HEAD')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-          <div>
-            <div style="line-height: 1.2;">หัวหน้าหน่วยงาน</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้อนุมัติ</div>
-          </div>
-        </button>
-        <button type="button" class="staff-role-tab-btn" data-role="ADMIN" onclick="selectStaffLoginRole('ADMIN')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <div>
-            <div style="line-height: 1.2;">ผู้ดูแลระบบสูงสุด</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ผู้ดูแลระบบ</div>
-          </div>
-        </button>
-        <button type="button" class="staff-role-tab-btn" data-role="REQUESTER" onclick="selectStaffLoginRole('REQUESTER')" style="padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid #cbd5e1; background: white; color: #334155; font-family: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; text-align: left; transition: all 0.15s;">
-          <svg class="svg-icon" style="width: 16px; height: 16px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <div>
-            <div style="line-height: 1.2;">ผู้ขอเบิกพัสดุ</div>
-            <div style="font-size: 0.68rem; font-weight: 400; opacity: 0.85;">ส่งคำขอเบิก</div>
-          </div>
-        </button>
-      </div>
-      <input type="hidden" id="selectedStaffLoginRole" value="STAFF">
     </div>
 
     <form onsubmit="handleStaffLogin(event)" style="display: flex; flex-direction: column; gap: 1rem;">
       <div class="form-group">
         <label><svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ชื่อผู้ใช้งาน</label>
-        <input type="text" id="loginUsername" class="form-control" placeholder="กรอกชื่อผู้ใช้งานเจ้าหน้าที่" required autocomplete="username">
+        <input type="text" id="loginUsername" class="form-control" placeholder="กรอกชื่อผู้ใช้งานของท่าน" required autocomplete="username">
       </div>
       <div class="form-group">
         <label><svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> รหัสผ่าน</label>
-        <input type="password" id="loginPassword" class="form-control" placeholder="กรอกรหัสผ่านเจ้าหน้าที่" required autocomplete="current-password">
+        <input type="password" id="loginPassword" class="form-control" placeholder="กรอกรหัสผ่านของท่าน" required autocomplete="current-password">
       </div>
-      <button type="submit" id="btnStaffLoginSubmit" class="btn btn-primary" style="justify-content: center; padding: 0.75rem; margin-top: 0.5rem; background: #059669;">
-        <span id="btnStaffLoginSubmitText">เข้าสู่ระบบเจ้าหน้าที่พัสดุ</span>
+      <button type="submit" id="btnStaffLoginSubmit" class="btn btn-primary" style="justify-content: center; padding: 0.78rem; margin-top: 0.35rem;">
+        <span id="btnStaffLoginSubmitText">เข้าสู่ระบบ</span>
       </button>
     </form>
 
-    <div style="margin-top: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.775rem; color: #475569; line-height: 1.5;">
-      <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 4px;">สิทธิ์การเข้าใช้งานตามบทบาท:</div>
-      <div>• <strong>staff</strong> : เจ้าหน้าที่พัสดุ (คัดกรองคำขอ / จัดการสต๊อก)</div>
-      <div>• <strong>head</strong> : หัวหน้าหน่วยงาน (อนุมัติขั้นสุดท้าย)</div>
-      <div>• <strong>admin_staff</strong> : ผู้ดูแลระบบสูงสุด (เข้าถึงและสลับมุมมองได้ทุกสิทธิ์)</div>
+    <div style="margin-top: 1.1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 0.9rem; font-size: 0.775rem; color: #475569; line-height: 1.55;">
+      <div style="font-weight: 600; color: #1e3a8a; margin-bottom: 4px;">ระบบตรวจสอบสิทธิ์อัตโนมัติตามบัญชี:</div>
+      <div>• เจ้าหน้าที่พัสดุ, หัวหน้าหน่วยงาน, และผู้ดูแลระบบจะเข้าสู่หน้าจัดการตามสิทธิ์ทันที</div>
+      <div>• บัญชีผู้ขอเบิกพัสดุจะถูกนำไปยังหน้าขอเบิกพัสดุโดยอัตโนมัติ</div>
     </div>
 
     <div style="margin-top: 1.25rem; text-align: center; border-top: 1px solid var(--neutral-200); padding-top: 1rem; display: flex; justify-content: center; gap: 0.75rem; align-items: center;">
@@ -4339,7 +4290,7 @@ __SEARCHABLE_SELECT_CSS__
       </a>
       <span style="color: var(--neutral-300);">|</span>
       <a href="index.html" style="font-size: 0.85rem; color: var(--neutral-600); text-decoration: none;">
-        หน้าขอเบิกพัสดุ (สำหรับผู้เบิก) →
+        หน้าขอเบิกพัสดุ
       </a>
     </div>
   </div>
@@ -4391,9 +4342,9 @@ __SEARCHABLE_SELECT_CSS__
           <a href="portal.html" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> ศูนย์กลางพอร์ทัล
           </a>
-          <a href="index.html" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
-            เปิดหน้าผู้เบิก ↗
-          </a>
+          <button type="button" id="btnSwitchToRequesterPortal" class="btn btn-outline" onclick="switchToRequesterPortal()" style="font-size: 0.8rem; padding: 0.42rem 0.8rem; border-color: #93c5fd; color: #1e40af; background: #eff6ff; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg> ขอเบิกพัสดุ
+          </button>
           <button class="btn btn-outline" style="color: var(--danger); font-size: 0.8rem; padding: 0.4rem 0.75rem;" onclick="logoutStaff()">
             <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg> ออกจากระบบ
           </button>
@@ -5127,15 +5078,32 @@ __SEARCHABLE_SELECT_CSS__
     }
     function saveReqsDB(reqs) { localStorage.setItem(DB_REQS_KEY, JSON.stringify(reqs)); }
 
+    function getStaffAuthHeaders() {
+      const token = sessionStorage.getItem('staff_token') || '';
+      const activeRole = typeof getActiveStaffRole === 'function' ? getActiveStaffRole() : 'STAFF';
+      const headers = { 'X-Staff-Role': activeRole };
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+        headers['X-Staff-Token'] = token;
+      }
+      return headers;
+    }
+
+    function isSafeSignatureDataUrl(sig) {
+      return typeof sig === 'string' && /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\s]+$/i.test(sig.trim());
+    }
+
     async function syncFromMySQLAPI() {
       if (!MYSQL_API_URL || !navigator.onLine) return;
+      if (sessionStorage.getItem('staff_auth') !== 'true' && !AUTH_BYPASS) return;
+      const authHeaders = getStaffAuthHeaders();
       try {
         const [itemsRes, reqsRes, usersRes, deptsRes, quotasRes] = await Promise.all([
-          fetch(`${MYSQL_API_URL}?action=getItems`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getRequisitions`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getUsers`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getDepartments`).then(r => r.json()).catch(() => null),
-          fetch(`${MYSQL_API_URL}?action=getQuotas`).then(r => r.json()).catch(() => null)
+          fetch(`${MYSQL_API_URL}?action=getItems`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getRequisitions`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getUsers`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getDepartments`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${MYSQL_API_URL}?action=getQuotas`, { headers: authHeaders }).then(r => r.ok ? r.json() : null).catch(() => null)
         ]);
         if (quotasRes && quotasRes.status === 'success' && Array.isArray(quotasRes.data)) {
           saveQuotasDB(quotasRes.data);
@@ -5348,95 +5316,7 @@ __SEARCHABLE_SELECT_CSS__
       }
     }
 
-    function selectStaffLoginRole(role) {
-      const r = String(role || 'STAFF').toUpperCase();
-      const hiddenEl = document.getElementById('selectedStaffLoginRole');
-      if (hiddenEl) hiddenEl.value = r;
-
-      const titleEl = document.getElementById('staffLoginTitle');
-      const badgeEl = document.getElementById('staffLoginBadge');
-      const unameEl = document.getElementById('loginUsername');
-      const passEl = document.getElementById('loginPassword');
-      const btnEl = document.getElementById('btnStaffLoginSubmit');
-      const btnTextEl = document.getElementById('btnStaffLoginSubmitText');
-
-      const roleConfigs = {
-        STAFF: {
-          title: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
-          badgeText: 'สำหรับเจ้าหน้าที่พัสดุ (คัดกรองคำขอ, รับของเข้าคลัง และจ่ายพัสดุ)',
-          badgeBg: '#ecfdf5',
-          badgeColor: '#047857',
-          badgeBorder: '#a7f3d0',
-          userPlaceholder: 'กรอกชื่อผู้ใช้งานเจ้าหน้าที่',
-          passPlaceholder: 'กรอกรหัสผ่านเจ้าหน้าที่',
-          btnText: 'เข้าสู่ระบบเจ้าหน้าที่พัสดุ',
-          btnBg: '#059669'
-        },
-        HEAD: {
-          title: 'เข้าสู่ระบบหัวหน้าหน่วยงาน',
-          badgeText: 'สำหรับหัวหน้าหน่วยงาน (อนุมัติคำขอขั้นสุดท้าย Approve และดูสถิติ)',
-          badgeBg: '#f5f3ff',
-          badgeColor: '#6d28d9',
-          badgeBorder: '#ddd6fe',
-          userPlaceholder: 'กรอกชื่อผู้ใช้งานหัวหน้าหน่วยงาน',
-          passPlaceholder: 'กรอกรหัสผ่านหัวหน้าหน่วยงาน',
-          btnText: 'เข้าสู่ระบบหัวหน้าผู้อนุมัติ',
-          btnBg: '#4f46e5'
-        },
-        ADMIN: {
-          title: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
-          badgeText: 'สำหรับผู้ดูแลระบบ (บริหารจัดการคลัง บุคลากร กลุ่มงาน และทุกสิทธิ์)',
-          badgeBg: '#f1f5f9',
-          badgeColor: '#0f172a',
-          badgeBorder: '#cbd5e1',
-          userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ดูแลระบบ',
-          passPlaceholder: 'กรอกรหัสผ่านผู้ดูแลระบบ',
-          btnText: 'เข้าสู่ระบบผู้ดูแลระบบสูงสุด',
-          btnBg: '#0f172a'
-        },
-        REQUESTER: {
-          title: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
-          badgeText: 'สำหรับบุคลากรและอาจารย์ สวท. (เลือกเบิกพัสดุและติดตามสถานะ)',
-          badgeBg: '#eff6ff',
-          badgeColor: '#1e40af',
-          badgeBorder: '#bfdbfe',
-          userPlaceholder: 'กรอกชื่อผู้ใช้งานผู้ขอเบิก',
-          passPlaceholder: 'กรอกรหัสผ่านผู้ขอเบิก',
-          btnText: 'เข้าสู่ระบบผู้ขอเบิกพัสดุ',
-          btnBg: '#1e40af'
-        }
-      };
-
-      const cfg = roleConfigs[r] || roleConfigs.STAFF;
-      if (titleEl) titleEl.innerText = cfg.title;
-      if (badgeEl) {
-        badgeEl.style.background = cfg.badgeBg;
-        badgeEl.style.color = cfg.badgeColor;
-        badgeEl.style.borderColor = cfg.badgeBorder;
-        badgeEl.innerHTML = `<svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg><span>${cfg.badgeText}</span>`;
-      }
-      if (unameEl) unameEl.placeholder = cfg.userPlaceholder;
-      if (passEl) passEl.placeholder = cfg.passPlaceholder;
-      if (btnEl) btnEl.style.background = cfg.btnBg;
-      if (btnTextEl) btnTextEl.innerText = cfg.btnText;
-
-      document.querySelectorAll('#staffRoleLoginTabs .staff-role-tab-btn').forEach(btn => {
-        const bRole = btn.getAttribute('data-role');
-        if (bRole === r) {
-          btn.classList.add('active');
-          btn.style.border = `2px solid ${cfg.btnBg}`;
-          btn.style.background = cfg.badgeBg;
-          btn.style.color = cfg.badgeColor;
-        } else {
-          btn.classList.remove('active');
-          btn.style.border = '1px solid #cbd5e1';
-          btn.style.background = 'white';
-          btn.style.color = '#334155';
-        }
-      });
-    }
-
-    // Auth Simulation
+    // Auth & Auto-Role Detection
     function checkStaffAuth(skipBypass = false) {
       let isAuth = sessionStorage.getItem('staff_auth') === 'true';
       const wantsLogin = window.location.search.includes('showLogin=1');
@@ -5466,11 +5346,11 @@ __SEARCHABLE_SELECT_CSS__
         updateRoleUI();
         loadStaffDashboard();
         const activeRole = getActiveStaffRole();
-        if (AUTH_BYPASS && !skipBypass) {
-          if (activeRole === 'HEAD') {
+        if (!skipBypass) {
+          if (activeRole === 'HEAD' && currentStaffStatus === 'PENDING') {
             const tabs = document.querySelectorAll('.status-tab');
             if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
-          } else if (activeRole === 'STAFF') {
+          } else if (activeRole === 'STAFF' && AUTH_BYPASS) {
             const tabs = document.querySelectorAll('.status-tab');
             if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
           }
@@ -5478,62 +5358,94 @@ __SEARCHABLE_SELECT_CSS__
       }
     }
 
+    function switchToRequesterPortal() {
+      const staffUsername = sessionStorage.getItem('staff_username') || '';
+      const staffName = sessionStorage.getItem('staff_name') || staffUsername || 'บุคลากร สวท.';
+      const staffRole = (sessionStorage.getItem('staff_role') || 'STAFF').toUpperCase();
+      let reqProfile = null;
+      try {
+        const raw = sessionStorage.getItem('staff_requester_profile');
+        if (raw) reqProfile = JSON.parse(raw);
+      } catch (e) {}
+
+      if (!reqProfile || !reqProfile.name) {
+        const users = getUsersDB();
+        const matched = users.find(u =>
+          (u.username && u.username.toLowerCase() === staffUsername.toLowerCase()) ||
+          (u.name && u.name.toLowerCase() === staffName.toLowerCase())
+        );
+        if (matched) {
+          reqProfile = {
+            id: matched.id,
+            name: matched.name,
+            username: matched.username || staffUsername,
+            role: staffRole,
+            position: matched.position || '',
+            dept: matched.dept || 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+            phone: matched.phone || ''
+          };
+        } else {
+          reqProfile = {
+            id: 0,
+            name: staffName,
+            username: staffUsername,
+            role: staffRole,
+            position: staffRole === 'HEAD' ? 'หัวหน้าหน่วยงาน' : (staffRole === 'ADMIN' ? 'ผู้ดูแลระบบคลังพัสดุ' : 'เจ้าหน้าที่พัสดุ'),
+            dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+            phone: ''
+          };
+        }
+      } else {
+        reqProfile.role = staffRole;
+      }
+
+      const tokenToUse = sessionStorage.getItem('staff_requester_token') || sessionStorage.getItem('staff_token') || '';
+      localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(reqProfile));
+      if (tokenToUse) {
+        localStorage.setItem('sdu_requester_token_v1', tokenToUse);
+      }
+      window.location.href = 'index.html';
+    }
+
     async function handleStaffLogin(e) {
       e.preventDefault();
       const usernameInput = document.getElementById('loginUsername');
       const passwordInput = document.getElementById('loginPassword');
-      const selectedRole = (document.getElementById('selectedStaffLoginRole')?.value || 'STAFF').toUpperCase();
       const username = usernameInput ? usernameInput.value.trim() : '';
       const password = passwordInput ? passwordInput.value.trim() : '';
 
-      if (selectedRole === 'REQUESTER') {
-        try {
-          const res = await fetch(MYSQL_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'loginRequester', username, password })
-          });
-          const data = await res.json();
-          if (data && data.status === 'success' && data.user) {
-            localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(data.user));
-            window.location.href = 'index.html';
-            return;
-          }
-        } catch (err) {}
-        const users = getUsersDB();
-        const found = users.find(u => (u.username && u.username.toLowerCase() === username.toLowerCase()) || (u.name && u.name.toLowerCase() === username.toLowerCase()));
-        if (found && (password === (found.password || 'sdu1234') || password === 'sdu1234')) {
-          localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(found));
-          window.location.href = 'index.html';
-          return;
-        }
+      if (!username || !password) {
         Swal.fire({
-          icon: 'error',
-          title: 'เข้าสู่ระบบไม่สำเร็จ',
-          text: 'ชื่อผู้ใช้งานหรือรหัสผ่านผู้ขอเบิกไม่ถูกต้อง',
+          icon: 'warning',
+          title: 'กรุณากรอกข้อมูลให้ครบ',
+          text: 'กรุณาระบุชื่อผู้ใช้งานและรหัสผ่าน',
           confirmButtonColor: '#1e40af',
-          confirmButtonText: 'ลองใหม่อีกครั้ง'
+          confirmButtonText: 'ตกลง'
         });
         return;
       }
 
       try {
+        // Authenticate without requested_role so backend automatically detects the account's actual role
         const res = await fetch(MYSQL_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'loginStaff', username, password, requested_role: selectedRole })
+          body: JSON.stringify({ action: 'loginStaff', username, password })
         });
         const data = await res.json();
         if (data && data.status === 'success') {
           const baseRole = (data.role || resolveRoleFromUsername(username)).toUpperCase();
-          const activeRole = (data.active_role || (baseRole === 'ADMIN' ? selectedRole : baseRole)).toUpperCase();
+          const activeRole = (data.active_role || baseRole).toUpperCase();
           sessionStorage.setItem('staff_auth', 'true');
           sessionStorage.setItem('staff_token', data.token || '');
           sessionStorage.setItem('staff_username', data.username || username);
           sessionStorage.setItem('staff_name', data.name || username);
           sessionStorage.setItem('staff_role', baseRole);
           sessionStorage.setItem('staff_active_role', activeRole);
+          if (data.requester_token) sessionStorage.setItem('staff_requester_token', data.requester_token);
+          if (data.requester_user) sessionStorage.setItem('staff_requester_profile', JSON.stringify(data.requester_user));
           checkStaffAuth();
+          syncFromMySQLAPI();
           if (activeRole === 'HEAD') {
             const tabs = document.querySelectorAll('.status-tab');
             if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
@@ -5541,13 +5453,34 @@ __SEARCHABLE_SELECT_CSS__
             const tabs = document.querySelectorAll('.status-tab');
             if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
           }
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'เข้าสู่ระบบไม่สำเร็จ',
-            text: (data && data.message) || 'ชื่อผู้ใช้หรือรหัสผ่านเจ้าหน้าที่ไม่ถูกต้อง'
-          });
+          return;
         }
+
+        // If account is a REQUESTER role, automatically sign in via loginRequester and redirect to index.html
+        if (data && data.code === 'ROLE_MISMATCH') {
+          const reqRes = await fetch(MYSQL_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'loginRequester', username, password })
+          });
+          const reqData = await reqRes.json();
+          if (reqData && reqData.status === 'success' && reqData.user) {
+            localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(reqData.user));
+            if (reqData.token) {
+              localStorage.setItem('sdu_requester_token_v1', reqData.token);
+            }
+            window.location.href = 'index.html';
+            return;
+          }
+        }
+
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: (data && data.message) || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ลองใหม่อีกครั้ง'
+        });
       } catch (err) {
         console.warn('Login request failed or offline fallback:', err);
         const uLow = username.toLowerCase();
@@ -5558,10 +5491,10 @@ __SEARCHABLE_SELECT_CSS__
           resolvedName = 'ผู้ดูแลระบบคลังพัสดุ';
         } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'STAFF';
-          resolvedName = 'เจ้าหน้าที่พัสดุ สวท. (ผู้คัดกรอง)';
+          resolvedName = 'เจ้าหน้าที่พัสดุ สวท.';
         } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'HEAD';
-          resolvedName = 'หัวหน้าหน่วยงาน สวท. (ผู้อนุมัติ)';
+          resolvedName = 'หัวหน้าหน่วยงาน สวท.';
         } else {
           const foundUser = getUsersDB().find(u => (u.username && u.username.toLowerCase() === uLow) || (u.name && u.name.toLowerCase() === uLow));
           const validPass = foundUser ? (foundUser.password || 'sdu1234') : '';
@@ -5571,11 +5504,8 @@ __SEARCHABLE_SELECT_CSS__
               resolvedRole = uRole;
               resolvedName = foundUser.name || username;
             } else {
-              Swal.fire({
-                icon: 'error',
-                title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
-                text: `บัญชี '${username}' มีสิทธิ์เป็น REQUESTER กรุณาเลือกแท็บ 'ผู้ขอเบิกพัสดุ'`
-              });
+              localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(foundUser));
+              window.location.href = 'index.html';
               return;
             }
           }
@@ -5584,25 +5514,25 @@ __SEARCHABLE_SELECT_CSS__
           Swal.fire({
             icon: 'error',
             title: 'เข้าสู่ระบบไม่สำเร็จ',
-            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง โหมดออฟไลน์'
+            text: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง โหมดออฟไลน์',
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ลองใหม่อีกครั้ง'
           });
           return;
         }
-        if (resolvedRole !== 'ADMIN' && resolvedRole !== selectedRole) {
-          Swal.fire({
-            icon: 'error',
-            title: 'สิทธิ์ไม่ตรงกับบทบาทที่เลือก',
-            text: `บัญชี '${username}' มีสิทธิ์เป็น ${resolvedRole} กรุณาเลือกแท็บบทบาทให้ตรงกับสิทธิ์ของท่าน`
-          });
-          return;
-        }
-        const activeRole = resolvedRole === 'ADMIN' ? selectedRole : resolvedRole;
         sessionStorage.setItem('staff_auth', 'true');
         sessionStorage.setItem('staff_username', username || 'admin_staff');
         sessionStorage.setItem('staff_name', resolvedName);
         sessionStorage.setItem('staff_role', resolvedRole);
-        sessionStorage.setItem('staff_active_role', activeRole);
+        sessionStorage.setItem('staff_active_role', resolvedRole);
         checkStaffAuth();
+        if (resolvedRole === 'HEAD') {
+          const tabs = document.querySelectorAll('.status-tab');
+          if (tabs[1]) filterStaffRequisitionStatus('VERIFIED', tabs[1]);
+        } else if (resolvedRole === 'STAFF') {
+          const tabs = document.querySelectorAll('.status-tab');
+          if (tabs[0]) filterStaffRequisitionStatus('PENDING', tabs[0]);
+        }
       }
     }
 
@@ -5624,6 +5554,10 @@ __SEARCHABLE_SELECT_CSS__
           sessionStorage.removeItem('staff_name');
           sessionStorage.removeItem('staff_role');
           sessionStorage.removeItem('staff_active_role');
+          sessionStorage.removeItem('staff_requester_token');
+          sessionStorage.removeItem('staff_requester_profile');
+          localStorage.removeItem('sdu_requester_auth_v1');
+          localStorage.removeItem('sdu_requester_token_v1');
           checkStaffAuth(true);
         }
       });
@@ -5926,7 +5860,7 @@ __SEARCHABLE_SELECT_CSS__
             verifiedDate: verifiedDate,
             items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
           });
-          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+          if (apiRes && apiRes.status === 'error') {
             Swal.fire({
               icon: 'error',
               title: 'ไม่สามารถคัดกรองคำขอได้',
@@ -6030,7 +5964,7 @@ __SEARCHABLE_SELECT_CSS__
             approvedDate: approvedDate,
             items: updatedItems.map(i => ({ itemId: i.itemId, approvedPieces: i.approvedPieces }))
           });
-          if (apiRes && apiRes.status === 'error' && apiRes.code && apiRes.code !== 'DB_ERROR' && apiRes.code !== 'MYSQL_CONNECTION_ERROR') {
+          if (apiRes && apiRes.status === 'error') {
             Swal.fire({
               icon: 'error',
               title: 'ไม่สามารถอนุมัติคำขอได้',
@@ -6089,11 +6023,27 @@ __SEARCHABLE_SELECT_CSS__
             return 'กรุณาระบุเหตุผลครับ!';
           }
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed && result.value) {
           const items = getItemsDB();
           const req = reqs.find(r => r.id === docNo);
           if (req) {
+            const now = new Date();
+            const thaiNow = getThaiDatetime(now);
+            const reasonText = result.value.trim();
+
+            const apiRes = await postToMySQLAPI('rejectRequisition', { docNo: docNo, reason: reasonText, rejected_date: thaiNow });
+            if (apiRes && apiRes.status === 'error') {
+              Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถปฏิเสธคำขอได้',
+                text: apiRes.message || 'เกิดข้อผิดพลาดในการบันทึกฐานข้อมูล',
+                confirmButtonColor: '#1e40af',
+                confirmButtonText: 'ตกลง'
+              });
+              return;
+            }
+
             // If previously APPROVED, release reserved_pieces back to stock
             if (req.status === 'APPROVED') {
               req.items.forEach(i => {
@@ -6104,17 +6054,14 @@ __SEARCHABLE_SELECT_CSS__
               });
               saveItemsDB(items);
             }
-            const now = new Date();
-            const thaiNow = getThaiDatetime(now);
             req.status = 'REJECTED';
-            req.reject_reason = result.value.trim();
-            req.rejectReason = result.value.trim();
+            req.reject_reason = reasonText;
+            req.rejectReason = reasonText;
             req.rejected_at = now.toISOString();
             req.rejected_date = thaiNow;
             req.rejectedDate = thaiNow;
             req.updated_at = now.toISOString();
             saveReqsDB(reqs);
-            postToMySQLAPI('rejectRequisition', { docNo: docNo, reason: req.reject_reason, rejected_date: thaiNow });
             renderStaffRequisitions(currentStaffStatus);
             renderInventoryTable();
 
@@ -6153,12 +6100,31 @@ __SEARCHABLE_SELECT_CSS__
         cancelButtonColor: '#64748b',
         confirmButtonText: 'ยืนยันจ่ายพัสดุ',
         cancelButtonText: 'ยกเลิก'
-      }).then((res) => {
+      }).then(async (res) => {
         if (!res.isConfirmed) return;
 
-        const items = getItemsDB();
         const now = new Date();
         const thaiNow = getThaiDatetime(now);
+        const staffUser = getLoggedInStaff();
+        const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+
+        const apiRes = await postToMySQLAPI('completeRequisition', {
+          docNo: req.id,
+          completed_date: thaiNow,
+          recordedBy: recBy
+        });
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'ไม่สามารถบันทึกจ่ายพัสดุได้',
+            text: apiRes.message || 'เกิดข้อผิดพลาดในการตัดสต๊อกบนฐานข้อมูล',
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง'
+          });
+          return;
+        }
+
+        const items = getItemsDB();
         req.status = 'COMPLETED';
         req.completed_at = now.toISOString();
         req.completed_date = thaiNow;
@@ -6166,8 +6132,6 @@ __SEARCHABLE_SELECT_CSS__
         req.updated_at = now.toISOString();
 
         // Deduct permanently from On-Hand and release Reserved
-        const staffUser = getLoggedInStaff();
-        const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
         req.items.forEach(i => {
           const itm = items.find(si => si.id === i.itemId);
           if (itm) {
@@ -6192,11 +6156,6 @@ __SEARCHABLE_SELECT_CSS__
 
         saveReqsDB(reqs);
         saveItemsDB(items);
-        postToMySQLAPI('completeRequisition', {
-          docNo: req.id,
-          completed_date: thaiNow,
-          recordedBy: recBy
-        });
 
         renderStaffRequisitions('APPROVED');
         renderInventoryTable();
@@ -6422,18 +6381,20 @@ __SEARCHABLE_SELECT_CSS__
             hiddenInput.value = itm.id;
             searchInput.value = itm.name;
 
-            const ratioTxt = itm.is_multi_unit ? `1 ${itm.unit_box_name} = ${itm.pieces_per_box} ${itm.unit_piece_name}` : `1 ${itm.unit_piece_name}`;
+            const safeBoxUnit = escapeHtml(itm.unit_box_name || 'กล่อง');
+            const safePieceUnit = escapeHtml(itm.unit_piece_name || 'ชิ้น');
+            const ratioTxt = itm.is_multi_unit ? `1 ${safeBoxUnit} = ${itm.pieces_per_box} ${safePieceUnit}` : `1 ${safePieceUnit}`;
             if (badgeEl) {
               badgeEl.innerHTML = `
-                <span>คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${itm.unit_piece_name}</span>
+                <span>คงเหลือปัจจุบัน: <strong style="color: #1e40af;">${Number(itm.on_hand_pieces).toLocaleString()}</strong> ${safePieceUnit}</span>
                 <span style="font-size: 0.75rem; color: #64748b;">อัตราส่วน: ${ratioTxt}</span>
               `;
             }
             if (boxLabelEl) {
-              boxLabelEl.innerHTML = `จำนวนหน่วยใหญ่ (<strong>${itm.unit_box_name || 'กล่อง'}</strong>):`;
+              boxLabelEl.innerHTML = `จำนวนหน่วยใหญ่ (<strong>${safeBoxUnit}</strong>):`;
             }
             if (pieceLabelEl) {
-              pieceLabelEl.innerHTML = `จำนวนหน่วยย่อย (<strong>${itm.unit_piece_name || 'ชิ้น'}</strong>):`;
+              pieceLabelEl.innerHTML = `จำนวนหน่วยย่อย (<strong>${safePieceUnit}</strong>):`;
             }
             if (priceHintEl) {
               const lastP = Number(itm.last_unit_price || 0);
@@ -6504,7 +6465,7 @@ __SEARCHABLE_SELECT_CSS__
           }
           return { itemId, boxes, pieces, priceMode, rawPrice, note };
         }
-      }).then((res) => {
+      }).then(async (res) => {
         if (res.isConfirmed && res.value) {
           const { itemId, boxes, pieces, priceMode, rawPrice, note } = res.value;
           const items = getItemsDB();
@@ -6527,14 +6488,34 @@ __SEARCHABLE_SELECT_CSS__
               }
             }
             const nowStr = formatThaiDatetime(new Date());
-            itm.on_hand_pieces += totalAdded;
-            itm.last_restocked_at = nowStr;
+            const staffUser = getLoggedInStaff();
+            const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+
+            const apiRes = await postToMySQLAPI('restockItem', {
+              itemId: itm.id,
+              quantityPieces: totalAdded,
+              unitPrice: unitPrice,
+              totalCost: totalCost,
+              note: note,
+              recordedBy: recBy
+            });
+            if (apiRes && apiRes.status === 'error') {
+              Swal.fire({
+                icon: 'error',
+                title: 'รับพัสดุเข้าคลังไม่สำเร็จ',
+                text: apiRes.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล',
+                confirmButtonColor: '#1e40af',
+                confirmButtonText: 'ตกลง'
+              });
+              return;
+            }
+
+            itm.on_hand_pieces = (apiRes && typeof apiRes.on_hand_pieces === 'number') ? apiRes.on_hand_pieces : (itm.on_hand_pieces + totalAdded);
+            itm.last_restocked_at = (apiRes && apiRes.last_restocked_at) ? apiRes.last_restocked_at : nowStr;
             if (unitPrice > 0) {
               itm.last_unit_price = unitPrice;
             }
             saveItemsDB(items);
-            const staffUser = getLoggedInStaff();
-            const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
             recordLocalTransaction({
               itemId: itm.id,
               itemName: itm.name,
@@ -6549,14 +6530,6 @@ __SEARCHABLE_SELECT_CSS__
               reason: note,
               recordedBy: recBy,
               formattedDate: nowStr
-            });
-            postToMySQLAPI('restockItem', {
-              itemId: itm.id,
-              quantityPieces: totalAdded,
-              unitPrice: unitPrice,
-              totalCost: totalCost,
-              note: note,
-              recordedBy: recBy
             });
             renderInventoryTable();
 
@@ -6779,7 +6752,7 @@ __SEARCHABLE_SELECT_CSS__
           }
           return { itemId, newQty, reason };
         }
-      }).then((res) => {
+      }).then(async (res) => {
         if (res.isConfirmed && res.value) {
           const { itemId, newQty, reason } = res.value;
           const items = getItemsDB();
@@ -6787,10 +6760,23 @@ __SEARCHABLE_SELECT_CSS__
           if (itm) {
             const oldQty = itm.on_hand_pieces;
             const diff = newQty - oldQty;
-            itm.on_hand_pieces = newQty;
-            saveItemsDB(items);
             const staffUser = getLoggedInStaff();
             const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
+
+            const apiRes = await postToMySQLAPI('adjustStock', { itemId: itm.id, newQty: newQty, reason: reason, recordedBy: recBy });
+            if (apiRes && apiRes.status === 'error') {
+              Swal.fire({
+                icon: 'error',
+                title: 'ปรับปรุงยอดสต๊อกไม่สำเร็จ',
+                text: apiRes.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล',
+                confirmButtonColor: '#1e40af',
+                confirmButtonText: 'ตกลง'
+              });
+              return;
+            }
+
+            itm.on_hand_pieces = newQty;
+            saveItemsDB(items);
             recordLocalTransaction({
               itemId: itm.id,
               itemName: itm.name,
@@ -6804,13 +6790,12 @@ __SEARCHABLE_SELECT_CSS__
               recordedBy: recBy,
               formattedDate: formatThaiDatetime(new Date())
             });
-            postToMySQLAPI('adjustStock', { itemId: itm.id, newQty: newQty, reason: reason, recordedBy: recBy });
             renderInventoryTable();
 
             Swal.fire({
               icon: 'success',
               title: 'ปรับปรุงยอดสต๊อกสำเร็จ!',
-              html: `รายการ <b>${itm.name}</b><br>ปรับยอดจาก ${oldQty.toLocaleString()} เป็น <b>${newQty.toLocaleString()} ${itm.unit_piece_name}</b><br><small style="color:#64748b;">เหตุผล: ${reason}</small>`,
+              html: `รายการ <b>${escapeHtml(itm.name)}</b><br>ปรับยอดจาก ${oldQty.toLocaleString()} เป็น <b>${newQty.toLocaleString()} ${escapeHtml(itm.unit_piece_name)}</b><br><small style="color:#64748b;">เหตุผล: ${escapeHtml(reason)}</small>`,
               confirmButtonColor: '#1e40af',
               confirmButtonText: 'ตกลง'
             });
@@ -7048,8 +7033,8 @@ __SEARCHABLE_SELECT_CSS__
 
       const sigArea = document.getElementById('pdfReceiverSigArea');
       if (sigArea) {
-        if (req.signature && req.signature.startsWith('data:image')) {
-          sigArea.innerHTML = `<img src="${req.signature}" class="sig-img-preview" alt="ลายเซ็นผู้รับพัสดุ">`;
+        if (isSafeSignatureDataUrl(req.signature)) {
+          sigArea.innerHTML = `<img src="${escapeHtml(req.signature.trim())}" class="sig-img-preview" alt="ลายเซ็นผู้รับพัสดุ">`;
         } else if (req.status === 'COMPLETED') {
           sigArea.innerHTML = `<div style="font-size: 0.75rem; color: #059669; font-weight: 700; margin-bottom: 6px;">[ รับมอบพัสดุแล้ว ]</div>`;
         } else {
@@ -7215,7 +7200,9 @@ __SEARCHABLE_SELECT_CSS__
       let txList = null;
       if (MYSQL_API_URL && navigator.onLine) {
         try {
-          const res = await fetch(`${MYSQL_API_URL}?action=getItemTransactions&itemId=${encodeURIComponent(itemId)}`);
+          const res = await fetch(`${MYSQL_API_URL}?action=getItemTransactions&itemId=${encodeURIComponent(itemId)}`, {
+            headers: getStaffAuthHeaders()
+          });
           if (res.ok) {
             const json = await res.json();
             if (json && json.status === 'success' && Array.isArray(json.data)) {
@@ -7319,7 +7306,9 @@ __SEARCHABLE_SELECT_CSS__
       // Try fetching from server API if online
       if (MYSQL_API_URL && navigator.onLine) {
         try {
-          const res = await fetch(`${MYSQL_API_URL}?action=getMonthlyAnalytics&month=${encodeURIComponent(selectedMonth)}`);
+          const res = await fetch(`${MYSQL_API_URL}?action=getMonthlyAnalytics&month=${encodeURIComponent(selectedMonth)}`, {
+            headers: getStaffAuthHeaders()
+          });
           if (res.ok) {
             const json = await res.json();
             if (json && json.status === 'success' && json.data) {
@@ -7827,7 +7816,9 @@ __SEARCHABLE_SELECT_CSS__
 
       if (MYSQL_API_URL && navigator.onLine) {
         try {
-          const res = await fetch(`${MYSQL_API_URL}?action=exportMonthlyAnalyticsExcel&month=${encodeURIComponent(selectedMonth)}`);
+          const res = await fetch(`${MYSQL_API_URL}?action=exportMonthlyAnalyticsExcel&month=${encodeURIComponent(selectedMonth)}`, {
+            headers: getStaffAuthHeaders()
+          });
           const contentType = res.headers.get('Content-Type') || '';
           if (res.ok && contentType.includes('spreadsheetml')) {
             const blob = await res.blob();
@@ -8144,9 +8135,19 @@ __SEARCHABLE_SELECT_CSS__
 
       if (newMin === undefined) return;
 
+      const apiRes = await postToMySQLAPI('saveItem', { id: itm.id, min_alert: newMin });
+      if (apiRes && apiRes.status === 'error') {
+        Swal.fire({
+          icon: 'error',
+          title: 'บันทึกเกณฑ์เตือนไม่สำเร็จ',
+          text: apiRes.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล',
+          confirmButtonColor: '#1e40af',
+          confirmButtonText: 'ตกลง'
+        });
+        return;
+      }
       itm.min_alert = newMin;
       saveItemsDB(items);
-      await postToMySQLAPI('saveItem', { id: itm.id, min_alert: newMin });
       renderInventoryTable();
 
       Swal.fire({
@@ -8283,12 +8284,31 @@ __SEARCHABLE_SELECT_CSS__
             image_box
           };
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (!result.isConfirmed || !result.value) return;
         const val = result.value;
         const currentItems = getItemsDB();
-        let savedItem = null;
+        const staffUser = getLoggedInStaff();
+        const recBy = staffUser ? (staffUser.name || staffUser.username) : 'เจ้าหน้าที่พัสดุ สวท.';
 
+        // Send id: null when creating a new item so PostgreSQL SERIAL RETURNING id generates the real ID
+        const apiPayload = existing
+          ? { id: existing.id, ...val, recordedBy: recBy }
+          : { id: null, ...val, recordedBy: recBy };
+
+        const apiRes = await postToMySQLAPI('saveItem', apiPayload);
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'บันทึกรายการพัสดุไม่สำเร็จ',
+            text: apiRes.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลลงฐานข้อมูล',
+            confirmButtonColor: '#1e40af',
+            confirmButtonText: 'ตกลง'
+          });
+          return;
+        }
+
+        let savedItem = null;
         if (existing) {
           const idx = currentItems.findIndex(i => Number(i.id) === Number(existing.id));
           if (idx !== -1) {
@@ -8297,8 +8317,9 @@ __SEARCHABLE_SELECT_CSS__
           }
         } else {
           const maxId = currentItems.reduce((m, i) => Math.max(m, Number(i.id) || 0), 0);
+          const newId = (apiRes && apiRes.id) ? Number(apiRes.id) : (maxId + 1);
           savedItem = {
-            id: maxId + 1,
+            id: newId,
             ...val,
             reserved_pieces: 0
           };
@@ -8306,7 +8327,6 @@ __SEARCHABLE_SELECT_CSS__
         }
 
         saveItemsDB(currentItems);
-        if (savedItem) postToMySQLAPI('saveItem', savedItem);
         renderInventoryTable();
 
         Swal.fire({
@@ -8368,7 +8388,7 @@ __SEARCHABLE_SELECT_CSS__
       return names;
     }
 
-    function ensureDeptExists(deptName) {
+    async function ensureDeptExists(deptName, syncToApi = true) {
       const clean = (deptName || '').trim();
       if (!clean) return;
       const deptsData = getDeptsDB();
@@ -8377,9 +8397,11 @@ __SEARCHABLE_SELECT_CSS__
       }
       const exists = deptsData.some(c => (c.items || []).some(it => it.value === clean));
       if (!exists) {
+        if (syncToApi) {
+          await postToMySQLAPI('addDepartment', { category: deptsData[0].category, name: clean });
+        }
         deptsData[0].items.push({ label: clean, value: clean, sub: false });
         saveDeptsDB(deptsData);
-        postToMySQLAPI('addDepartment', { category: deptsData[0].category, name: clean });
       }
     }
 
@@ -8600,9 +8622,43 @@ __SEARCHABLE_SELECT_CSS__
       }).then(async (result) => {
         if (!result.isConfirmed || !result.value) return;
         const val = result.value;
-        ensureDeptExists(val.dept);
 
         const currentUsers = getUsersDB();
+        const apiPayload = existing
+          ? {
+              id: existing.id,
+              name: val.name,
+              username: val.username,
+              role: val.role,
+              ...(val.password ? { password: val.password } : {}),
+              position: val.position,
+              dept: val.dept,
+              phone: val.phone
+            }
+          : {
+              // Send id: null on creation so PostgreSQL SERIAL RETURNING id generates the authoritative ID
+              id: null,
+              name: val.name,
+              username: val.username,
+              role: val.role,
+              password: val.password || 'sdu1234',
+              position: val.position,
+              dept: val.dept,
+              phone: val.phone
+            };
+
+        const apiRes = await postToMySQLAPI('saveUser', apiPayload);
+        if (apiRes && apiRes.status === 'error') {
+          Swal.fire({
+            icon: 'error',
+            title: 'บันทึกข้อมูลบุคลากรไม่สำเร็จ',
+            text: apiRes.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลงสิทธิ์หรือข้อมูลบุคลากรได้'
+          });
+          return;
+        }
+
+        await ensureDeptExists(val.dept, false);
+
         let savedUser = null;
         if (existing) {
           const idx = currentUsers.findIndex(u => Number(u.id) === Number(existing.id));
@@ -8617,40 +8673,28 @@ __SEARCHABLE_SELECT_CSS__
               phone: val.phone
             };
             if (val.password) updatedUser.password = val.password;
+            if (apiRes && apiRes.data) {
+              Object.assign(updatedUser, apiRes.data, { role: apiRes.data.role || val.role });
+            }
             currentUsers[idx] = updatedUser;
             savedUser = currentUsers[idx];
           }
         } else {
           const maxId = currentUsers.reduce((m, u) => Math.max(m, Number(u.id) || 0), 0);
+          const realId = (apiRes && apiRes.data && apiRes.data.id)
+            ? Number(apiRes.data.id)
+            : ((apiRes && apiRes.id) ? Number(apiRes.id) : (maxId + 1));
           savedUser = {
-            id: maxId + 1,
+            id: realId,
             name: val.name,
             username: val.username,
-            role: val.role,
+            role: (apiRes && apiRes.data && apiRes.data.role) ? apiRes.data.role : val.role,
             password: val.password || 'sdu1234',
             position: val.position,
             dept: val.dept,
             phone: val.phone
           };
           currentUsers.push(savedUser);
-        }
-
-        if (savedUser) {
-          const apiRes = await postToMySQLAPI('saveUser', { ...savedUser, role: val.role });
-          if (apiRes && apiRes.status === 'error') {
-            Swal.fire({
-              icon: 'error',
-              title: 'บันทึกข้อมูลบุคลากรไม่สำเร็จ',
-              text: apiRes.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลงสิทธิ์หรือข้อมูลบุคลากรได้'
-            });
-            return;
-          }
-          if (apiRes && apiRes.data) {
-            savedUser = { ...savedUser, ...apiRes.data, role: (apiRes.data.role || val.role) };
-            const hit = currentUsers.findIndex(u => Number(u.id) === Number(savedUser.id));
-            if (hit !== -1) currentUsers[hit] = savedUser;
-            else if (!existing && currentUsers.length > 0) currentUsers[currentUsers.length - 1] = savedUser;
-          }
         }
 
         saveUsersDB(currentUsers);
@@ -9298,22 +9342,26 @@ __SEARCHABLE_SELECT_CSS__
       try {
         const params = new URLSearchParams(window.location.search);
         const roleParam = (params.get('role') || '').toUpperCase();
-        if (['STAFF', 'HEAD', 'ADMIN', 'REQUESTER'].includes(roleParam)) {
-          if (AUTH_BYPASS && roleParam !== 'REQUESTER') {
+        if (roleParam === 'REQUESTER') {
+          window.location.href = 'index.html';
+          return;
+        }
+        if (['STAFF', 'HEAD', 'ADMIN'].includes(roleParam)) {
+          if (AUTH_BYPASS) {
             sessionStorage.setItem('staff_auth', 'true');
             sessionStorage.setItem('staff_username', 'admin_staff');
             sessionStorage.setItem('staff_name', 'ผู้ดูแลระบบคลังพัสดุ (โหมดทดสอบ)');
             sessionStorage.setItem('staff_role', 'ADMIN');
             sessionStorage.setItem('staff_active_role', roleParam);
-          } else {
-            sessionStorage.removeItem('staff_auth');
-            sessionStorage.removeItem('staff_token');
-            selectStaffLoginRole(roleParam);
+          } else if (sessionStorage.getItem('staff_auth') === 'true' && (sessionStorage.getItem('staff_role') || '').toUpperCase() === 'ADMIN') {
+            sessionStorage.setItem('staff_active_role', roleParam);
           }
         }
       } catch (e) {}
       checkStaffAuth();
-      syncFromMySQLAPI();
+      if (sessionStorage.getItem('staff_auth') === 'true' || AUTH_BYPASS) {
+        syncFromMySQLAPI();
+      }
     });
 
 __SEARCHABLE_SELECT_JS__
@@ -9356,6 +9404,11 @@ if os.path.exists(portal_path):
         r'Stock Order SDU v[0-9]+\.[0-9]+\.[0-9]+',
         f'Stock Order SDU v{SYSTEM_VERSION}',
         portal_content
+    )
+    updated_portal = _re.sub(
+        r'(<span class="version-pill">)v[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        rf'\g<1>v{SYSTEM_VERSION}\g<2>',
+        updated_portal
     )
     if updated_portal != portal_content:
         with open(portal_path, 'w', encoding='utf-8') as f:

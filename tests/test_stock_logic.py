@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.7.0"
+        assert SYSTEM_VERSION == "3.7.6"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1030,15 +1030,35 @@ class TestPhase8ExtendedRequirements:
         assert res_a_head["role"] == "ADMIN"
         assert res_a_head["active_role"] == "HEAD"
 
-        # Check UI presence of 4-role login selector across portals
+        # Auto-detect role login without requested_role resolves each account's actual role
+        res_auto_staff = server.handle_login_staff({"username": "staff", "password": "sdu1234"})
+        assert res_auto_staff["status"] == "success"
+        assert res_auto_staff["role"] == "STAFF"
+        assert res_auto_staff["active_role"] == "STAFF"
+
+        res_auto_head = server.handle_login_staff({"username": "head", "password": "sdu1234"})
+        assert res_auto_head["status"] == "success"
+        assert res_auto_head["role"] == "HEAD"
+        assert res_auto_head["active_role"] == "HEAD"
+
+        res_auto_admin = server.handle_login_staff({"username": "admin_staff", "password": "sdu1234"})
+        assert res_auto_admin["status"] == "success"
+        assert res_auto_admin["role"] == "ADMIN"
+        assert res_auto_admin["active_role"] == "ADMIN"
+
+        # Check simplified username + password auto-detect login UI (no manual 4-role selector tabs)
         with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
             idx_html = f.read()
-        assert "selectPortalLoginRole" in idx_html
+        assert "portalRoleTabs" not in idx_html
+        assert "selectedLoginRole" not in idx_html
+        assert "BUILTIN_STAFF_USERNAMES" in idx_html
 
         with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
             stf_html = f.read()
-        assert "selectStaffLoginRole" in stf_html
+        assert "staffRoleLoginTabs" not in stf_html
+        assert "selectedStaffLoginRole" not in stf_html
         assert "swal-user-role" in stf_html
+        assert "data.code === 'ROLE_MISMATCH'" in stf_html
 
         with open(os.path.join(PROJECT_ROOT, "portal.html"), "r", encoding="utf-8") as f:
             ptl_html = f.read()
@@ -1510,6 +1530,266 @@ class TestPhase8ExtendedRequirements:
             assert cfg["DB_HOST"] == "postgres"
             assert cfg["DB_PORT"] == 5432
             assert cfg["AUTH_BYPASS"] == "false"
+
+    def test_security_and_correctness_hardening_v372(self):
+        """Verify login fallback guard, token-protected endpoints, XSS guards, duplicate itemId aggregation, pooling, CI postgres, and Docker hardening."""
+        import io
+        import json as _json
+        import server
+
+        # 1. SARGable month date range helper (CE & BE + Dec rollover)
+        s1, e1, p1 = server.parse_month_date_range("2026-11")
+        assert s1 == datetime(2026, 11, 1, 0, 0, 0)
+        assert e1 == datetime(2026, 12, 1, 0, 0, 0)
+        assert p1 == "REQ-256911-"
+        s2, e2, p2 = server.parse_month_date_range("2569-12")
+        assert s2 == datetime(2026, 12, 1, 0, 0, 0)
+        assert e2 == datetime(2027, 1, 1, 0, 0, 0)
+        assert p2 == "REQ-256912-"
+
+        # 2. Duplicate itemId aggregation blocks stock bypass & locks in ascending order
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.side_effect = [
+            {"id": 1, "name": "ซองเอกสาร", "is_multi_unit": 0, "on_hand_pieces": 10, "reserved_pieces": 0, "pieces_per_box": 1, "monthly_limit": 0, "unit_piece_name": "ซอง"},
+        ]
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res_dup = server.handle_create_requisition({
+                "requester": "สมชาย",
+                "dept": "กลุ่มงานบริการวิชาการ",
+                "purpose": "ทดสอบซ้ำ itemId",
+                "items": [
+                    {"itemId": 1, "qtyBoxes": 0, "qtyPieces": 6, "totalPieces": 6},
+                    {"itemId": 1, "qtyBoxes": 0, "qtyPieces": 6, "totalPieces": 6},
+                ],
+            })
+            assert res_dup["status"] == "error"
+            assert res_dup["code"] == "INSUFFICIENT_STOCK"
+            assert res_dup["details"]["requested"] == 12
+            assert res_dup["details"]["available"] == 10
+
+        # 3. handle_get_requisitions only fetches items for matched req_ids (no full-table scan)
+        mock_conn_r = MagicMock()
+        mock_cur_r = MagicMock()
+        mock_cur_r.fetchall.return_value = []
+        mock_conn_r.cursor.return_value.__enter__.return_value = mock_cur_r
+        with patch("server.get_db_connection", return_value=mock_conn_r):
+            res_empty = server.handle_get_requisitions({"month": ["2026-11"]})
+            assert res_empty["status"] == "success"
+            assert res_empty["total"] == 0
+            # Only 1 SQL query executed when no requisitions match
+            assert mock_cur_r.execute.call_count == 1
+
+        # 4. HTTP Auth enforcement on GET & POST endpoints + Security Headers
+        def _run_handler(method, path, headers=None, body_obj=None):
+            h = server.SDUInventoryRequestHandler.__new__(server.SDUInventoryRequestHandler)
+            h.path = path
+            h.command = method
+            h.request_version = "HTTP/1.1"
+            h.client_address = ("127.0.0.1", 9999)
+            raw_bytes = _json.dumps(body_obj).encode("utf-8") if body_obj is not None else b""
+            hdrs = dict(headers or {})
+            if body_obj is not None:
+                hdrs.setdefault("Content-Length", str(len(raw_bytes)))
+            h.headers = hdrs
+            h.rfile = io.BytesIO(raw_bytes)
+            h.wfile = io.BytesIO()
+            h._status = None
+            h._resp_headers = {}
+            h.send_response = lambda code, msg=None: setattr(h, "_status", code)
+            h.send_header = lambda k, v: h._resp_headers.__setitem__(k, v)
+            orig_end = server.SDUInventoryRequestHandler.end_headers
+            h.end_headers = lambda: (
+                h.send_header("X-Content-Type-Options", "nosniff"),
+                h.send_header("X-Frame-Options", "DENY"),
+                h.send_header("Referrer-Policy", "same-origin"),
+            )
+            assert orig_end is not None
+            if method == "GET":
+                h.do_GET()
+            else:
+                h.do_POST()
+            return h._status, h._resp_headers, _json.loads(h.wfile.getvalue().decode("utf-8"))
+
+        with patch("server.is_auth_bypass_enabled", return_value=False):
+            # Unauthenticated GET to staff-only & auth-required endpoints -> 401
+            for action in ("getMonthlyAnalytics", "exportMonthlyAnalyticsExcel", "getItemTransactions", "getRequisitions", "getUsers", "getQuotas"):
+                st, hdrs, data = _run_handler("GET", f"/api?action={action}")
+                assert st == 401, f"{action} should require auth, got {st}"
+                assert data["code"] == "UNAUTHORIZED"
+                assert hdrs.get("X-Content-Type-Options") == "nosniff"
+                assert hdrs.get("X-Frame-Options") == "DENY"
+
+            # Requester token cannot access staff-only GET endpoints -> 401
+            req_tok = server.generate_requester_token("user", "Demo User")
+            st_staff_only, _, _ = _run_handler("GET", "/api?action=getMonthlyAnalytics", headers={"Authorization": f"Bearer {req_tok}"})
+            assert st_staff_only == 401
+
+            # Unauthenticated POST createRequisition -> 401
+            st_post, _, data_post = _run_handler("POST", "/api", body_obj={"action": "createRequisition", "payload": {}})
+            assert st_post == 401
+            assert data_post["code"] == "UNAUTHORIZED"
+
+            # Valid requester token passes auth check on createRequisition
+            with patch("server.handle_create_requisition", return_value={"status": "success", "docNo": "REQ-256911-0001"}):
+                st_ok, _, data_ok = _run_handler(
+                    "POST",
+                    "/api",
+                    headers={"Authorization": f"Bearer {req_tok}"},
+                    body_obj={"action": "createRequisition", "payload": {"requester": "user"}},
+                )
+                assert st_ok == 200
+                assert data_ok["status"] == "success"
+
+        # 5. Frontend portals: no embedded plaintext password in defaultUsers, XSS & login fallback guards present
+        for fname in ("index.html", "staff.html"):
+            with open(os.path.join(PROJECT_ROOT, fname), "r", encoding="utf-8") as f:
+                html = f.read()
+            assert '"password":' not in html, f"{fname} must not embed plaintext passwords in defaultUsers"
+            assert "isSafeSignatureDataUrl" in html, f"{fname} missing signature data URL validation"
+
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "if (loginResult === null)" in idx_html
+        assert "AUTH_TOKEN_KEY" in idx_html
+        assert "getRequesterAuthHeaders" in idx_html
+        assert "escapeHtml(filterText)" in idx_html
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        assert "getStaffAuthHeaders" in stf_html
+        assert "safeBoxUnit" in stf_html
+
+        # 6. Docker & CI hardening checks
+        with open(os.path.join(PROJECT_ROOT, "Dockerfile"), "r", encoding="utf-8") as f:
+            df_txt = f.read()
+        assert "USER appuser" in df_txt
+
+        with open(os.path.join(PROJECT_ROOT, "docker-compose.yml"), "r", encoding="utf-8") as f:
+            dc_txt = f.read()
+        assert 'profiles: ["tools"]' in dc_txt
+        assert 'PGADMIN_CONFIG_SERVER_MODE: "True"' in dc_txt
+        assert "127.0.0.1" in dc_txt
+
+        with open(os.path.join(PROJECT_ROOT, ".github", "workflows", "ci.yml"), "r", encoding="utf-8") as f:
+            ci_txt = f.read()
+        assert "postgres:17-alpine" in ci_txt
+        assert "backend/init_db.py" in ci_txt
+
+        # 7. Connection pool helper exists
+        assert hasattr(server, "_get_pg_pool")
+        assert hasattr(server, "_PooledPgConnection")
+
+    def test_db_persistence_and_schema_hardening_v373(self):
+        """Verify all write actions await API errors, new item/user IDs come from DB, initial stock logs audit trail, and SQL schemas enforce CHECK/RESTRICT/indexes."""
+        import server
+
+        # 1. handle_save_item with new item (id=None) and on_hand_pieces > 0 logs INITIAL_STOCK in stock_transactions
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.fetchone.return_value = {"id": 99}
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res_new = server.handle_save_item({
+                "id": None,
+                "name": "ปากกาลูกลื่นทดสอบ",
+                "category": "เครื่องเขียนและแฟ้ม",
+                "is_multi_unit": False,
+                "unit_piece_name": "ด้าม",
+                "on_hand_pieces": 50,
+                "min_alert": 10,
+                "recordedBy": "เจ้าหน้าที่ทดสอบ",
+            })
+            assert res_new["status"] == "success"
+            assert res_new["id"] == 99
+            executed_sqls = " ".join(str(call.args[0]) for call in mock_cur.execute.call_args_list if call.args)
+            assert "INSERT INTO stock_transactions" in executed_sqls
+            assert "INITIAL_STOCK" in executed_sqls
+
+        # 2. Frontend awaits & guards ALL write actions (zero fire-and-forget postToMySQLAPI calls)
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        for expected in (
+            "await postToMySQLAPI('rejectRequisition'",
+            "await postToMySQLAPI('completeRequisition'",
+            "await postToMySQLAPI('restockItem'",
+            "await postToMySQLAPI('adjustStock'",
+            "await postToMySQLAPI('saveItem'",
+            "await postToMySQLAPI('saveUser'",
+            "await postToMySQLAPI('addDepartment'",
+            "id: null",
+        ):
+            assert expected in stf_html, f"staff.html missing {expected}"
+        assert "apiRes.code !== 'DB_ERROR'" not in stf_html
+
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_html = f.read()
+        assert "const finalDocNo = (apiRes && apiRes.docNo)" in idx_html
+
+        # 3. Verify 1-click cross-portal SSO switch between Requester and Staff/Head portals
+        res_head_sso = server.handle_login_staff({"username": "head", "password": "sdu1234"})
+        assert res_head_sso["status"] == "success"
+        assert res_head_sso.get("requester_token")
+        assert server.verify_requester_token(res_head_sso["requester_token"]) is True
+        assert isinstance(res_head_sso.get("requester_user"), dict)
+
+        mock_conn_sso = MagicMock()
+        mock_cur_sso = MagicMock()
+        mock_cur_sso.fetchone.return_value = {
+            "id": 1,
+            "name": "นางสาววาสนา จันทร์จ่าย",
+            "username": "wasana.c",
+            "password": server.hash_password("sdu1234"),
+            "role": "HEAD",
+            "position": "หัวหน้าสำนักงาน",
+            "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+            "phone": "081-998-7766",
+        }
+        mock_conn_sso.cursor.return_value.__enter__.return_value = mock_cur_sso
+        with patch("server.get_db_connection", return_value=mock_conn_sso):
+            res_req_head = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+            assert res_req_head["status"] == "success"
+            assert res_req_head["user"]["role"] == "HEAD"
+            assert res_req_head.get("staff_role") == "HEAD"
+            assert server.verify_staff_token(res_req_head.get("staff_token", "")) is True
+
+        with open(os.path.join(PROJECT_ROOT, "index.html"), "r", encoding="utf-8") as f:
+            idx_sso = f.read()
+        assert "btnSwitchToStaffPortal" in idx_sso
+        assert "function switchToStaffPortal(" in idx_sso
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_sso = f.read()
+        assert "btnSwitchToRequesterPortal" in stf_sso
+        assert "function switchToRequesterPortal(" in stf_sso
+
+        # 4. PostgreSQL & MySQL schema hardening (CHECK constraints, ON DELETE RESTRICT, indexes, trigger)
+        with open(os.path.join(PROJECT_ROOT, "backend", "schema_postgres.sql"), "r", encoding="utf-8") as f:
+            pg_sql = f.read()
+        for token in (
+            "CHECK (on_hand_pieces >= 0)",
+            "CHECK (reserved_pieces >= 0)",
+            "CHECK (pieces_per_box >= 1)",
+            "CHECK (total_pieces > 0)",
+            "REFERENCES inventory_items(id) ON DELETE RESTRICT",
+            "CREATE INDEX idx_req_dept ON requisitions (dept);",
+            "CREATE INDEX idx_tx_created_at ON stock_transactions (created_at);",
+            "CREATE INDEX idx_tx_type_created_at ON stock_transactions (transaction_type, created_at);",
+            "CREATE TRIGGER trg_quota_rules_updated_at",
+        ):
+            assert token in pg_sql, f"schema_postgres.sql missing {token}"
+        assert "item_id INT NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE" not in pg_sql
+
+        with open(os.path.join(PROJECT_ROOT, "backend", "schema.sql"), "r", encoding="utf-8") as f:
+            my_sql = f.read()
+        for token in (
+            "CHECK (`on_hand_pieces` >= 0)",
+            "INDEX `idx_req_dept` (`dept`)",
+            "INDEX `idx_tx_created_at` (`created_at`)",
+            "CONSTRAINT `fk_tx_inventory` FOREIGN KEY (`item_id`) REFERENCES `inventory_items` (`id`) ON DELETE RESTRICT",
+        ):
+            assert token in my_sql, f"schema.sql missing {token}"
 
 
 

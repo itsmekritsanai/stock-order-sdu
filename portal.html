@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ศูนย์กลางระบบคลังพัสดุดิจิทัล | มหาวิทยาลัยสวนดุสิต</title>
-  
+
   <!-- University Brand Logo Tab Favicon -->
   <link rel="icon" type="image/png" href="assets/logo_sdu.png">
   <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
@@ -14,63 +14,96 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1e40af">
 
-  <!-- Google Fonts: Prompt for modern UI -->
+  <!-- Google Fonts: Prompt & Sarabun -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
       --primary: #1e40af;
+      --primary-dark: #1e3a8a;
       --primary-hover: #1d4ed8;
       --primary-light: #eff6ff;
       --primary-border: #bfdbfe;
       --accent: #059669;
       --accent-hover: #047857;
+      --accent-light: #ecfdf5;
+      --accent-border: #a7f3d0;
+      --purple: #6d28d9;
+      --purple-light: #f5f3ff;
+      --purple-border: #ddd6fe;
       --neutral-50: #f8fafc;
       --neutral-100: #f1f5f9;
       --neutral-200: #e2e8f0;
       --neutral-300: #cbd5e1;
       --neutral-400: #94a3b8;
+      --neutral-500: #64748b;
       --neutral-600: #475569;
       --neutral-700: #334155;
       --neutral-800: #1e293b;
       --neutral-900: #0f172a;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --radius: 14px;
+      --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+      --shadow-sm: 0 2px 6px -1px rgb(15 23 42 / 0.06), 0 1px 3px -1px rgb(15 23 42 / 0.04);
+      --shadow-md: 0 8px 20px -4px rgb(15 23 42 / 0.08), 0 4px 8px -4px rgb(15 23 42 / 0.04);
+      --shadow-lg: 0 16px 32px -8px rgb(30 64 175 / 0.14), 0 6px 12px -4px rgb(15 23 42 / 0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --container-max: 1060px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Prompt', sans-serif;
+      font-family: 'Prompt', 'Sarabun', sans-serif;
       background-color: var(--neutral-50);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(30, 64, 175, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 88% 8%, rgba(5, 150, 105, 0.05) 0%, transparent 36%);
       color: var(--neutral-800);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      -webkit-font-smoothing: antialiased;
     }
 
     .svg-icon {
       display: inline-block;
-      width: 1.25rem;
-      height: 1.25rem;
+      width: 1.2rem;
+      height: 1.2rem;
       stroke-width: 2;
       stroke: currentColor;
       fill: none;
       stroke-linecap: round;
       stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .svg-icon-sm {
+      width: 1rem;
+      height: 1rem;
+    }
+    .svg-icon-lg {
+      width: 1.5rem;
+      height: 1.5rem;
     }
 
+    /* Top Header */
     header {
-      background: white;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--neutral-200);
-      padding: 1rem 1.5rem;
-      box-shadow: var(--shadow-sm);
+      padding: 0.85rem 1.5rem;
+      box-shadow: var(--shadow-xs);
     }
     .header-container {
-      max-width: 1200px;
+      max-width: var(--container-max);
       margin: 0 auto;
       display: flex;
       justify-content: space-between;
@@ -84,100 +117,217 @@
       gap: 0.85rem;
     }
     .brand-logo {
-      height: 52px;
+      height: 46px;
       width: auto;
       object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+      filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.08));
     }
     .brand-text h1 {
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--neutral-900);
-      line-height: 1.2;
+      line-height: 1.25;
     }
     .brand-text p {
-      font-size: 0.825rem;
-      color: var(--neutral-600);
+      font-size: 0.78rem;
+      color: var(--neutral-500);
+      margin-top: 1px;
     }
 
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
     .sync-status {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      background: #ecfdf5;
+      gap: 7px;
+      background: var(--accent-light);
       color: #065f46;
-      border: 1px solid #a7f3d0;
+      border: 1px solid var(--accent-border);
       padding: 5px 12px;
       border-radius: 999px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 500;
+    }
+    .sync-status.offline {
+      background: #fffbeb;
+      color: #92400e;
+      border-color: #fde68a;
     }
     .pulse-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #059669;
-      box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7);
-      animation: pulse 1.8s infinite;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.65);
+      animation: pulse 2s infinite;
+    }
+    .sync-status.offline .pulse-dot {
+      background: #d97706;
+      animation: none;
     }
     @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+      0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.65); }
       70% { box-shadow: 0 0 0 6px rgba(5, 150, 105, 0); }
       100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
     }
+    .version-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--neutral-100);
+      color: var(--neutral-600);
+      border: 1px solid var(--neutral-200);
+    }
 
+    /* Main Container */
     main {
       flex: 1;
-      max-width: 1200px;
-      margin: 2.5rem auto;
-      padding: 0 1.5rem;
       width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 2rem 1.5rem 2.75rem;
       display: flex;
       flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    /* Hero Section */
+    .hero-panel {
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 58%, #1d4ed8 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 2rem 2.25rem;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      justify-content: space-between;
       align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
     }
-
-    .hero-banner {
-      text-align: center;
-      max-width: 720px;
-      margin-bottom: 2.5rem;
+    .hero-panel::after {
+      content: '';
+      position: absolute;
+      right: -60px;
+      top: -60px;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.07);
+      pointer-events: none;
     }
-    .hero-banner h2 {
-      font-size: 1.85rem;
-      font-weight: 800;
-      color: var(--neutral-900);
-      margin-bottom: 0.75rem;
+    .hero-content {
+      max-width: 650px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #dbeafe;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 0.85rem;
+    }
+    .hero-content h2 {
+      font-size: 1.65rem;
+      font-weight: 700;
       line-height: 1.3;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
     }
-    .hero-banner p {
-      font-size: 0.975rem;
-      color: var(--neutral-600);
+    .hero-content p {
+      font-size: 0.9rem;
+      color: #dbeafe;
       line-height: 1.6;
+      font-weight: 300;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-stat-box {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 0.75rem 1.05rem;
+      min-width: 112px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+    }
+    .hero-stat-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .hero-stat-label {
+      font-size: 0.72rem;
+      color: #dbeafe;
+      margin-top: 3px;
     }
 
+    /* Section Headings */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--neutral-900);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title .svg-icon {
+      color: var(--primary);
+    }
+    .section-desc {
+      font-size: 0.82rem;
+      color: var(--neutral-500);
+    }
+
+    /* Primary Portal Cards */
     .portal-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-      gap: 2rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.5rem;
       width: 100%;
-      max-width: 980px;
-      margin-bottom: 2rem;
     }
-
     .portal-card {
       background: white;
       border-radius: var(--radius);
       border: 1px solid var(--neutral-200);
-      padding: 2.25rem 2rem;
+      padding: 1.75rem;
       box-shadow: var(--shadow-sm);
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
-      transition: all 0.25s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .portal-card:hover {
-      transform: translateY(-4px);
+      transform: translateY(-3px);
       box-shadow: var(--shadow-lg);
       border-color: var(--primary-border);
     }
@@ -187,23 +337,52 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 5px;
+      height: 4px;
       background: var(--primary);
     }
     .portal-card.staff-card::before {
-      background: linear-gradient(90deg, #1e40af, #059669);
+      background: linear-gradient(90deg, var(--neutral-900), var(--accent));
+    }
+    .portal-card.staff-card:hover {
+      border-color: var(--accent-border);
     }
 
+    .card-top-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+    }
+    .portal-icon-wrapper {
+      width: 52px;
+      height: 52px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .icon-requester {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: white;
+      box-shadow: 0 6px 14px rgba(30, 64, 175, 0.24);
+    }
+    .icon-staff {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.22);
+    }
+    .card-heading {
+      min-width: 0;
+    }
     .card-badge {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 999px;
-      margin-bottom: 1.25rem;
-      width: fit-content;
+      margin-bottom: 0.35rem;
     }
     .badge-requester {
       background: var(--primary-light);
@@ -211,70 +390,53 @@
       border: 1px solid var(--primary-border);
     }
     .badge-staff {
-      background: #f0fdf4;
+      background: var(--accent-light);
       color: #166534;
-      border: 1px solid #bbf7d0;
+      border: 1px solid var(--accent-border);
     }
-
-    .portal-icon-wrapper {
-      width: 58px;
-      height: 58px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 1.25rem;
-    }
-    .icon-requester {
-      background: linear-gradient(135deg, #1e40af, #3b82f6);
-      color: white;
-      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
-    }
-    .icon-staff {
-      background: linear-gradient(135deg, #0f172a, #334155);
-      color: white;
-      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.25);
-    }
-
     .portal-card h3 {
-      font-size: 1.3rem;
+      font-size: 1.22rem;
       font-weight: 700;
       color: var(--neutral-900);
-      margin-bottom: 0.5rem;
+      line-height: 1.25;
     }
     .portal-card p.subtitle {
-      font-size: 0.85rem;
+      font-size: 0.855rem;
       color: var(--neutral-600);
-      margin-bottom: 1.25rem;
-      line-height: 1.5;
+      margin-bottom: 1.15rem;
+      line-height: 1.55;
     }
 
     .features-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
-      margin-bottom: 1.75rem;
+      gap: 0.55rem;
+      margin-bottom: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--neutral-100);
       flex: 1;
-      font-size: 0.875rem;
+      font-size: 0.855rem;
       color: var(--neutral-700);
     }
     .features-list li {
       display: flex;
-      align-items: center;
-      gap: 0.5rem;
+      align-items: flex-start;
+      gap: 0.55rem;
+      line-height: 1.45;
     }
     .check-bullet {
       color: var(--accent);
+      margin-top: 2px;
       flex-shrink: 0;
     }
 
     .btn {
       width: 100%;
-      padding: 0.75rem 1.25rem;
-      border-radius: 10px;
+      padding: 0.78rem 1.25rem;
+      border-radius: var(--radius-sm);
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       text-decoration: none;
       cursor: pointer;
@@ -283,7 +445,10 @@
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      transition: all 0.2s;
+      transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+    }
+    .btn:active {
+      transform: scale(0.99);
     }
     .btn-primary {
       background: var(--primary);
@@ -297,51 +462,259 @@
       color: white;
     }
     .btn-dark:hover {
-      background: #1e293b;
+      background: var(--neutral-800);
     }
     .btn-outline {
       background: white;
       border: 1px solid var(--neutral-300);
       color: var(--neutral-700);
+      width: auto;
+      padding: 0.62rem 1.15rem;
+      font-size: 0.86rem;
     }
     .btn-outline:hover {
       background: var(--neutral-100);
       border-color: var(--neutral-400);
+      color: var(--neutral-900);
+    }
+
+    /* 4-Role Direct Gateway */
+    .role-gateway-panel {
+      width: 100%;
+      background: white;
+      border: 1px solid var(--neutral-200);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+    .role-card {
+      text-decoration: none;
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      border: 1px solid var(--neutral-200);
+      background: var(--neutral-50);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    }
+    .role-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+    }
+    .role-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .role-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .role-step-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .role-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .role-desc {
+      font-size: 0.775rem;
+      line-height: 1.45;
+    }
+
+    .role-requester {
+      background: var(--primary-light);
+      border-color: var(--primary-border);
+    }
+    .role-requester:hover { border-color: #93c5fd; }
+    .role-requester .role-icon { background: white; color: var(--primary); border: 1px solid var(--primary-border); }
+    .role-requester .role-step-tag { background: white; color: var(--primary); }
+    .role-requester .role-title { color: var(--primary-dark); }
+    .role-requester .role-desc { color: #1e3a8a; }
+
+    .role-staff {
+      background: var(--accent-light);
+      border-color: var(--accent-border);
+    }
+    .role-staff:hover { border-color: #6ee7b7; }
+    .role-staff .role-icon { background: white; color: var(--accent); border: 1px solid var(--accent-border); }
+    .role-staff .role-step-tag { background: white; color: #047857; }
+    .role-staff .role-title { color: #065f46; }
+    .role-staff .role-desc { color: #065f46; }
+
+    .role-head {
+      background: var(--purple-light);
+      border-color: var(--purple-border);
+    }
+    .role-head:hover { border-color: #c4b5fd; }
+    .role-head .role-icon { background: white; color: var(--purple); border: 1px solid var(--purple-border); }
+    .role-head .role-step-tag { background: white; color: var(--purple); }
+    .role-head .role-title { color: #5b21b6; }
+    .role-head .role-desc { color: #5b21b6; }
+
+    .role-admin {
+      background: var(--neutral-100);
+      border-color: var(--neutral-300);
+    }
+    .role-admin:hover { border-color: var(--neutral-400); }
+    .role-admin .role-icon { background: white; color: var(--neutral-900); border: 1px solid var(--neutral-300); }
+    .role-admin .role-step-tag { background: white; color: var(--neutral-700); }
+    .role-admin .role-title { color: var(--neutral-900); }
+    .role-admin .role-desc { color: var(--neutral-600); }
+
+    /* Lifecycle Overview + Utility Row */
+    .bottom-utility-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 1.25rem;
+      width: 100%;
+    }
+    .workflow-panel {
+      background: white;
+      border: 1px solid var(--neutral-200);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-xs);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.9rem;
+    }
+    .workflow-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--neutral-800);
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+    .workflow-title .svg-icon {
+      color: var(--primary);
+    }
+    .workflow-steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+    .workflow-step {
+      background: var(--neutral-50);
+      border: 1px solid var(--neutral-200);
+      border-radius: 10px;
+      padding: 0.65rem 0.7rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .workflow-step-num {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .workflow-step-name {
+      font-size: 0.79rem;
+      font-weight: 600;
+      color: var(--neutral-900);
+    }
+    .workflow-step-sub {
+      font-size: 0.71rem;
+      color: var(--neutral-500);
     }
 
     .dual-open-box {
-      width: 100%;
-      max-width: 980px;
       background: white;
       border: 1px dashed var(--primary-border);
       border-radius: var(--radius);
-      padding: 1.25rem 1.75rem;
+      padding: 1.25rem 1.5rem;
       display: flex;
+      flex-direction: column;
       justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
-      box-shadow: var(--shadow-sm);
+      gap: 0.9rem;
+      box-shadow: var(--shadow-xs);
     }
     .dual-text h4 {
-      font-size: 0.975rem;
+      font-size: 0.92rem;
       font-weight: 700;
       color: var(--primary);
-      margin-bottom: 2px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
     }
     .dual-text p {
-      font-size: 0.825rem;
+      font-size: 0.8rem;
       color: var(--neutral-600);
+      line-height: 1.5;
+    }
+    .dual-actions {
+      display: flex;
+      justify-content: flex-start;
     }
 
     footer {
       background: white;
       border-top: 1px solid var(--neutral-200);
-      padding: 1.5rem;
+      padding: 1.25rem 1.5rem;
       text-align: center;
-      font-size: 0.85rem;
-      color: var(--neutral-600);
+      font-size: 0.82rem;
+      color: var(--neutral-500);
       margin-top: auto;
+    }
+
+    @media (max-width: 960px) {
+      .role-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .bottom-utility-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      main {
+        padding: 1.25rem 1rem 2rem;
+        gap: 1.25rem;
+      }
+      .hero-panel {
+        padding: 1.5rem;
+      }
+      .hero-content h2 {
+        font-size: 1.35rem;
+      }
+      .portal-grid {
+        grid-template-columns: 1fr;
+      }
+      .workflow-steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .role-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-stats {
+        width: 100%;
+      }
+      .hero-stat-box {
+        flex: 1;
+        min-width: 90px;
+      }
     }
   </style>
 </head>
@@ -354,157 +727,247 @@
         <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo">
         <div class="brand-text">
           <h1>ศูนย์กลางระบบคลังพัสดุดิจิทัล</h1>
-          <p>มหาวิทยาลัยสวนดุสิต</p>
+          <p>สำนักส่งเสริมวิชาการและงานทะเบียน มหาวิทยาลัยสวนดุสิต</p>
         </div>
       </div>
-      <div class="sync-status">
-        <span class="pulse-dot"></span>
-        ระบบเชื่อมต่อข้อมูลข้ามพอร์ทัลเรียลไทม์
+      <div class="header-meta">
+        <div class="sync-status" id="liveHealthBadge">
+          <span class="pulse-dot"></span>
+          <span id="liveHealthText">กำลังตรวจสอบสถานะระบบ...</span>
+        </div>
+        <span class="version-pill">v3.7.6</span>
       </div>
     </div>
   </header>
 
   <!-- Main Content -->
   <main>
-    <div class="hero-banner">
-      <h2>เลือกพอร์ทัลการใช้งานที่ต้องการ</h2>
-      <p>ระบบสต๊อกและเบิกพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต แบ่งการทำงานออกเป็น 2 พอร์ทัลตามสิทธิ์และความรับผิดชอบ เพื่อความปลอดภัยและการบริหารจัดการที่มีประสิทธิภาพ</p>
-    </div>
 
-    <!-- Portal Cards Grid -->
-    <div class="portal-grid">
-      
-      <!-- Requester Portal Card -->
-      <div class="portal-card">
-        <span class="card-badge badge-requester">
-          สำหรับอาจารย์และบุคลากรทุกหน่วยงาน
-        </span>
-        <div class="portal-icon-wrapper icon-requester">
-          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+    <!-- Institutional Hero Banner -->
+    <section class="hero-panel" aria-label="ภาพรวมระบบ">
+      <div class="hero-content">
+        <div class="hero-eyebrow">
+          <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+          ระบบขอเบิกพัสดุและบริหารคลังสินค้ากลาง
         </div>
-        <h3>ระบบขอเบิกพัสดุออนไลน์</h3>
-        <p class="subtitle">เลือกชมแคตตาล็อกพัสดุ 34 รายการ (58 รูปภาพจริง) คำนวณ 2 หน่วยนับ และส่งคำขอเบิกพัสดุ</p>
-
-        <ul class="features-list">
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            ค้นหาหน่วยงาน 90+ สังกัดใน มสด. แบบเรียลไทม์
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            คำนวณ 2 หน่วยนับอัตโนมัติ (กล่อง และ ชิ้น/ซอง/แผ่น)
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            ดูรายการคำขอของฉัน พร้อมติดตามสถานะ 5 ระดับ
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            สั่งพิมพ์ใบขอเบิกพัสดุทางการ PDF
-          </li>
-        </ul>
-
-        <a href="index.html" class="btn btn-primary">
-          เข้าสู่ระบบขอเบิกพัสดุ →
-        </a>
+        <h2>เลือกพอร์ทัลการใช้งานตามสิทธิ์ของท่าน</h2>
+        <p>แยกพอร์ทัลระหว่างผู้ขอเบิกพัสดุและเจ้าหน้าที่คลังพัสดุอย่างชัดเจน พร้อมระบบอนุมัติ 2 ขั้นตอน โควตาประจำเดือน และรายงานสรุปสถิติแบบเรียลไทม์</p>
       </div>
-
-      <!-- Staff Portal Card -->
-      <div class="portal-card staff-card">
-        <span class="card-badge badge-staff">
-          สำหรับเจ้าหน้าที่ฝ่ายพัสดุและคลังสินค้ากลาง
-        </span>
-        <div class="portal-icon-wrapper icon-staff">
-          <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div class="hero-stats">
+        <div class="hero-stat-box">
+          <div class="hero-stat-value">34</div>
+          <div class="hero-stat-label">รายการพัสดุในคลัง</div>
         </div>
-        <h3>ระบบบริหารคลังพัสดุ</h3>
-        <p class="subtitle">คิวอนุมัติคำขอเบิก จ่ายพัสดุตัดสต๊อกจริง และสรุปยอดสต๊อกเรียลไทม์</p>
+        <div class="hero-stat-box">
+          <div class="hero-stat-value">5</div>
+          <div class="hero-stat-label">กลุ่มงาน สวท.</div>
+        </div>
+        <div class="hero-stat-box">
+          <div class="hero-stat-value">4</div>
+          <div class="hero-stat-label">บทบาทสิทธิ์การใช้งาน</div>
+        </div>
+      </div>
+    </section>
 
-        <ul class="features-list">
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            คิวตรวจสอบและอนุมัติคำขอเบิก (กันยอดจองอัตโนมัติ)
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            จ่ายพัสดุและตัดสต๊อกจริงพร้อมกล่องยืนยัน SweetAlert2
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            สูตรคำนวณยอดสต๊อกคงเหลือจริง Available = On-Hand - Reserved
-          </li>
-          <li>
-            <span class="check-bullet"><svg class="svg-icon" style="width: 1rem; height: 1rem;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
-            ปรับยอดสต๊อกจริงแบบค้นหาได้ และบันทึกรับเข้าพัสดุใหม่
-          </li>
-        </ul>
-
-        <a href="staff.html" class="btn btn-dark">
-          เข้าสู่ระบบบริหารคลัง (เจ้าหน้าที่ / หัวหน้า / ผู้ดูแล) →
-        </a>
+    <!-- Section 1: Primary Portals -->
+    <section aria-label="พอร์ทัลหลัก">
+      <div class="section-header">
+        <h3 class="section-title">
+          <svg class="svg-icon" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          พอร์ทัลหลักของระบบ
+        </h3>
+        <span class="section-desc">เลือกเข้าสู่หน้าจอทำงานที่ตรงกับภารกิจของท่าน</span>
       </div>
 
-    </div>
-
-    <!-- 4-Role Direct Login Gateway -->
-    <div style="background: white; border: 1px solid var(--neutral-200); border-radius: 16px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm);">
-      <div style="margin-bottom: 1rem;">
-        <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">ทางลัดเข้าสู่ระบบแยกตามบทบาท</h4>
-        <p style="font-size: 0.85rem; color: var(--neutral-600);">คลิกเลือกบทบาทของท่านเพื่อเปิดหน้าเข้าสู่ระบบพร้อมตั้งค่าบทบาทนั้นให้อัตโนมัติ</p>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.85rem;">
-        <a href="index.html?role=REQUESTER" style="text-decoration: none; border: 1px solid #bfdbfe; background: #eff6ff; padding: 0.85rem 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s;">
-          <div style="font-weight: 700; color: #1e40af; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            1. ผู้ขอเบิกพัสดุ
+      <div class="portal-grid">
+        <!-- Requester Portal Card -->
+        <div class="portal-card">
+          <div class="card-top-row">
+            <div class="portal-icon-wrapper icon-requester">
+              <svg class="svg-icon svg-icon-lg" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </div>
+            <div class="card-heading">
+              <span class="card-badge badge-requester">สำหรับบุคลากรและผู้ขอเบิกพัสดุ</span>
+              <h3>ระบบขอเบิกพัสดุออนไลน์</h3>
+            </div>
           </div>
-          <div style="font-size: 0.78rem; color: #1e3a8a;">เลือกเบิกพัสดุ ตรวจสอบโควตารายบุคคล และดูสถานะคำขอ</div>
+          <p class="subtitle">เลือกชมแคตตาล็อกพัสดุพร้อมภาพประกอบ 2 หน่วยนับ ตรวจสอบโควตาคงเหลือ และส่งใบคำขอเบิกพัสดุได้ทันที</p>
+
+          <ul class="features-list">
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              คำนวณจำนวน 2 หน่วยนับอัตโนมัติ ทั้งหน่วยใหญ่และหน่วยย่อย
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              แสดงยอดพร้อมเบิกจริงและโควตาประจำเดือนคงเหลือของท่านแบบเรียลไทม์
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              ติดตามสถานะคำขอเบิกครบ 5 ขั้นตอน พร้อมค้นหาตามงวดเดือน
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              สั่งพิมพ์แบบฟอร์มใบขอเบิกพัสดุทางการ 4 ฝ่ายในรูปแบบเอกสารพร้อมพิมพ์
+            </li>
+          </ul>
+
+          <a href="index.html" class="btn btn-primary">
+            เข้าสู่ระบบขอเบิกพัสดุ
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+
+        <!-- Staff Portal Card -->
+        <div class="portal-card staff-card">
+          <div class="card-top-row">
+            <div class="portal-icon-wrapper icon-staff">
+              <svg class="svg-icon svg-icon-lg" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="card-heading">
+              <span class="card-badge badge-staff">สำหรับเจ้าหน้าที่คลัง หัวหน้า และผู้ดูแลระบบ</span>
+              <h3>ระบบบริหารคลังพัสดุ</h3>
+            </div>
+          </div>
+          <p class="subtitle">จัดการคิวคัดกรองและอนุมัติคำขอเบิก ควบคุมยอดคงคลัง บันทึกรับเข้าพร้อมต้นทุน และดูรายงานสถิติประจำเดือน</p>
+
+          <ul class="features-list">
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              ระบบอนุมัติ 2 ขั้นตอน แยกสิทธิ์เจ้าหน้าที่คัดกรองและหัวหน้าผู้อนุมัติ
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              กันยอดจองเมื่ออนุมัติ และตัดสต๊อกจริงพร้อมบันทึกประวัติทุกความเคลื่อนไหว
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              รับพัสดุเข้าคลังพร้อมคำนวณราคาซื้อ ปรับยอดตรวจนับ และแจ้งเตือนสต๊อกต่ำ
+            </li>
+            <li>
+              <span class="check-bullet"><svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+              แดชบอร์ดสถิติการเบิกรายเดือน พร้อมส่งออกรายงานสรุปเป็นไฟล์สเปรดชีตและเอกสารผู้บริหาร
+            </li>
+          </ul>
+
+          <a href="staff.html" class="btn btn-dark">
+            เข้าสู่ระบบบริหารคลังพัสดุ
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: 4-Role Direct Login Gateway -->
+    <section class="role-gateway-panel" aria-label="ทางลัดเข้าสู่ระบบแยกตามบทบาท">
+      <div class="section-header">
+        <h3 class="section-title">
+          <svg class="svg-icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          ทางลัดเข้าสู่ระบบแยกตามบทบาท
+        </h3>
+        <span class="section-desc">เลือกบทบาทของท่านเพื่อเปิดหน้าเข้าสู่ระบบพร้อมตั้งค่าสิทธิ์ให้อัตโนมัติ</span>
+      </div>
+
+      <div class="role-grid">
+        <a href="index.html?role=REQUESTER" class="role-card role-requester">
+          <div class="role-card-head">
+            <span class="role-icon">
+              <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <span class="role-step-tag">01</span>
+          </div>
+          <div class="role-title">ผู้ขอเบิกพัสดุ</div>
+          <div class="role-desc">เลือกเบิกพัสดุ ตรวจสอบโควตารายบุคคล และติดตามสถานะใบคำขอ</div>
         </a>
 
-        <a href="staff.html?role=STAFF" style="text-decoration: none; border: 1px solid #a7f3d0; background: #ecfdf5; padding: 0.85rem 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s;">
-          <div style="font-weight: 700; color: #047857; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
-            2. เจ้าหน้าที่พัสดุ
+        <a href="staff.html?role=STAFF" class="role-card role-staff">
+          <div class="role-card-head">
+            <span class="role-icon">
+              <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>
+            </span>
+            <span class="role-step-tag">02</span>
           </div>
-          <div style="font-size: 0.78rem; color: #065f46;">คัดกรองคำขอเบื้องต้น รับของเข้าคลัง และจ่ายพัสดุ</div>
+          <div class="role-title">เจ้าหน้าที่พัสดุ</div>
+          <div class="role-desc">คัดกรองคำขอเบื้องต้น รับของเข้าคลัง ปรับยอด และจ่ายพัสดุ</div>
         </a>
 
-        <a href="staff.html?role=HEAD" style="text-decoration: none; border: 1px solid #ddd6fe; background: #f5f3ff; padding: 0.85rem 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s;">
-          <div style="font-weight: 700; color: #6d28d9; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            3. หัวหน้าหน่วยงาน
+        <a href="staff.html?role=HEAD" class="role-card role-head">
+          <div class="role-card-head">
+            <span class="role-icon">
+              <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            </span>
+            <span class="role-step-tag">03</span>
           </div>
-          <div style="font-size: 0.78rem; color: #5b21b6;">พิจารณาอนุมัติคำขอขั้นสุดท้าย และดูสถิติรายเดือน</div>
+          <div class="role-title">หัวหน้าหน่วยงาน</div>
+          <div class="role-desc">พิจารณาอนุมัติคำขอขั้นสุดท้าย และติดตามสถิติการเบิกรายเดือน</div>
         </a>
 
-        <a href="staff.html?role=ADMIN" style="text-decoration: none; border: 1px solid #cbd5e1; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; transition: transform 0.15s;">
-          <div style="font-weight: 700; color: #0f172a; font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
-            <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            4. ผู้ดูแลระบบสูงสุด
+        <a href="staff.html?role=ADMIN" class="role-card role-admin">
+          <div class="role-card-head">
+            <span class="role-icon">
+              <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <span class="role-step-tag">04</span>
           </div>
-          <div style="font-size: 0.78rem; color: #334155;">บริหารจัดการระบบทั้งหมด บุคลากร หน่วยงาน และสลับมุมมอง</div>
+          <div class="role-title">ผู้ดูแลระบบสูงสุด</div>
+          <div class="role-desc">บริหารจัดการระบบทั้งหมด บุคลากร กลุ่มงาน โควตา และสลับมุมมองสิทธิ์</div>
         </a>
       </div>
-    </div>
+    </section>
 
-    <!-- Quick Dual Screen Launch Box -->
-    <div class="dual-open-box">
-      <div class="dual-text">
-        <h4>ทดสอบการเชื่อมต่อแบบเรียลไทม์</h4>
-        <p>เปิดทั้งหน้าจอ "ผู้ขอเบิก" และหน้าจอ "เจ้าหน้าที่พัสดุ" พร้อมกันใน 2 แท็บ เพื่อทดสอบการส่งคำขอและตัดสต๊อกทันที</p>
+    <!-- Section 3: Requisition Workflow + Quick Dual-Screen Utility -->
+    <section class="bottom-utility-grid" aria-label="ขั้นตอนการทำงานและเครื่องมือทดสอบ">
+      <div class="workflow-panel">
+        <div class="workflow-title">
+          <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          ลำดับขั้นตอนการเบิกจ่ายพัสดุ
+        </div>
+        <div class="workflow-steps">
+          <div class="workflow-step">
+            <span class="workflow-step-num">ขั้นที่ 1</span>
+            <span class="workflow-step-name">ส่งคำขอเบิก</span>
+            <span class="workflow-step-sub">ผู้ขอเบิกเลือกรายการ</span>
+          </div>
+          <div class="workflow-step">
+            <span class="workflow-step-num">ขั้นที่ 2</span>
+            <span class="workflow-step-name">คัดกรองคำขอ</span>
+            <span class="workflow-step-sub">เจ้าหน้าที่ตรวจสอบ</span>
+          </div>
+          <div class="workflow-step">
+            <span class="workflow-step-num">ขั้นที่ 3</span>
+            <span class="workflow-step-name">อนุมัติกันยอด</span>
+            <span class="workflow-step-sub">หัวหน้าอนุมัติขั้นสุดท้าย</span>
+          </div>
+          <div class="workflow-step">
+            <span class="workflow-step-num">ขั้นที่ 4</span>
+            <span class="workflow-step-name">จ่ายและตัดสต๊อก</span>
+            <span class="workflow-step-sub">รับพัสดุพร้อมใบเบิก</span>
+          </div>
+        </div>
       </div>
-      <div>
-        <button class="btn btn-outline" onclick="openDualTabs()" style="width: auto; padding: 0.6rem 1.25rem;">
-          <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-          เปิด 2 หน้าต่างพร้อมกัน (2 แท็บ)
-        </button>
+
+      <div class="dual-open-box">
+        <div class="dual-text">
+          <h4>
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><rect width="18" height="14" x="3" y="5" rx="2"/><line x1="12" x2="12" y1="5" y2="19"/></svg>
+            ทดสอบการทำงานควบคู่ 2 หน้าจอ
+          </h4>
+          <p>เปิดหน้าผู้ขอเบิกและหน้าเจ้าหน้าที่พร้อมกันใน 2 แท็บ เพื่อทดสอบการส่งคำขอ การอนุมัติ และการตัดสต๊อกแบบต่อเนื่อง</p>
+        </div>
+        <div class="dual-actions">
+          <button type="button" class="btn btn-outline" onclick="openDualTabs()">
+            <svg class="svg-icon svg-icon-sm" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
+            เปิด 2 หน้าต่างพร้อมกัน
+          </button>
+        </div>
       </div>
-    </div>
+    </section>
+
   </main>
 
   <!-- Footer -->
   <footer>
-    © 2569 ระบบคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต | Stock Order SDU v3.7.0 | ใช้งานเฉพาะภายในสถาบัน
+    © 2569 ระบบคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต | Stock Order SDU v3.7.6 | ใช้งานเฉพาะภายในสถาบัน
   </footer>
 
   <script>
@@ -512,6 +975,30 @@
       window.open('index.html', '_blank');
       window.open('staff.html', '_blank');
     }
+
+    async function checkPortalHealth() {
+      const badge = document.getElementById('liveHealthBadge');
+      const text = document.getElementById('liveHealthText');
+      if (!badge || !text) return;
+      try {
+        const res = await fetch('/api?action=health', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.healthy) {
+            badge.classList.remove('offline');
+            text.textContent = 'เชื่อมต่อฐานข้อมูลพร้อมใช้งาน';
+            return;
+          }
+          badge.classList.add('offline');
+          text.textContent = 'เซิร์ฟเวอร์ทำงาน (โหมดสำรองออฟไลน์)';
+          return;
+        }
+      } catch (e) {}
+      badge.classList.add('offline');
+      text.textContent = 'โหมดออฟไลน์ในเบราว์เซอร์';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkPortalHealth);
   </script>
 </body>
 </html>

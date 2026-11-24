@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgrespassword}
       POSTGRES_DB: ${DB_NAME:-sdu_inventory}
     ports:
-      - "${DB_PORT:-5433}:5432"
+      - "${DB_BIND_HOST:-127.0.0.1}:${DB_PORT:-5433}:5432"
     volumes:
       - postgres-stock-data:/var/lib/postgresql/data
       - ./backend/schema_postgres.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
@@ -22,13 +22,14 @@ services:
   pgadmin:
     image: dpage/pgadmin4
     container_name: sdu_stock_pgadmin
+    profiles: ["tools"]
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-root}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_SERVER_MODE: "True"
     ports:
-      - "${PGADMIN_PORT:-5051}:80"
+      - "${PGADMIN_BIND_HOST:-127.0.0.1}:${PGADMIN_PORT:-5051}:80"
     volumes:
       - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
     depends_on:
