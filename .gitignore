@@ -22,6 +22,7 @@ npm-debug.log*
 
 # Scratch / Temp artifacts
 .tempmediaStorage/
+postgres-data/
 ~$*
 *.tmp
 *.log

@@ -10,7 +10,7 @@ services:
     ports:
       - "${DB_BIND_HOST:-127.0.0.1}:${DB_PORT:-5433}:5432"
     volumes:
-      - postgres-stock-data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
       - ./backend/schema_postgres.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
@@ -18,23 +18,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: sdu_stock_pgadmin
-    profiles: ["tools"]
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-root}
-      PGADMIN_CONFIG_SERVER_MODE: "True"
-    ports:
-      - "${PGADMIN_BIND_HOST:-127.0.0.1}:${PGADMIN_PORT:-5051}:80"
-    volumes:
-      - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   app:
     build: .
@@ -64,6 +47,4 @@ services:
       REQUESTER_AUTH_SECRET: ${REQUESTER_AUTH_SECRET:-sdu_inventory_requester_secret_token_change_in_production}
       AUTH_BYPASS: ${AUTH_BYPASS:-false}
 
-volumes:
-  postgres-stock-data:
 
