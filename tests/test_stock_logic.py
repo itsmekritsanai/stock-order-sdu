@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.8.0"
+        assert SYSTEM_VERSION == "3.8.2"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -245,9 +245,9 @@ class TestPostgresSchemaAndConfiguration:
             content = f.read()
 
         assert "postgres:17-alpine" in content
-        assert "dpage/pgadmin4" in content
+        assert "sdu_stock_app" in content
+        assert "./postgres-data:/var/lib/postgresql/data" in content
         assert "5433:5432" in content or "DB_PORT" in content
-        assert "5051:80" in content or "PGADMIN_PORT" in content
 
     def test_pgadmin_servers_configuration(self):
         pgadmin_json = os.path.join(PROJECT_ROOT, "pgadmin_servers.json")
@@ -297,7 +297,7 @@ class TestApiHandlers:
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_cur.fetchall.return_value = [
-            {"id": 1, "name": "นางสาววาสนา จันทร์จ่าย", "position": "หัวหน้าสำนักงาน", "dept": "สวท.", "phone": "081-998-7766"}
+            {"id": 1, "name": "จิตราพร จันทรกูล", "position": "หัวหน้าสำนักงาน", "dept": "สวท.", "phone": "081-998-7766"}
         ]
         mock_conn.cursor.return_value.__enter__.return_value = mock_cur
 
@@ -305,7 +305,7 @@ class TestApiHandlers:
             res = server.handle_get_users()
             assert res["status"] == "success"
             assert res["total"] == 1
-            assert res["data"][0]["name"] == "นางสาววาสนา จันทร์จ่าย"
+            assert res["data"][0]["name"] == "จิตราพร จันทรกูล"
 
     def test_handle_track_requisition_not_found(self):
         mock_conn = MagicMock()
@@ -460,18 +460,18 @@ class TestApiHandlers:
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_cur.fetchone.return_value = {
-            "id": 1,
-            "name": "นางสาววาสนา จันทร์จ่าย",
-            "username": "wasana.c",
-            "password": "sdu1234",
-            "position": "หัวหน้าสำนักงาน",
-            "dept": "สำนักงานผู้อำนวยการ สวท.",
-            "phone": "081-998-7766"
+            "id": 2,
+            "name": "จิตราพร จันทรกูล",
+            "username": "jittraporn_cha",
+            "password": "J08111972",
+            "position": "รองผู้อำนวยการ",
+            "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+            "phone": "5235"
         }
         mock_conn.cursor.return_value.__enter__.return_value = mock_cur
 
         with patch("server.get_db_connection", return_value=mock_conn):
-            res = server.handle_login_requester({"username": "wasana.c", "password": "wrong_password"})
+            res = server.handle_login_requester({"username": "jittraporn_cha", "password": "wrong_password"})
             assert res["status"] == "error"
             assert "รหัสผ่านไม่ถูกต้อง" in res["message"]
 
@@ -479,22 +479,22 @@ class TestApiHandlers:
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_cur.fetchone.return_value = {
-            "id": 1,
-            "name": "นางสาววาสนา จันทร์จ่าย",
-            "username": "wasana.c",
-            "password": "sdu1234",
-            "position": "หัวหน้าสำนักงาน",
-            "dept": "สำนักงานผู้อำนวยการ สวท.",
-            "phone": "081-998-7766"
+            "id": 2,
+            "name": "จิตราพร จันทรกูล",
+            "username": "jittraporn_cha",
+            "password": "J08111972",
+            "position": "รองผู้อำนวยการ",
+            "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+            "phone": "5235"
         }
         mock_conn.cursor.return_value.__enter__.return_value = mock_cur
 
         with patch("server.get_db_connection", return_value=mock_conn):
-            res = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+            res = server.handle_login_requester({"username": "jittraporn_cha", "password": "J08111972"})
             assert res["status"] == "success"
-            assert res["user"]["name"] == "นางสาววาสนา จันทร์จ่าย"
-            assert res["user"]["username"] == "wasana.c"
-            assert res["user"]["dept"] == "สำนักงานผู้อำนวยการ สวท."
+            assert res["user"]["name"] == "จิตราพร จันทรกูล"
+            assert res["user"]["username"] == "jittraporn_cha"
+            assert res["user"]["dept"] == "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน"
 
 
 class TestSecurityEnhancements:
@@ -670,34 +670,49 @@ class TestSecurityAuditRun2Patches:
     def test_requester_token_lifecycle(self):
         """sdu-sec-010: Requester HMAC session token generation and verification."""
         import server
-        token = server.generate_requester_token("wasana.c")
-        assert token.startswith("wasana.c.")
-        assert server.verify_requester_token(token, "wasana.c") is True
+        token = server.generate_requester_token("jittraporn_cha")
+        assert token.startswith("jittraporn_cha.")
+        assert server.verify_requester_token(token, "jittraporn_cha") is True
         assert server.verify_requester_token(token, "other.user") is False
-        assert server.verify_requester_token("invalid.token", "wasana.c") is False
+        assert server.verify_requester_token("invalid.token", "jittraporn_cha") is False
 
     @require_db
     def test_handle_login_requester_returns_token(self):
         """sdu-sec-010: handle_login_requester must return an authenticated session token."""
         import server
-        res = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+        res = server.handle_login_requester({"username": "jittraporn_cha", "password": "J08111972"})
         assert res["status"] == "success"
         assert "token" in res
-        assert server.verify_requester_token(res["token"], "wasana.c") is True
+        assert res["user"]["role"] == "HEAD"
+        assert server.verify_requester_token(res["token"], "jittraporn_cha") is True
 
     @require_db
     def test_requester_login_with_default_sdu_password(self):
-        """Verify that wasana.c and user can log in with institutional default sdu1234."""
+        """Verify Book1.xlsx accounts authenticate strictly with their own credentials (case-insensitive username)."""
         import server
-        res_wasana = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
-        assert res_wasana["status"] == "success"
-        assert "token" in res_wasana
-        assert server.verify_requester_token(res_wasana["token"], "wasana.c") is True
+        res_head = server.handle_login_requester({"username": "jittraporn_cha", "password": "J08111972"})
+        assert res_head["status"] == "success"
+        assert "token" in res_head
+        assert server.verify_requester_token(res_head["token"], "jittraporn_cha") is True
 
-        res_user = server.handle_login_requester({"username": "user", "password": "sdu1234"})
-        assert res_user["status"] == "success"
-        assert "token" in res_user
-        assert server.verify_requester_token(res_user["token"], "user") is True
+        res_req = server.handle_login_requester({"username": "somchai_jar", "password": "S123456"})
+        assert res_req["status"] == "success"
+        assert "token" in res_req
+        assert server.verify_requester_token(res_req["token"], "somchai_jar") is True
+
+        # Case-insensitive username check (Jabie_Sin)
+        res_ci = server.handle_login_requester({"username": "jabie_sin", "password": "J094929"})
+        assert res_ci["status"] == "success"
+
+        # Staff account from Book1.xlsx (chuthathip_pan -> STAFF)
+        res_staff_book1 = server.handle_login_staff({"username": "chuthathip_pan", "password": "bowmin/18092545"})
+        assert res_staff_book1["status"] == "success"
+        assert res_staff_book1["role"] == "STAFF"
+        assert server.verify_staff_token(res_staff_book1["token"]) is True
+
+        # Default password sdu1234 must NOT bypass a user's real password
+        res_wrong = server.handle_login_requester({"username": "somchai_jar", "password": "sdu1234"})
+        assert res_wrong["status"] == "error"
 
     def test_staff_portal_template_syntax_clean(self):
         """Verify staff.html and index.html have 0 duplicate join tokens or template syntax errors."""
@@ -833,7 +848,8 @@ class TestPhase8ExtendedRequirements:
         assert server.get_staff_role("admin_staff") == "ADMIN"
         assert server.get_staff_role("staff") == "STAFF"
         assert server.get_staff_role("head") == "HEAD"
-        assert server.get_staff_role("wasana.c") == "HEAD"
+        assert server.get_staff_role("jittraporn_cha") == "HEAD"
+        assert server.get_staff_role("chuthathip_pan") == "STAFF"
 
         # Token username extraction
         token = server.generate_staff_token("head_approver")
@@ -938,7 +954,7 @@ class TestPhase8ExtendedRequirements:
         import server
         from unittest.mock import MagicMock, patch
 
-        # Person A ("นางสาววาสนา จันทร์จ่าย") has already requested 900 out of 1000 monthly_limit -> requesting 200 more fails
+        # Person A ("จิตราพร จันทรกูล") has already requested 900 out of 1000 monthly_limit -> requesting 200 more fails
         mock_conn_a = MagicMock()
         mock_cur_a = MagicMock()
         mock_cur_a.fetchone.side_effect = [
@@ -958,17 +974,17 @@ class TestPhase8ExtendedRequirements:
 
         with patch("server.get_db_connection", return_value=mock_conn_a):
             res_a = server.handle_create_requisition({
-                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "requester": "จิตราพร จันทรกูล",
                 "dept": "สำนักงานผู้อำนวยการ สวท.",
                 "purpose": "ทดสอบโควตารายบุคคล",
                 "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200}],
             })
             assert res_a["status"] == "error"
             assert res_a["code"] == "QUOTA_EXCEEDED"
-            assert res_a["details"]["requester"] == "นางสาววาสนา จันทร์จ่าย"
+            assert res_a["details"]["requester"] == "จิตราพร จันทรกูล"
             assert res_a["details"]["remainingQuota"] == 100
 
-        # Person B ("นางสาวจีรวรรณ บุญพิทักษ์") has requested 0 in the same month -> requesting 500 succeeds!
+        # Person B ("รัตติการณ์ คำแก้ววันดี") has requested 0 in the same month -> requesting 500 succeeds!
         mock_conn_b = MagicMock()
         mock_cur_b = MagicMock()
         mock_cur_b.fetchone.side_effect = [
@@ -989,7 +1005,7 @@ class TestPhase8ExtendedRequirements:
 
         with patch("server.get_db_connection", return_value=mock_conn_b):
             res_b = server.handle_create_requisition({
-                "requester": "นางสาวจีรวรรณ บุญพิทักษ์",
+                "requester": "รัตติการณ์ คำแก้ววันดี",
                 "dept": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
                 "purpose": "ทดสอบโควตาของบุคลากรอีกท่าน",
                 "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 500, "totalPieces": 500}],
@@ -1185,7 +1201,7 @@ class TestPhase8ExtendedRequirements:
 
         with patch("server.get_db_connection", return_value=mock_conn):
             res_dept = server.handle_create_requisition({
-                "requester": "นางสาวพัชราภรณ์ ขำแป้ง",
+                "requester": "ทรรศนีย์ สุทธิภาพย์",
                 "dept": "กลุ่มงานบริการวิชาการ",
                 "purpose": "ทดสอบโควตารายกลุ่มงาน",
                 "items": [{"itemId": 3, "qtyBoxes": 0, "qtyPieces": 200, "totalPieces": 200}],
@@ -1249,7 +1265,7 @@ class TestPhase8ExtendedRequirements:
             [{"item_id": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_piece_name": "ใบ", "total_pieces": 1500, "req_count": 2}],
             [
                 {
-                    "requester": "นางสาววาสนา จันทร์จ่าย",
+                    "requester": "จิตราพร จันทรกูล",
                     "dept": "สำนักงานผู้อำนวยการ สวท.",
                     "req_count": 1,
                     "completed_count": 1,
@@ -1257,7 +1273,7 @@ class TestPhase8ExtendedRequirements:
                     "total_approved_pieces": 1000,
                 },
                 {
-                    "requester": "นางสาวจีรวรรณ บุญพิทักษ์",
+                    "requester": "รัตติการณ์ คำแก้ววันดี",
                     "dept": "หน่วยงานศึกษาทั่วไป",
                     "req_count": 1,
                     "completed_count": 0,
@@ -1266,8 +1282,8 @@ class TestPhase8ExtendedRequirements:
                 },
             ],
             [
-                {"requester": "นางสาววาสนา จันทร์จ่าย", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 1000, "approved_pieces": 1000},
-                {"requester": "นางสาวจีรวรรณ บุญพิทักษ์", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 500, "approved_pieces": 0},
+                {"requester": "จิตราพร จันทรกูล", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 1000, "approved_pieces": 1000},
+                {"requester": "รัตติการณ์ คำแก้ววันดี", "item_id": 3, "item_name": "กระดาษคำตอบ", "unit_name": "ใบ", "total_pieces": 500, "approved_pieces": 0},
             ],
         ]
         mock_cur.fetchone.return_value = {"total_requested": 1500, "total_approved": 1000}
@@ -1278,7 +1294,7 @@ class TestPhase8ExtendedRequirements:
             assert res["status"] == "success"
             pu = res["data"]["personUsage"]
             assert len(pu) == 2
-            assert pu[0]["requester"] == "นางสาววาสนา จันทร์จ่าย"
+            assert pu[0]["requester"] == "จิตราพร จันทรกูล"
             assert pu[0]["totalRequestedPieces"] == 1000
             assert len(pu[0]["items"]) == 1
             assert pu[0]["items"][0]["name"] == "กระดาษคำตอบ"
@@ -1321,7 +1337,7 @@ class TestPhase8ExtendedRequirements:
             ],
             "personUsage": [
                 {
-                    "requester": "นางสาววาสนา จันทร์จ่าย",
+                    "requester": "จิตราพร จันทรกูล",
                     "dept": "สำนักงานผู้อำนวยการ สวท.",
                     "requisitionCount": 1,
                     "completedCount": 1,
@@ -1345,7 +1361,7 @@ class TestPhase8ExtendedRequirements:
                 "docNo": "REQ-256911-0001",
                 "date": "17 พ.ย. 2569 10:00 น.",
                 "statusThai": "จ่ายสำเร็จแล้ว",
-                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "requester": "จิตราพร จันทรกูล",
                 "dept": "สำนักงานผู้อำนวยการ สวท.",
                 "itemName": "กระดาษคำตอบ",
                 "totalPieces": 1000,
@@ -1392,7 +1408,7 @@ class TestPhase8ExtendedRequirements:
                 "id": "REQ-256911-0001",
                 "date": "17 พ.ย. 2569 10:00 น.",
                 "status": "COMPLETED",
-                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "requester": "จิตราพร จันทรกูล",
                 "dept": "สำนักงานผู้อำนวยการ สวท.",
                 "items": [{"name": "กระดาษคำตอบ", "totalPieces": 1000, "approvedPieces": 1000, "unitPiece": "ใบ"}],
             }],
@@ -1629,7 +1645,7 @@ class TestPhase8ExtendedRequirements:
                 assert hdrs.get("X-Frame-Options") == "DENY"
 
             # Requester token cannot access staff-only GET endpoints -> 401
-            req_tok = server.generate_requester_token("user", "Demo User")
+            req_tok = server.generate_requester_token("somchai_jar", "สมชัย จารุธนกิจพานิช")
             st_staff_only, _, _ = _run_handler("GET", "/api?action=getMonthlyAnalytics", headers={"Authorization": f"Bearer {req_tok}"})
             assert st_staff_only == 401
 
@@ -1675,9 +1691,9 @@ class TestPhase8ExtendedRequirements:
 
         with open(os.path.join(PROJECT_ROOT, "docker-compose.yml"), "r", encoding="utf-8") as f:
             dc_txt = f.read()
-        assert 'profiles: ["tools"]' in dc_txt
-        assert 'PGADMIN_CONFIG_SERVER_MODE: "True"' in dc_txt
+        assert "./postgres-data:/var/lib/postgresql/data" in dc_txt
         assert "127.0.0.1" in dc_txt
+        assert "AUTH_BYPASS" in dc_txt
 
         with open(os.path.join(PROJECT_ROOT, ".github", "workflows", "ci.yml"), "r", encoding="utf-8") as f:
             ci_txt = f.read()
@@ -1745,8 +1761,8 @@ class TestPhase8ExtendedRequirements:
         mock_cur_sso = MagicMock()
         mock_cur_sso.fetchone.return_value = {
             "id": 1,
-            "name": "นางสาววาสนา จันทร์จ่าย",
-            "username": "wasana.c",
+            "name": "จิตราพร จันทรกูล",
+            "username": "jittraporn_cha",
             "password": server.hash_password("sdu1234"),
             "role": "HEAD",
             "position": "หัวหน้าสำนักงาน",
@@ -1755,7 +1771,7 @@ class TestPhase8ExtendedRequirements:
         }
         mock_conn_sso.cursor.return_value.__enter__.return_value = mock_cur_sso
         with patch("server.get_db_connection", return_value=mock_conn_sso):
-            res_req_head = server.handle_login_requester({"username": "wasana.c", "password": "sdu1234"})
+            res_req_head = server.handle_login_requester({"username": "jittraporn_cha", "password": "sdu1234"})
             assert res_req_head["status"] == "success"
             assert res_req_head["user"]["role"] == "HEAD"
             assert res_req_head.get("staff_role") == "HEAD"
@@ -1805,7 +1821,7 @@ class TestPhase8ExtendedRequirements:
             [{
                 "id": "REQ-256911-0001",
                 "date": "25 พ.ย. 2569 10:00 น.",
-                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "requester": "จิตราพร จันทรกูล",
                 "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
                 "phone": "081-998-7766",
                 "purpose": "ใช้สำหรับจัดการสอบ",
@@ -1858,6 +1874,43 @@ class TestPhase8ExtendedRequirements:
             "function renderAnalyticsRequisitionsTable(",
         ):
             assert expected in stf_html, f"staff.html missing {expected}"
+
+    def test_dynamic_month_dropdowns_v381(self):
+        """Verify all month dropdowns in index.html and staff.html auto-populate dynamically instead of hardcoding 2026-11."""
+        for fname in ("index.html", "staff.html"):
+            with open(os.path.join(PROJECT_ROOT, fname), "r", encoding="utf-8") as f:
+                html = f.read()
+            for fn_name in (
+                "function getCurrentMonthKey(",
+                "function formatThaiMonthOption(",
+                "function collectAvailableMonthKeys(",
+                "function populateDynamicMonthSelect(",
+                "function refreshAllMonthDropdowns(",
+            ):
+                assert fn_name in html, f"{fname} missing {fn_name}"
+            assert '<option value="2026-11"' not in html, f"{fname} still has hardcoded 2026-11 month option"
+            assert '<option value="2026-10"' not in html, f"{fname} still has hardcoded 2026-10 month option"
+
+    def test_book1_seed_users_sync_v382(self):
+        """Verify all 15 personnel accounts from Book1.xlsx are synchronized across SQL schemas and portals without leaking passwords in HTML."""
+        expected_usernames = [
+            "somchai_jar", "jittraporn_cha", "tatsanee_soo", "sutang_hon", "thanathorn_yim",
+            "saranphat_cho", "sarika_sua", "natcha_kae", "thanaphat_aie", "ratthikarn_kha",
+            "apichart_kro", "atipong_int", "boonthum_sun", "Jabie_Sin", "chuthathip_pan",
+        ]
+        for sql_file in ("backend/schema_postgres.sql", "backend/schema.sql"):
+            with open(os.path.join(PROJECT_ROOT, sql_file), "r", encoding="utf-8") as f:
+                sql_txt = f.read()
+            assert "กลุ่มงานเคาน์เตอร์บริการ" in sql_txt
+            for uname in expected_usernames:
+                assert f"'{uname}'" in sql_txt, f"{sql_file} missing seed username {uname}"
+        for html_file in ("index.html", "staff.html"):
+            with open(os.path.join(PROJECT_ROOT, html_file), "r", encoding="utf-8") as f:
+                html_txt = f.read()
+            assert "กลุ่มงานเคาน์เตอร์บริการ" in html_txt
+            for uname in expected_usernames:
+                assert f'"{uname}"' in html_txt, f"{html_file} missing default user {uname}"
+            assert "Sarika@1978" not in html_txt and "bowmin/18092545" not in html_txt
 
         with open(os.path.join(PROJECT_ROOT, "backend", "schema.sql"), "r", encoding="utf-8") as f:
             my_sql = f.read()

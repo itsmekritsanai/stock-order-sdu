@@ -8,7 +8,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from server import CONFIG, SCHEMA_SQL_PATH, IS_POSTGRES, get_db_connection
+from server import CONFIG, SCHEMA_SQL_PATH, IS_POSTGRES, get_db_connection, hash_password
 
 
 def init_database_schema():
@@ -47,8 +47,12 @@ def init_database_schema():
             with conn.cursor() as cur:
                 print(f"[*] กำลังรันสคริปต์ {os.path.basename(SCHEMA_SQL_PATH)}...")
                 cur.execute(sql_script)
+                cur.execute("SELECT id, password FROM users WHERE password IS NOT NULL AND password <> ''")
+                for uid, raw_pw in cur.fetchall():
+                    if not str(raw_pw).startswith("pbkdf2_sha256$"):
+                        cur.execute("UPDATE users SET password = %s WHERE id = %s", (hash_password(str(raw_pw)), uid))
             conn.commit()
-            print("[+] ติดตั้งตารางทั้ง 6 ตาราง และนำเข้าข้อมูลตั้งต้นสำเร็จ 100%!")
+            print("[+] ติดตั้งตารางทั้งหมด นำเข้าข้อมูลตั้งต้น และเข้ารหัสรหัสผ่านสำเร็จ 100%!")
         except Exception as e:
             conn.rollback()
             print(f"[!] เกิดข้อผิดพลาดในการรันสคริปต์: {e}")

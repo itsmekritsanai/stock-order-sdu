@@ -698,11 +698,8 @@
             <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
               <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> เดือน:
             </label>
-            <select id="staffReqMonthFilter" class="form-control" style="width: auto; min-width: 170px;" onchange="handleStaffReqMonthChange()">
+            <select id="staffReqMonthFilter" class="form-control" style="width: auto; min-width: 190px;" onchange="handleStaffReqMonthChange()">
               <option value="ALL">ดูทุกเดือนย้อนหลัง</option>
-              <option value="2026-11" selected>พฤศจิกายน 2569</option>
-              <option value="2026-10">ตุลาคม 2569</option>
-              <option value="2026-09">กันยายน 2569</option>
             </select>
           </div>
           <div class="status-tabs" style="width: 100%; margin-top: 0.5rem;">
@@ -932,10 +929,7 @@
             <label style="font-size: 0.825rem; font-weight: 600; color: var(--neutral-600); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
               <svg class="svg-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg> เลือกเดือนที่ต้องการดูรายงาน:
             </label>
-            <select id="analyticsMonthSelect" class="form-control" style="width: auto; min-width: 190px;" onchange="handleAnalyticsMonthChange()">
-              <option value="2026-11" selected>พฤศจิกายน 2569 (เดือนปัจจุบัน)</option>
-              <option value="2026-10">ตุลาคม 2569</option>
-              <option value="2026-09">กันยายน 2569</option>
+            <select id="analyticsMonthSelect" class="form-control" style="width: auto; min-width: 210px;" onchange="handleAnalyticsMonthChange()">
               <option value="ALL">ภาพรวมข้อมูลย้อนหลังทั้งหมด</option>
             </select>
             <button type="button" class="btn btn-outline" style="font-size: 0.825rem; padding: 0.45rem 0.85rem;" onclick="exportMonthlyAnalyticsCsv()">
@@ -1220,7 +1214,7 @@
               </tr>
               <tr>
                 <td><strong>หน่วยงาน/กลุ่มงาน:</strong> <span id="pdfDept">สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน</span></td>
-                <td><strong>ชื่อผู้ขอเบิก:</strong> <span id="pdfRequester">นางสาววาสนา จันทร์จ่าย</span></td>
+                <td><strong>ชื่อผู้ขอเบิก:</strong> <span id="pdfRequester">สมชัย จารุธนกิจพานิช</span></td>
               </tr>
               <tr>
                 <td colspan="2"><strong>วัตถุประสงค์ในการขอเบิก:</strong> <span id="pdfPurpose">ใช้สำหรับจัดส่งเอกสารราชการและหนังสือสำคัญ ประจำภาคการศึกษา 1/2569</span></td>
@@ -1251,7 +1245,7 @@
               <div class="pdf-signatures">
                 <div class="sig-box">
                   <div class="sig-line"></div>
-                  <div>( <span id="pdfSignRequester">นางสาววาสนา จันทร์จ่าย</span> )</div>
+                  <div>( <span id="pdfSignRequester">สมชัย จารุธนกิจพานิช</span> )</div>
                   <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้ขอเบิกพัสดุ</div>
                   <div style="font-size: 0.72rem; color: #666;" id="pdfSignReqDate">21 ต.ค. 2569</div>
                 </div>
@@ -1275,7 +1269,7 @@
                 <div class="sig-box">
                   <div id="pdfReceiverSigArea"></div>
                   <div class="sig-line"></div>
-                  <div>( <span id="pdfReceiverName">นางสาววาสนา จันทร์จ่าย</span> )</div>
+                  <div>( <span id="pdfReceiverName">สมชัย จารุธนกิจพานิช</span> )</div>
                   <div style="font-size: 0.78rem; color: #444; font-weight: 600;">ผู้รับมอบพัสดุ</div>
                   <div style="font-size: 0.72rem; color: #666;" id="pdfReceiveTime">วันที่ ........../........../..........</div>
                 </div>
@@ -1292,13 +1286,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.8.0 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.8.2 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.8.0';
+    const APP_VERSION = '3.8.2';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = false;
     const vIcons = {
@@ -1375,6 +1369,11 @@
         "label": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
         "value": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
         "sub": false
+      },
+      {
+        "label": "กลุ่มงานเคาน์เตอร์บริการ",
+        "value": "กลุ่มงานเคาน์เตอร์บริการ",
+        "sub": false
       }
     ]
   }
@@ -1382,48 +1381,138 @@
     const defaultUsers = [
   {
     "id": 1,
-    "name": "นางสาววาสนา จันทร์จ่าย",
-    "username": "wasana.c",
-    "role": "HEAD",
-    "position": "หัวหน้าสำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
-    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
-    "phone": ""
+    "name": "สมชัย จารุธนกิจพานิช",
+    "username": "somchai_jar",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานเคาน์เตอร์บริการ",
+    "dept": "กลุ่มงานเคาน์เตอร์บริการ",
+    "phone": "5174"
   },
   {
     "id": 2,
-    "name": "นางสาวจีรวรรณ บุญพิทักษ์",
-    "username": "jeerawan.b",
+    "name": "จิตราพร จันทรกูล",
+    "username": "jittraporn_cha",
     "role": "HEAD",
-    "position": "หัวหน้าหน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
-    "dept": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
-    "phone": ""
+    "position": "รองผู้อำนวยการ",
+    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+    "phone": "5235"
   },
   {
     "id": 3,
-    "name": "นางสาวพัชราภรณ์ ขำแป้ง",
-    "username": "patcharaporn.k",
-    "role": "HEAD",
-    "position": "หัวหน้ากลุ่มงานบริการวิชาการ",
+    "name": "ทรรศนีย์ สุทธิภาพย์",
+    "username": "tatsanee_soo",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานบริการวิชาการ",
     "dept": "กลุ่มงานบริการวิชาการ",
-    "phone": ""
+    "phone": "5171"
   },
   {
     "id": 4,
-    "name": "นางสาวสินีนาฎ ลักษณะโยธิน",
-    "username": "sineenart.l",
-    "role": "HEAD",
-    "position": "หัวหน้ากลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
-    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
-    "phone": ""
+    "name": "สุธางค์ หงษ์กลาง",
+    "username": "sutang_hon",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานบริการวิชาการ",
+    "dept": "กลุ่มงานบริการวิชาการ",
+    "phone": "5173"
   },
   {
     "id": 5,
-    "name": "ผู้ขอเบิกทดสอบ",
-    "username": "user",
+    "name": "ธนธรณ์ ยิ้มแย้ม",
+    "username": "thanathorn_yim",
     "role": "REQUESTER",
-    "position": "เจ้าหน้าที่บริการการศึกษา",
-    "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
-    "phone": "089-123-4567"
+    "position": "งานเคาน์เตอร์บริการ",
+    "dept": "กลุ่มงานเคาน์เตอร์บริการ",
+    "phone": "5173"
+  },
+  {
+    "id": 6,
+    "name": "สรัลพรรษ ชมศรี",
+    "username": "saranphat_cho",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานบริการวิชาการ",
+    "dept": "กลุ่มงานบริการวิชาการ",
+    "phone": "5173"
+  },
+  {
+    "id": 7,
+    "name": "สาริกา เสือบำรุง",
+    "username": "sarika_sua",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานบริการวิชาการ",
+    "dept": "กลุ่มงานบริการวิชาการ",
+    "phone": "5173"
+  },
+  {
+    "id": 8,
+    "name": "ณัฐชา แก้ววิมล",
+    "username": "natcha_kae",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานส่งเสริมวิชาการ",
+    "dept": "กลุ่มงานส่งเสริมวิชาการ",
+    "phone": "5173"
+  },
+  {
+    "id": 9,
+    "name": "ธนพรรธน์ เอี่ยมสะอาด",
+    "username": "thanaphat_aie",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานส่งเสริมวิชาการ",
+    "dept": "กลุ่มงานส่งเสริมวิชาการ",
+    "phone": "5173"
+  },
+  {
+    "id": 10,
+    "name": "รัตติการณ์ คำแก้ววันดี",
+    "username": "ratthikarn_kha",
+    "role": "REQUESTER",
+    "position": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
+    "dept": "หน่วยงานศึกษาทั่วไปและการเรียนรู้ตลอดชีวิต",
+    "phone": "5171"
+  },
+  {
+    "id": 11,
+    "name": "นายอภิชาติ กรมนา",
+    "username": "apichart_kro",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "phone": "5234"
+  },
+  {
+    "id": 12,
+    "name": "อธิพงศ์ อินโท",
+    "username": "atipong_int",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "phone": "5234"
+  },
+  {
+    "id": 13,
+    "name": "นายบุญธรรม สังขะเสน",
+    "username": "boonthum_sun",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "phone": "5235"
+  },
+  {
+    "id": 14,
+    "name": "จุริรัตน์ สิงอ่อน",
+    "username": "Jabie_Sin",
+    "role": "REQUESTER",
+    "position": "กลุ่มงานบริการวิชาการ",
+    "dept": "กลุ่มงานบริการวิชาการ",
+    "phone": "5173"
+  },
+  {
+    "id": 15,
+    "name": "จุฑาธิป ปั้นทอง",
+    "username": "chuthathip_pan",
+    "role": "STAFF",
+    "position": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "dept": "กลุ่มงานทะเบียนนักศึกษา ฐานข้อมูลฯ",
+    "phone": "5175"
   }
 ];
 
@@ -1647,7 +1736,7 @@
     function resolveRoleFromUsername(username) {
       const u = String(username || '').trim().toLowerCase();
       if (['admin_staff', 'admin'].includes(u)) return 'ADMIN';
-      if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(u)) return 'HEAD';
+      if (['head', 'head_approver', 'approver', 'director', 'jittraporn_cha'].includes(u)) return 'HEAD';
       return 'STAFF';
     }
 
@@ -1950,7 +2039,7 @@
         } else if (['staff', 'warehouse_staff', 'screener', 'officer'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'STAFF';
           resolvedName = 'เจ้าหน้าที่พัสดุ สวท.';
-        } else if (['head', 'head_approver', 'approver', 'director', 'wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes(uLow) && password === 'sdu1234') {
+        } else if (['head', 'head_approver', 'approver', 'director', 'jittraporn_cha'].includes(uLow) && password === 'sdu1234') {
           resolvedRole = 'HEAD';
           resolvedName = 'หัวหน้าหน่วยงาน สวท.';
         } else {
@@ -3568,8 +3657,9 @@
     }
 
     async function renderMonthlyAnalyticsView() {
+      refreshAllMonthDropdowns();
       const monthSelect = document.getElementById('analyticsMonthSelect');
-      const selectedMonth = monthSelect ? monthSelect.value : '2026-11';
+      const selectedMonth = (monthSelect && monthSelect.value) ? monthSelect.value : getCurrentMonthKey();
       let analyticsData = null;
 
       // Try fetching from server API if online
@@ -4622,8 +4712,8 @@
             </div>
             <div>
               <div style="margin-top: 2.2rem;">ลงชื่อ...........................................................</div>
-              <div>( นางสาววาสนา จันทร์จ่าย )</div>
-              <div style="font-size:11.5px; color:#555;">หัวหน้าสำนักงานผู้อำนวยการ สวท. / ผู้รับรองรายงาน</div>
+              <div>( จิตราพร จันทรกูล )</div>
+              <div style="font-size:11.5px; color:#555;">รองผู้อำนวยการ สวท. / ผู้รับรองรายงาน</div>
             </div>
           </div>
         </body>
@@ -5032,7 +5122,7 @@
       }
 
       tbody.innerHTML = filtered.map((u, idx) => {
-        const uRole = String(u.role || (['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes((u.username || '').toLowerCase()) ? 'HEAD' : 'REQUESTER')).toUpperCase();
+        const uRole = String(u.role || ((u.username || '').toLowerCase() === 'jittraporn_cha' ? 'HEAD' : ((u.username || '').toLowerCase() === 'chuthathip_pan' ? 'STAFF' : 'REQUESTER'))).toUpperCase();
         let roleBadge = `<span style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">ผู้ขอเบิก</span>`;
         if (uRole === 'STAFF') {
           roleBadge = `<span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;">เจ้าหน้าที่พัสดุ</span>`;
@@ -5091,7 +5181,7 @@
       const currentUsers = getUsersDB();
       const existing = userId !== null ? currentUsers.find(u => Number(u.id) === Number(userId)) : null;
       const deptNames = getAllDeptNames();
-      const curRole = existing ? String(existing.role || (['wasana.c', 'jeerawan.b', 'patcharaporn.k', 'sineenart.l'].includes((existing.username || '').toLowerCase()) ? 'HEAD' : 'REQUESTER')).toUpperCase() : 'REQUESTER';
+      const curRole = existing ? String(existing.role || ((existing.username || '').toLowerCase() === 'jittraporn_cha' ? 'HEAD' : ((existing.username || '').toLowerCase() === 'chuthathip_pan' ? 'STAFF' : 'REQUESTER'))).toUpperCase() : 'REQUESTER';
 
       const deptOptionsHtml = deptNames.map(d =>
         `<option value="${d}" ${existing && existing.dept === d ? 'selected' : ''}>${d}</option>`
@@ -5897,6 +5987,7 @@
     }
 
     function loadStaffDashboard() {
+      refreshAllMonthDropdowns();
       renderStaffRequisitions(currentStaffStatus);
       renderInventoryTable();
       renderStaffUsersTable();
@@ -5906,6 +5997,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       getDeptsDB();
       getUsersDB();
+      refreshAllMonthDropdowns();
       try {
         const params = new URLSearchParams(window.location.search);
         const roleParam = (params.get('role') || '').toUpperCase();
@@ -5930,6 +6022,135 @@
         syncFromMySQLAPI();
       }
     });
+
+
+    // Dynamic Auto-Updating Month Dropdowns (Current Calendar Month + Rolling 12 Months + Historical Data)
+    const THAI_FULL_MONTH_NAMES = [
+      'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+    ];
+
+    function getCurrentMonthKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    function formatThaiMonthOption(ymKey, currentKey, markCurrent = false) {
+      const m = /^(\d{4})-(\d{2})$/.exec(String(ymKey || ''));
+      if (!m) return String(ymKey || '');
+      const yr = parseInt(m[1], 10);
+      const mo = parseInt(m[2], 10);
+      const mName = THAI_FULL_MONTH_NAMES[mo - 1] || m[2];
+      const beYear = yr + 543;
+      return `${mName} ${beYear}${markCurrent && ymKey === currentKey ? ' (เดือนปัจจุบัน)' : ''}`;
+    }
+
+    function extractMonthKeyFromRecord(rec) {
+      if (!rec || typeof rec !== 'object') return null;
+      const iso = String(rec.created_at || rec.createdAt || '').trim();
+      const isoMatch = /^(\d{4})-(\d{2})/.exec(iso);
+      if (isoMatch) {
+        const mo = parseInt(isoMatch[2], 10);
+        if (mo >= 1 && mo <= 12) return `${isoMatch[1]}-${isoMatch[2]}`;
+      }
+      const docId = String(rec.id || rec.referenceId || '').trim().toUpperCase();
+      const idMatch = /^REQ-(\d{4})(\d{2})/.exec(docId);
+      if (idMatch) {
+        const rawYr = parseInt(idMatch[1], 10);
+        const ceYr = rawYr > 2400 ? rawYr - 543 : rawYr;
+        const mo = parseInt(idMatch[2], 10);
+        if (ceYr >= 2000 && ceYr <= 2150 && mo >= 1 && mo <= 12) {
+          return `${ceYr}-${String(mo).padStart(2, '0')}`;
+        }
+      }
+      return null;
+    }
+
+    function collectAvailableMonthKeys(lookbackMonths = 12) {
+      const now = new Date();
+      const monthSet = new Set();
+      for (let i = 0; i < lookbackMonths; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        monthSet.add(`${y}-${m}`);
+      }
+      try {
+        if (typeof getReqsDB === 'function') {
+          (getReqsDB() || []).forEach(r => {
+            const k = extractMonthKeyFromRecord(r);
+            if (k) monthSet.add(k);
+          });
+        }
+      } catch (e) {}
+      try {
+        if (typeof getTransactionsDB === 'function') {
+          (getTransactionsDB() || []).forEach(tx => {
+            const k = extractMonthKeyFromRecord(tx);
+            if (k) monthSet.add(k);
+          });
+        }
+      } catch (e) {}
+      return Array.from(monthSet).sort((a, b) => b.localeCompare(a));
+    }
+
+    function populateDynamicMonthSelect(selectId, config = {}) {
+      const selectEl = document.getElementById(selectId);
+      if (!selectEl) return;
+      const currentKey = getCurrentMonthKey();
+      const monthKeys = collectAvailableMonthKeys(config.lookbackMonths || 12);
+      const allLabel = config.allLabel || 'ดูทุกเดือนย้อนหลัง';
+      const allPosition = config.allPosition || 'top';
+      const markCurrent = Boolean(config.markCurrent);
+
+      const wasInit = selectEl.dataset.monthInitialized === 'true';
+      const prevVal = wasInit ? selectEl.value : currentKey;
+
+      const options = [];
+      if (allPosition === 'top') {
+        options.push({ value: 'ALL', label: allLabel });
+      }
+      monthKeys.forEach(k => {
+        options.push({ value: k, label: formatThaiMonthOption(k, currentKey, markCurrent) });
+      });
+      if (allPosition === 'bottom') {
+        options.push({ value: 'ALL', label: allLabel });
+      }
+
+      const signature = options.map(o => `${o.value}:${o.label}`).join('|');
+      if (selectEl.dataset.monthOptionsSig !== signature) {
+        selectEl.innerHTML = options.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+        selectEl.dataset.monthOptionsSig = signature;
+      }
+
+      const hasPrev = options.some(o => o.value === prevVal);
+      selectEl.value = hasPrev ? prevVal : currentKey;
+      selectEl.dataset.monthInitialized = 'true';
+      if (typeof selectEl._syncSearchableLabel === 'function') {
+        selectEl._syncSearchableLabel();
+      }
+    }
+
+    function refreshAllMonthDropdowns() {
+      populateDynamicMonthSelect('myReqsMonthSelect', {
+        allPosition: 'top',
+        allLabel: 'ทุกเดือนย้อนหลัง',
+        markCurrent: true
+      });
+      populateDynamicMonthSelect('staffReqMonthFilter', {
+        allPosition: 'top',
+        allLabel: 'ดูทุกเดือนย้อนหลัง',
+        markCurrent: true
+      });
+      populateDynamicMonthSelect('analyticsMonthSelect', {
+        allPosition: 'bottom',
+        allLabel: 'ภาพรวมข้อมูลย้อนหลังทั้งหมด',
+        markCurrent: true
+      });
+    }
+
 
 
     // Universal Searchable Dropdown Enhancer (Zero-Build Vanilla JS)

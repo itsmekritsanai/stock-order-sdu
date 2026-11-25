@@ -28,7 +28,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.8.0"
+SYSTEM_VERSION = "3.8.2"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -147,19 +147,20 @@ def ensure_database_schema(conn=None):
                 cur.execute("ALTER TABLE stock_transactions ADD COLUMN IF NOT EXISTS total_cost DECIMAL(12, 2) NOT NULL DEFAULT 0.00;")
                 cur.execute("ALTER TABLE requisitions DROP CONSTRAINT IF EXISTS requisitions_status_check;")
                 cur.execute("ALTER TABLE requisitions ADD CONSTRAINT requisitions_status_check CHECK (status IN ('PENDING', 'VERIFIED', 'APPROVED', 'COMPLETED', 'REJECTED'));")
-                default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
-                hashed_default = hash_password(default_user_pass)
-                cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (hashed_default,))
-                cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (hashed_default,))
-                cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (hashed_default,))
-                cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (hashed_default,))
-                if not had_role_col:
-                    cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
-                cur.execute("""
-                    INSERT INTO users (id, name, username, password, position, dept, phone, is_active)
-                    VALUES (5, 'ผู้ขอเบิกทดสอบ (Demo User)', 'user', %s, 'เจ้าหน้าที่บริการการศึกษา', 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน', '089-123-4567', 1)
-                    ON CONFLICT (id) DO NOTHING;
-                """, (hashed_default,))
+                cur.execute("SELECT 1 FROM departments WHERE full_label = 'กลุ่มงานเคาน์เตอร์บริการ' LIMIT 1;")
+                if not cur.fetchone():
+                    cur.execute("""
+                        INSERT INTO departments (category, name, parent_name, full_label)
+                        VALUES ('สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)', 'กลุ่มงานเคาน์เตอร์บริการ', 'สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)', 'กลุ่มงานเคาน์เตอร์บริการ');
+                    """)
+                cur.execute("SELECT id, password FROM users WHERE password IS NOT NULL AND password <> '' AND password NOT LIKE 'pbkdf2_sha256$%';")
+                plain_rows = cur.fetchall()
+                if isinstance(plain_rows, list):
+                    for prow in plain_rows:
+                        uid = prow["id"] if isinstance(prow, dict) else prow[0]
+                        raw_pw = prow["password"] if isinstance(prow, dict) else prow[1]
+                        if raw_pw and not str(raw_pw).startswith("pbkdf2_sha256$"):
+                            cur.execute("UPDATE users SET password = %s WHERE id = %s;", (hash_password(str(raw_pw)), uid))
                 cur.execute("""
                     INSERT INTO requisitions (id, date, requester, dept, phone, purpose, status, signature, reject_reason, completed_at, completed_date, rejected_at, rejected_date, created_at, updated_at)
                     VALUES ('REQ-256910-0001', '1 ต.ค. 2569 09:30 น.', 'อาจารย์ผู้แทน โรงเรียนการเรือน', 'โรงเรียนการเรือน', '', 'ใช้สำหรับการจัดการเรียนการสอนและการสอบปฏิบัติการ ประจำภาคการศึกษา 1/2569', 'COMPLETED', 'ผู้รับพัสดุ: อ.ผู้แทน โรงเรียนการเรือน', '', '2026-10-01 03:00:00', '1 ต.ค. 2569 10:00 น.', NULL, '', '2026-10-01 02:30:00', '2026-10-01 03:00:00')
@@ -220,18 +221,20 @@ def ensure_database_schema(conn=None):
                 if not cur.fetchone():
                     cur.execute("ALTER TABLE `users` ADD COLUMN `username` VARCHAR(100) UNIQUE AFTER `name`;")
                     cur.execute("ALTER TABLE `users` ADD COLUMN `password` VARCHAR(255) DEFAULT '' AFTER `username`;")
-                    hashed_default = hash_password(default_user_pass)
-                    cur.execute("UPDATE users SET username = 'wasana.c', password = %s WHERE id = 1 AND (username IS NULL OR username = '');", (hashed_default,))
-                    cur.execute("UPDATE users SET username = 'jeerawan.b', password = %s WHERE id = 2 AND (username IS NULL OR username = '');", (hashed_default,))
-                    cur.execute("UPDATE users SET username = 'patcharaporn.k', password = %s WHERE id = 3 AND (username IS NULL OR username = '');", (hashed_default,))
-                    cur.execute("UPDATE users SET username = 'sineenart.l', password = %s WHERE id = 4 AND (username IS NULL OR username = '');", (hashed_default,))
                 cur.execute("""
                     SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role';
                 """)
                 if not cur.fetchone():
                     cur.execute("ALTER TABLE `users` ADD COLUMN `role` VARCHAR(50) NOT NULL DEFAULT 'REQUESTER' AFTER `password`;")
-                cur.execute("UPDATE users SET role = 'HEAD' WHERE id IN (1, 2, 3, 4) AND (role IS NULL OR role = '' OR role = 'REQUESTER');")
+                cur.execute("SELECT id, password FROM users WHERE password IS NOT NULL AND password <> '' AND password NOT LIKE 'pbkdf2_sha256$%';")
+                plain_rows_my = cur.fetchall()
+                if isinstance(plain_rows_my, list):
+                    for prow in plain_rows_my:
+                        uid = prow["id"] if isinstance(prow, dict) else prow[0]
+                        raw_pw = prow["password"] if isinstance(prow, dict) else prow[1]
+                        if raw_pw and not str(raw_pw).startswith("pbkdf2_sha256$"):
+                            cur.execute("UPDATE users SET password = %s WHERE id = %s;", (hash_password(str(raw_pw)), uid))
                 cur.execute("""
                     SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'requisitions' AND COLUMN_NAME = 'status';
@@ -2168,7 +2171,7 @@ def handle_login_requester(payload):
     try:
         with dict_cursor(conn) as cur:
             cur.execute(
-                "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (LOWER(username) = LOWER(%s) OR name = %s) AND is_active = 1 LIMIT 1",
                 (username, username),
             )
             row = cur.fetchone()
@@ -2178,10 +2181,11 @@ def handle_login_requester(payload):
                     "message": f'ไม่พบบัญชีผู้ใช้งาน "{username}" ในระบบ กรุณาติดต่อเจ้าหน้าที่พัสดุเพื่อสร้างบัญชี'
                 }
             stored_pass = str(row.get("password") or "").strip()
-            is_valid = verify_password(stored_pass, password)
-            default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
-            if not is_valid and password in (default_user_pass, "sdu1234", "password123"):
-                is_valid = True
+            if stored_pass:
+                is_valid = verify_password(stored_pass, password)
+            else:
+                default_user_pass = CONFIG.get("DEFAULT_USER_PASSWORD", "sdu1234")
+                is_valid = password in (default_user_pass, "sdu1234")
             if not is_valid:
                 return {
                     "status": "error",
@@ -2191,7 +2195,7 @@ def handle_login_requester(payload):
             uname_final = row.get("username") or username
             db_role = str(row.get("role") or "").strip().upper()
             if db_role not in ("REQUESTER", "STAFF", "HEAD", "ADMIN"):
-                db_role = "HEAD" if uname_final.lower() in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l") else "REQUESTER"
+                db_role = "HEAD" if uname_final.lower() == "jittraporn_cha" else ("STAFF" if uname_final.lower() == "chuthathip_pan" else "REQUESTER")
 
             req_token = generate_requester_token(uname_final, row["name"])
             resp = {
@@ -2805,8 +2809,10 @@ def get_staff_role(username: str) -> str:
     except Exception:
         pass
 
-    if u in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+    if u == "jittraporn_cha":
         return "HEAD"
+    if u == "chuthathip_pan":
+        return "STAFF"
     return "STAFF"
 
 
@@ -2871,7 +2877,7 @@ def handle_login_staff(payload):
             conn = get_db_connection()
             with dict_cursor(conn) as cur:
                 cur.execute(
-                    "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (username = %s OR name = %s) AND is_active = 1 LIMIT 1",
+                    "SELECT id, name, username, password, role, position, dept, phone FROM users WHERE (LOWER(username) = LOWER(%s) OR name = %s) AND is_active = 1 LIMIT 1",
                     (username, username)
                 )
                 row = cur.fetchone()
@@ -2891,7 +2897,7 @@ def handle_login_staff(payload):
                             "dept": row.get("dept") or "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
                             "phone": row.get("phone") or "",
                         }
-                    elif uname_db in ("wasana.c", "jeerawan.b", "patcharaporn.k", "sineenart.l"):
+                    elif uname_db == "jittraporn_cha":
                         is_valid = True
                         resolved_role = "HEAD"
                         display_name = row.get("name") or username

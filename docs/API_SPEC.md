@@ -281,8 +281,8 @@
 {
   "action": "loginRequester",
   "payload": {
-    "username": "wasana.c",
-    "password": "password123"
+    "username": "somchai_jar",
+    "password": "<password>"
   }
 }
 ```
@@ -294,11 +294,11 @@
   "message": "เข้าสู่ระบบสำเร็จ",
   "user": {
     "id": 1,
-    "name": "นางสาววาสนา จันทร์จ่าย",
-    "username": "wasana.c",
-    "position": "หัวหน้าสำนักงาน",
-    "dept": "สำนักงานผู้อำนวยการ สวท.",
-    "phone": "081-998-7766"
+    "name": "สมชัย จารุธนกิจพานิช",
+    "username": "somchai_jar",
+    "position": "กลุ่มงานเคาน์เตอร์บริการ",
+    "dept": "กลุ่มงานเคาน์เตอร์บริการ",
+    "phone": "5174"
   }
 }
 ```

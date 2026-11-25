@@ -18,6 +18,19 @@
 
 ---
 
+## [3.8.2] - 2026-11-25
+### Changed
+- อัปเดตข้อมูลบัญชีผู้ใช้งานตั้งต้น (Seed Data) ทั้งหมดใน `backend/schema_postgres.sql`, `backend/schema.sql`, `scripts/generate_separated_portals.py` (`index.html`, `staff.html`) และฐานข้อมูล PostgreSQL ให้ตรงกับรายชื่อบุคลากร สวท. 15 ท่านจากไฟล์ `Book1.xlsx` (คุณจิตราพร จันทรกูล `jittraporn_cha` รองผู้อำนวยการ สิทธิ์ `HEAD`, คุณจุฑาธิป ปั้นทอง `chuthathip_pan` สิทธิ์ `STAFF`, และอีก 13 ท่าน สิทธิ์ `REQUESTER` พร้อมเพิ่ม `กลุ่มงานเคาน์เตอร์บริการ` รวมเป็น 6 กลุ่มงาน สวท.)
+- ปรับระบบตรวจสอบรหัสผ่านใน `backend/server.py` (`handle_login_requester` และ `handle_login_staff`) ให้รองรับ Username แบบไม่คำนึงตัวพิมพ์เล็ก-ใหญ่ (`LOWER(username) = LOWER(%s)`), บังคับตรวจสอบรหัสผ่านเฉพาะบุคคลอย่างเคร่งครัดไม่ให้รหัสเริ่มต้น `sdu1234` ผ่านแทนรหัสผ่านจริง และเข้ารหัสรหัสผ่านทั้งหมดในตาราง `users` ด้วย PBKDF2-HMAC-SHA256 อัตโนมัติทั้งใน `backend/init_db.py` และ `ensure_database_schema()`
+
+---
+
+## [3.8.1] - 2026-11-25
+### Changed
+- เปลี่ยนตัวเลือกเดือนทั้งหมดทั้ง 3 จุด (`analyticsMonthSelect` และ `staffReqMonthFilter` ใน `staff.html` รวมถึง `myReqsMonthSelect` ใน `index.html`) จากค่าคงที่ (Hardcode) เป็นการสร้างรายการเดือนอัตโนมัติตามปฏิทินจริง (`getCurrentMonthKey`, `collectAvailableMonthKeys`, `populateDynamicMonthSelect`, `refreshAllMonthDropdowns`) โดยเลือกเดือนปัจจุบันเป็นค่าเริ่มต้นและรวมเดือนย้อนหลัง 12 เดือนกับเดือนที่มีข้อมูลจริงในฐานข้อมูล
+
+---
+
 ## [3.8.0] - 2026-11-25
 ### Added
 - เพิ่มความสามารถดู **"รายการคำขอเบิกทั้งหมดในเดือน"** ในหน้าสรุปยอดและสถิติรายเดือน (`staff.html`):
