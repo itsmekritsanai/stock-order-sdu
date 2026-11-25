@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.7.7"
+        assert SYSTEM_VERSION == "3.8.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1765,11 +1765,14 @@ class TestPhase8ExtendedRequirements:
             idx_sso = f.read()
         assert "btnSwitchToStaffPortal" in idx_sso
         assert "function switchToStaffPortal(" in idx_sso
+        assert "const AUTH_SESSION_KEY = 'sdu_requester_auth_v1';" in idx_sso
+        assert "localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(reqUser));" in idx_sso
 
         with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
             stf_sso = f.read()
         assert "btnSwitchToRequesterPortal" in stf_sso
         assert "function switchToRequesterPortal(" in stf_sso
+        assert "localStorage.setItem('sdu_requester_auth_v1', JSON.stringify(reqProfile));" in stf_sso
 
         # 4. PostgreSQL & MySQL schema hardening (CHECK constraints, ON DELETE RESTRICT, indexes, trigger)
         with open(os.path.join(PROJECT_ROOT, "backend", "schema_postgres.sql"), "r", encoding="utf-8") as f:
@@ -1787,6 +1790,74 @@ class TestPhase8ExtendedRequirements:
         ):
             assert token in pg_sql, f"schema_postgres.sql missing {token}"
         assert "item_id INT NOT NULL REFERENCES inventory_items(id) ON DELETE CASCADE" not in pg_sql
+
+    def test_monthly_analytics_requisitions_list_v380(self):
+        """Verify monthly analytics returns monthRequisitions and staff.html renders clickable monthly requisitions viewer."""
+        import server
+
+        mock_cur = MagicMock()
+        mock_cur.fetchall.side_effect = [
+            [{"status": "COMPLETED", "count": 1}],
+            [{"item_id": 3, "name": "กระดาษคำตอบ", "category": "กระดาษ", "unit_piece_name": "ใบ", "total_pieces": 500, "req_count": 1}],
+            [],  # personUsage empty
+            [],  # purchaseSummary empty
+            [],  # purchaseTransactions empty
+            [{
+                "id": "REQ-256911-0001",
+                "date": "25 พ.ย. 2569 10:00 น.",
+                "requester": "นางสาววาสนา จันทร์จ่าย",
+                "dept": "สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน",
+                "phone": "081-998-7766",
+                "purpose": "ใช้สำหรับจัดการสอบ",
+                "status": "COMPLETED",
+                "signature": "",
+                "reject_reason": "",
+                "verified_by": "เจ้าหน้าที่พัสดุ สวท.",
+                "verified_date": "25 พ.ย. 2569 10:05 น.",
+                "approved_by": "หัวหน้าสำนักงานผู้อำนวยการ สวท.",
+                "approved_date": "25 พ.ย. 2569 10:10 น.",
+                "completed_date": "25 พ.ย. 2569 10:15 น.",
+                "rejected_date": "",
+                "created_at": "2026-11-25 10:00:00",
+            }],
+            [{
+                "requisition_id": "REQ-256911-0001",
+                "item_id": 3,
+                "name": "กระดาษคำตอบ",
+                "qty_boxes": 0,
+                "qty_pieces": 500,
+                "total_pieces": 500,
+                "unit_box": "กล่อง",
+                "unit_piece": "ใบ",
+                "approved_pieces": 500,
+            }],
+        ]
+        mock_cur.fetchone.return_value = {"total_requested": 500, "total_approved": 500}
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value.__enter__.return_value = mock_cur
+
+        with patch("server.get_db_connection", return_value=mock_conn):
+            res = server.handle_get_monthly_analytics({"month": ["2026-11"]})
+            assert res["status"] == "success"
+            m_reqs = res["data"].get("monthRequisitions", [])
+            assert len(m_reqs) == 1
+            assert m_reqs[0]["id"] == "REQ-256911-0001"
+            assert m_reqs[0]["totalPieces"] == 500
+            assert len(m_reqs[0]["items"]) == 1
+            assert m_reqs[0]["items"][0]["name"] == "กระดาษคำตอบ"
+
+        with open(os.path.join(PROJECT_ROOT, "staff.html"), "r", encoding="utf-8") as f:
+            stf_html = f.read()
+        for expected in (
+            'id="analyticsTotalReqsCard"',
+            'id="analyticsRequisitionsCard"',
+            'id="analyticsReqStatusFilter"',
+            'id="analyticsReqsTbody"',
+            "function openMonthlyRequisitionsModal(",
+            "function openMonthlyRequisitionDetailModal(",
+            "function renderAnalyticsRequisitionsTable(",
+        ):
+            assert expected in stf_html, f"staff.html missing {expected}"
 
         with open(os.path.join(PROJECT_ROOT, "backend", "schema.sql"), "r", encoding="utf-8") as f:
             my_sql = f.read()

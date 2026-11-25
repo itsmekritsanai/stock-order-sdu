@@ -1251,14 +1251,14 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v3.7.7 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v3.8.0 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.7.7';
+    const APP_VERSION = '3.8.0';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = false;
     const defaultDepts = [
@@ -1552,6 +1552,7 @@
         });
         if (res.status === 401 && action !== 'loginRequester' && action !== 'loginStaff') {
           localStorage.removeItem(AUTH_SESSION_KEY);
+          localStorage.removeItem('requester_session');
           localStorage.removeItem(AUTH_TOKEN_KEY);
           if (typeof checkRequesterAuth === 'function') checkRequesterAuth();
           if (typeof Swal !== 'undefined') {
@@ -2912,7 +2913,7 @@
     }
 
     // Requester Authentication State & Handlers
-    const AUTH_SESSION_KEY = 'requester_session';
+    const AUTH_SESSION_KEY = 'sdu_requester_auth_v1';
 
     function getLoggedInRequester() {
       try {
@@ -3099,7 +3100,7 @@
 
       const uLow = username.toLowerCase();
 
-      // Auto-route dedicated staff/head/admin accounts directly to staff.html with their detected role
+      // Allow built-in staff/head/admin accounts to log into index.html for requisitions while enabling 1-click switch to staff.html
       if (BUILTIN_STAFF_USERNAMES.includes(uLow)) {
         let staffRes = await postToMySQLAPI('loginStaff', { username, password });
         if (staffRes === null) {
@@ -3116,21 +3117,66 @@
             dispName = 'หัวหน้าหน่วยงาน สวท.';
           }
           staffRes = resolved
-            ? { status: 'success', token: `${username}.${Math.floor(Date.now()/1000)}.offline`, username, name: dispName, role: resolved, active_role: resolved }
+            ? {
+                status: 'success',
+                token: `${username}.${Math.floor(Date.now()/1000)}.offline`,
+                requester_token: `${username}.${Math.floor(Date.now()/1000)}.offline`,
+                requester_user: {
+                  id: 0,
+                  name: dispName,
+                  username,
+                  role: resolved,
+                  position: resolved === 'HEAD' ? 'หัวหน้าหน่วยงาน' : (resolved === 'ADMIN' ? 'ผู้ดูแลระบบคลังพัสดุ' : 'เจ้าหน้าที่พัสดุ'),
+                  dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+                  phone: ''
+                },
+                username,
+                name: dispName,
+                role: resolved,
+                active_role: resolved
+              }
             : { status: 'error', message: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง' };
         }
         if (staffRes && staffRes.status === 'success') {
           const finalRole = (staffRes.role || 'STAFF').toUpperCase();
           const activeRole = (staffRes.active_role || finalRole).toUpperCase();
+          const reqUser = Object.assign({
+            id: 0,
+            name: staffRes.name || username,
+            username: staffRes.username || username,
+            role: finalRole,
+            position: finalRole === 'HEAD' ? 'หัวหน้าหน่วยงาน' : (finalRole === 'ADMIN' ? 'ผู้ดูแลระบบคลังพัสดุ' : 'เจ้าหน้าที่พัสดุ'),
+            dept: 'สำนักงานผู้อำนวยการสำนักส่งเสริมวิชาการและงานทะเบียน',
+            phone: ''
+          }, staffRes.requester_user || {}, { role: finalRole });
+          const reqToken = staffRes.requester_token || staffRes.token || '';
+
           sessionStorage.setItem('staff_auth', 'true');
           sessionStorage.setItem('staff_token', staffRes.token || '');
           sessionStorage.setItem('staff_username', staffRes.username || username);
           sessionStorage.setItem('staff_name', staffRes.name || username);
           sessionStorage.setItem('staff_role', finalRole);
           sessionStorage.setItem('staff_active_role', activeRole);
-          if (staffRes.requester_token) sessionStorage.setItem('staff_requester_token', staffRes.requester_token);
-          if (staffRes.requester_user) sessionStorage.setItem('staff_requester_profile', JSON.stringify(staffRes.requester_user));
-          window.location.href = 'staff.html';
+          if (reqToken) sessionStorage.setItem('staff_requester_token', reqToken);
+          sessionStorage.setItem('staff_requester_profile', JSON.stringify(reqUser));
+
+          localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(reqUser));
+          if (reqToken) {
+            localStorage.setItem(AUTH_TOKEN_KEY, reqToken);
+          } else {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+          }
+
+          Swal.fire({
+            icon: 'success',
+            title: 'เข้าสู่ระบบสำเร็จ',
+            text: 'ยินดีต้อนรับ ' + reqUser.name,
+            timer: 1500,
+            showConfirmButton: false
+          });
+          checkRequesterAuth();
+          renderCatalog();
+          syncFromMySQLAPI();
           return;
         }
         Swal.fire({
@@ -3162,6 +3208,7 @@
                 id: found.id,
                 name: found.name,
                 username: found.username || username,
+                role: (found.role || 'REQUESTER').toUpperCase(),
                 position: found.position || '',
                 dept: found.dept || '',
                 phone: found.phone || ''
@@ -3228,6 +3275,7 @@
       }).then((res) => {
         if (res.isConfirmed) {
           localStorage.removeItem(AUTH_SESSION_KEY);
+          localStorage.removeItem('requester_session');
           localStorage.removeItem(AUTH_TOKEN_KEY);
           sessionStorage.removeItem('staff_auth');
           sessionStorage.removeItem('staff_token');

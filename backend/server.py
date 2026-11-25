@@ -28,7 +28,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.7.7"
+SYSTEM_VERSION = "3.8.0"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -1203,6 +1203,77 @@ def handle_get_monthly_analytics(params):
                 purchase_summary = []
                 purchase_transactions = []
 
+            month_requisitions = []
+            try:
+                req_list_query = f"""
+                    SELECT
+                        r.id, r.date, r.requester, r.dept, r.phone, r.purpose, r.status,
+                        r.signature, r.reject_reason, r.verified_by, r.verified_date,
+                        r.approved_by, r.approved_date, r.completed_date, r.rejected_date,
+                        r.created_at
+                    FROM requisitions r
+                    {where_req_clause}
+                    ORDER BY r.created_at DESC, r.id DESC
+                    LIMIT 500
+                """
+                cur.execute(req_list_query, tuple(query_args))
+                m_req_rows = cur.fetchall()
+                if isinstance(m_req_rows, list) and len(m_req_rows) > 0:
+                    req_ids = [r["id"] for r in m_req_rows if r.get("id")]
+                    items_by_req = {}
+                    if req_ids:
+                        placeholders = ", ".join(["%s"] * len(req_ids))
+                        cur.execute(
+                            f"""
+                            SELECT requisition_id, item_id, name, qty_boxes, qty_pieces,
+                                   total_pieces, unit_box, unit_piece, approved_pieces
+                            FROM requisition_items
+                            WHERE requisition_id IN ({placeholders})
+                            ORDER BY id ASC
+                            """,
+                            tuple(req_ids),
+                        )
+                        ri_rows = cur.fetchall()
+                        if isinstance(ri_rows, list):
+                            for ri in ri_rows:
+                                items_by_req.setdefault(ri["requisition_id"], []).append({
+                                    "itemId": int(ri.get("item_id") or 0),
+                                    "name": ri.get("name") or "",
+                                    "qtyBoxes": int(ri.get("qty_boxes") or 0),
+                                    "qtyPieces": int(ri.get("qty_pieces") or 0),
+                                    "totalPieces": int(ri.get("total_pieces") or 0),
+                                    "unitBox": ri.get("unit_box") or "",
+                                    "unitPiece": ri.get("unit_piece") or "ชิ้น",
+                                    "approvedPieces": int(ri.get("approved_pieces") or 0),
+                                })
+                    for r in m_req_rows:
+                        dt_val = r.get("created_at")
+                        iso_dt = dt_val.strftime("%Y-%m-%d %H:%M:%S") if isinstance(dt_val, datetime) else str(dt_val or "")
+                        r_items = items_by_req.get(r["id"], [])
+                        month_requisitions.append({
+                            "id": r["id"],
+                            "date": r.get("date") or "",
+                            "requester": r.get("requester") or "",
+                            "dept": r.get("dept") or "",
+                            "phone": r.get("phone") or "",
+                            "purpose": r.get("purpose") or "",
+                            "status": r.get("status") or "PENDING",
+                            "signature": r.get("signature") or "",
+                            "reject_reason": r.get("reject_reason") or "",
+                            "verified_by": r.get("verified_by") or "",
+                            "verified_date": r.get("verified_date") or "",
+                            "approved_by": r.get("approved_by") or "",
+                            "approved_date": r.get("approved_date") or "",
+                            "completed_date": r.get("completed_date") or "",
+                            "rejected_date": r.get("rejected_date") or "",
+                            "created_at": iso_dt,
+                            "items": r_items,
+                            "totalPieces": sum(int(i["totalPieces"]) for i in r_items),
+                            "approvedPieces": sum(int(i["approvedPieces"]) for i in r_items),
+                        })
+            except StopIteration:
+                month_requisitions = []
+
             return {
                 "status": "success",
                 "data": {
@@ -1225,6 +1296,7 @@ def handle_get_monthly_analytics(params):
                     "personUsage": person_usage,
                     "purchaseSummary": purchase_summary,
                     "purchaseTransactions": purchase_transactions,
+                    "monthRequisitions": month_requisitions,
                 }
             }
     finally:

@@ -949,10 +949,13 @@
 
         <!-- Analytics Metric Cards -->
         <div class="metrics-row" style="margin-bottom: 1.25rem;">
-          <div class="metric-card">
+          <div class="metric-card" id="analyticsTotalReqsCard" onclick="openMonthlyRequisitionsModal()" style="cursor: pointer;" title="คลิกเพื่อดูรายการคำขอเบิกทั้งหมดในเดือน">
             <div class="metric-header"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> คำขอเบิกทั้งหมดในเดือน</div>
             <span class="metric-val" id="analyticsMetricTotalReqs">0 <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">คำขอ</small></span>
             <div style="font-size: 0.75rem; color: var(--neutral-500); margin-top: 4px;" id="analyticsReqBreakdown">รอคัดกรอง 0 | รออนุมัติ 0 | สำเร็จ 0</div>
+            <div style="font-size: 0.76rem; font-weight: 600; color: var(--primary); margin-top: 8px; display: inline-flex; align-items: center; gap: 4px;">
+              <svg class="svg-icon" viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> คลิกเพื่อดูรายการคำขอทั้งหมด
+            </div>
           </div>
           <div class="metric-card">
             <div class="metric-header" style="color: var(--primary);"><svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> จำนวนชิ้นพัสดุที่ขอเบิก</div>
@@ -968,6 +971,60 @@
             <div class="metric-header" style="color: #0369a1;"><svg class="svg-icon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> ยอดเงินซื้อพัสดุเข้าคลัง</div>
             <span class="metric-val" style="color: #0369a1;" id="analyticsMetricTotalPurchaseCost">0.00 <small style="font-size: 0.85rem; font-weight: normal; color: var(--neutral-400);">บาท</small></span>
             <div style="font-size: 0.75rem; color: var(--neutral-500); margin-top: 4px;" id="analyticsPurchaseBreakdown">เติมเข้า 0 ครั้ง | รวม 0 ชิ้น</div>
+          </div>
+        </div>
+
+        <!-- Monthly Requisitions List Card -->
+        <div id="analyticsRequisitionsCard" style="background: white; border-radius: var(--radius); border: 1px solid var(--neutral-200); padding: 1.25rem; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                <svg class="svg-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> รายการคำขอเบิกทั้งหมดในเดือน
+              </h3>
+              <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 2px;">ตรวจสอบเลขที่เอกสาร ผู้ขอเบิก รายการพัสดุ สถานะ และเปิดดูใบขอเบิกทางการ (PDF) ของงวดที่เลือก</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span id="analyticsReqsListCount" style="font-size: 0.85rem; color: var(--neutral-500); font-weight: 600;"></span>
+              <button type="button" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.35rem 0.75rem;" onclick="openMonthlyRequisitionsModal()">
+                <svg class="svg-icon" viewBox="0 0 24 24" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> เปิดดูแบบเต็มจอ
+              </button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 240px;">
+              <input type="text" id="analyticsReqSearchInput" class="form-control"
+                     placeholder="พิมพ์ค้นหาเลขที่คำขอ, ชื่อผู้ขอเบิก, หน่วยงาน, วัตถุประสงค์ หรือชื่อพัสดุ..."
+                     oninput="renderAnalyticsRequisitionsTable()">
+            </div>
+            <div style="min-width: 220px;">
+              <select id="analyticsReqStatusFilter" class="form-control" onchange="renderAnalyticsRequisitionsTable()">
+                <option value="ALL">ทุกสถานะคำขอทั้งหมด</option>
+                <option value="PENDING">รอคัดกรอง (PENDING)</option>
+                <option value="VERIFIED">รอหัวหน้าอนุมัติ (VERIFIED)</option>
+                <option value="APPROVED">อนุมัติแล้ว รอรับของ (APPROVED)</option>
+                <option value="COMPLETED">จ่ายสำเร็จแล้ว (COMPLETED)</option>
+                <option value="REJECTED">ไม่อนุมัติ / ยกเลิก (REJECTED)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto; max-height: 420px; overflow-y: auto;">
+            <table class="req-table" style="font-size: 0.86rem;">
+              <thead>
+                <tr>
+                  <th style="min-width: 145px;">เลขที่คำขอ / วันที่</th>
+                  <th style="min-width: 185px;">ผู้ขอเบิก / หน่วยงาน</th>
+                  <th style="min-width: 220px;">รายการพัสดุที่ขอเบิก</th>
+                  <th style="min-width: 155px;">วัตถุประสงค์</th>
+                  <th style="width: 135px; text-align: center;">สถานะ</th>
+                  <th style="width: 170px; text-align: right;">การดำเนินการ</th>
+                </tr>
+              </thead>
+              <tbody id="analyticsReqsTbody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1235,13 +1292,13 @@
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.7.7 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v3.8.0 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.7.7';
+    const APP_VERSION = '3.8.0';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = false;
     const vIcons = {
@@ -1958,6 +2015,7 @@
           sessionStorage.removeItem('staff_requester_token');
           sessionStorage.removeItem('staff_requester_profile');
           localStorage.removeItem('sdu_requester_auth_v1');
+          localStorage.removeItem('requester_session');
           localStorage.removeItem('sdu_requester_token_v1');
           checkStaffAuth(true);
         }
@@ -3188,7 +3246,10 @@
 
     function previewDocInPdf(docNo) {
       const reqs = getReqsDB();
-      const req = reqs.find(r => r.id === docNo);
+      let req = reqs.find(r => r.id === docNo);
+      if (!req && window.lastMonthlyAnalyticsData && Array.isArray(window.lastMonthlyAnalyticsData.monthRequisitions)) {
+        req = window.lastMonthlyAnalyticsData.monthRequisitions.find(r => r.id === docNo);
+      }
       if (!req) return;
 
       document.getElementById('pdfDocNo').innerText = req.id;
@@ -3725,7 +3786,16 @@
           allItemUsage: allItemsUsage,
           personUsage: personUsageList,
           purchaseSummary: offPurchaseSummary,
-          purchaseTransactions: offPurchaseTx
+          purchaseTransactions: offPurchaseTx,
+          monthRequisitions: monthReqs.map(r => {
+            const rItems = Array.isArray(r.items) ? r.items : [];
+            return {
+              ...r,
+              items: rItems,
+              totalPieces: rItems.reduce((sum, it) => sum + Number(it.totalPieces || 0), 0),
+              approvedPieces: rItems.reduce((sum, it) => sum + Number(it.approvedPieces !== undefined ? it.approvedPieces : (it.totalPieces || 0)), 0)
+            };
+          })
         };
       }
 
@@ -3811,8 +3881,297 @@
         `).join('');
       }
       window.lastMonthlyAnalyticsData = analyticsData;
+      renderAnalyticsRequisitionsTable();
       renderAnalyticsPersonUsageTable();
       renderAnalyticsPurchaseSection();
+    }
+
+    function getAnalyticsStatusMeta(status) {
+      const st = String(status || 'PENDING').toUpperCase();
+      if (st === 'PENDING') return { label: 'รอคัดกรอง', bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+      if (st === 'VERIFIED') return { label: 'รอหัวหน้าอนุมัติ', bg: '#f5f3ff', color: '#6d28d9', border: '#ddd6fe' };
+      if (st === 'APPROVED') return { label: 'อนุมัติแล้ว รอรับของ', bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+      if (st === 'COMPLETED') return { label: 'จ่ายสำเร็จแล้ว', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+      if (st === 'REJECTED') return { label: 'ไม่อนุมัติ / ยกเลิก', bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' };
+      return { label: st, bg: '#f1f5f9', color: '#334155', border: '#cbd5e1' };
+    }
+
+    function getMonthlyRequisitionsList() {
+      if (window.lastMonthlyAnalyticsData && Array.isArray(window.lastMonthlyAnalyticsData.monthRequisitions)) {
+        return window.lastMonthlyAnalyticsData.monthRequisitions;
+      }
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const selectedMonth = monthSelect ? monthSelect.value : 'ALL';
+      const reqs = getReqsDB();
+      if (selectedMonth === 'ALL') return reqs;
+      try {
+        const parts = selectedMonth.split('-');
+        const beYear = parseInt(parts[0], 10) + 543;
+        const bePattern = `REQ-${beYear}${parts[1]}`;
+        return reqs.filter(r => (r.id || '').startsWith(bePattern) || (r.created_at || '').startsWith(selectedMonth));
+      } catch (e) {
+        return reqs;
+      }
+    }
+
+    function buildAnalyticsReqRowHtml(r, inModal = false) {
+      const meta = getAnalyticsStatusMeta(r.status);
+      const itemsArr = Array.isArray(r.items) ? r.items : [];
+      const itemChips = itemsArr.slice(0, 2).map(it =>
+        `<span style="display:inline-block; background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; padding:2px 8px; border-radius:999px; font-size:0.73rem; margin:2px 4px 2px 0;">${escapeHtml(it.name || '-')} (${Number(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unitPiece || 'ชิ้น')})</span>`
+      ).join('');
+      const extraCnt = itemsArr.length > 2 ? `<span style="font-size:0.73rem; color:#64748b;"> +อีก ${itemsArr.length - 2} รายการ</span>` : '';
+      const totalPcs = Number(r.totalPieces !== undefined ? r.totalPieces : itemsArr.reduce((s, x) => s + Number(x.totalPieces || 0), 0));
+      const safeIdJs = String(r.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const pdfClick = inModal
+        ? `Swal.close(); previewDocInPdf('${safeIdJs}');`
+        : `previewDocInPdf('${safeIdJs}');`;
+
+      return `
+        <tr>
+          <td style="white-space: nowrap;">
+            <strong style="color: #1e3a8a;">${escapeHtml(r.id || '-')}</strong>
+            <div style="font-size: 0.74rem; color: var(--neutral-500); margin-top: 2px;">${escapeHtml(r.date || r.created_at || '-')}</div>
+          </td>
+          <td>
+            <div style="font-weight: 600; color: var(--neutral-900);">${escapeHtml(r.requester || '-')}</div>
+            <div style="font-size: 0.74rem; color: var(--neutral-500); margin-top: 2px;">${escapeHtml(r.dept || '-')}</div>
+          </td>
+          <td>
+            <div>${itemChips || '-'}${extraCnt}</div>
+            <div style="font-size: 0.73rem; color: var(--neutral-500); margin-top: 3px;">รวม ${itemsArr.length.toLocaleString()} รายการ (${totalPcs.toLocaleString()} ชิ้น)</div>
+          </td>
+          <td style="font-size: 0.8rem; color: var(--neutral-700); max-width: 210px;">
+            ${escapeHtml(r.purpose || '-')}
+          </td>
+          <td style="text-align: center; white-space: nowrap;">
+            <span style="display: inline-block; background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.border}; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600;">
+              ${escapeHtml(meta.label)}
+            </span>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-outline" style="padding: 4px 9px; font-size: 0.74rem; margin-right: 4px;" onclick="openMonthlyRequisitionDetailModal('${safeIdJs}')">
+              ${vIcons.eye} รายละเอียด
+            </button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 9px; font-size: 0.74rem;" onclick="${pdfClick}">
+              ${vIcons.printer} PDF
+            </button>
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderAnalyticsRequisitionsTable() {
+      const tbody = document.getElementById('analyticsReqsTbody');
+      const countEl = document.getElementById('analyticsReqsListCount');
+      const searchEl = document.getElementById('analyticsReqSearchInput');
+      const statusEl = document.getElementById('analyticsReqStatusFilter');
+      if (!tbody) return;
+
+      const list = getMonthlyRequisitionsList();
+      const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
+      const selectedStatus = statusEl ? statusEl.value : 'ALL';
+
+      const filtered = list.filter(r => {
+        const matchStatus = selectedStatus === 'ALL' || String(r.status || '').toUpperCase() === selectedStatus;
+        const matchQuery = !q ||
+          (r.id && r.id.toLowerCase().includes(q)) ||
+          (r.requester && r.requester.toLowerCase().includes(q)) ||
+          (r.dept && r.dept.toLowerCase().includes(q)) ||
+          (r.purpose && r.purpose.toLowerCase().includes(q)) ||
+          (r.items || []).some(it => it.name && it.name.toLowerCase().includes(q));
+        return matchStatus && matchQuery;
+      });
+
+      if (countEl) {
+        countEl.innerText = `(แสดง ${filtered.length.toLocaleString()} จาก ${list.length.toLocaleString()} คำขอ)`;
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--neutral-400);">
+              ไม่พบรายการคำขอเบิกพัสดุในงวดเดือนหรือเงื่อนไขที่เลือก
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => buildAnalyticsReqRowHtml(r, false)).join('');
+    }
+
+    function openMonthlyRequisitionsModal(initialStatus = 'ALL') {
+      const list = getMonthlyRequisitionsList();
+      const monthSelect = document.getElementById('analyticsMonthSelect');
+      const monthLabel = monthSelect && monthSelect.selectedIndex >= 0
+        ? monthSelect.options[monthSelect.selectedIndex].text
+        : ((window.lastMonthlyAnalyticsData && window.lastMonthlyAnalyticsData.thaiMonth) || 'ทั้งหมด');
+
+      const counts = { ALL: list.length, PENDING: 0, VERIFIED: 0, APPROVED: 0, COMPLETED: 0, REJECTED: 0 };
+      list.forEach(r => {
+        const st = String(r.status || '').toUpperCase();
+        if (counts[st] !== undefined) counts[st] += 1;
+      });
+
+      const filterButtons = [
+        { key: 'ALL', label: `ทั้งหมด (${counts.ALL})` },
+        { key: 'PENDING', label: `รอคัดกรอง (${counts.PENDING})` },
+        { key: 'VERIFIED', label: `รอหัวหน้าอนุมัติ (${counts.VERIFIED})` },
+        { key: 'APPROVED', label: `รอรับของ (${counts.APPROVED})` },
+        { key: 'COMPLETED', label: `จ่ายสำเร็จ (${counts.COMPLETED})` },
+        { key: 'REJECTED', label: `ไม่อนุมัติ (${counts.REJECTED})` }
+      ];
+
+      Swal.fire({
+        title: `รายการคำขอเบิกทั้งหมดในเดือน (${escapeHtml(monthLabel)})`,
+        width: '1020px',
+        html: `
+          <div style="text-align: left; font-size: 0.875rem; margin-top: 0.5rem;">
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.75rem;" id="modalMonthlyReqStatusBar">
+              ${filterButtons.map(b => `
+                <button type="button" data-status="${b.key}" class="btn ${b.key === initialStatus ? 'btn-primary' : 'btn-outline'}"
+                        style="padding: 5px 11px; font-size: 0.76rem; border-radius: 999px;">
+                  ${b.label}
+                </button>
+              `).join('')}
+            </div>
+            <div style="margin-bottom: 0.75rem;">
+              <input type="text" id="modalMonthlyReqSearch" class="form-control"
+                     placeholder="พิมพ์ค้นหาเลขที่คำขอ, ผู้ขอเบิก, หน่วยงาน, วัตถุประสงค์ หรือชื่อพัสดุ...">
+            </div>
+            <div style="max-height: 440px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+              <table class="req-table" style="font-size: 0.84rem; margin: 0;">
+                <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+                  <tr>
+                    <th style="min-width: 140px;">เลขที่คำขอ / วันที่</th>
+                    <th style="min-width: 175px;">ผู้ขอเบิก / หน่วยงาน</th>
+                    <th style="min-width: 210px;">รายการพัสดุ</th>
+                    <th style="min-width: 140px;">วัตถุประสงค์</th>
+                    <th style="width: 130px; text-align: center;">สถานะ</th>
+                    <th style="width: 165px; text-align: right;">การดำเนินการ</th>
+                  </tr>
+                </thead>
+                <tbody id="modalMonthlyReqTbody"></tbody>
+              </table>
+            </div>
+          </div>
+        `,
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ปิดหน้าต่าง',
+        didOpen: () => {
+          let activeSt = initialStatus;
+          const tbodyEl = document.getElementById('modalMonthlyReqTbody');
+          const searchInput = document.getElementById('modalMonthlyReqSearch');
+          const barEl = document.getElementById('modalMonthlyReqStatusBar');
+
+          const renderModalRows = () => {
+            if (!tbodyEl) return;
+            const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+            const rows = list.filter(r => {
+              const okSt = activeSt === 'ALL' || String(r.status || '').toUpperCase() === activeSt;
+              const okQ = !q ||
+                (r.id && r.id.toLowerCase().includes(q)) ||
+                (r.requester && r.requester.toLowerCase().includes(q)) ||
+                (r.dept && r.dept.toLowerCase().includes(q)) ||
+                (r.purpose && r.purpose.toLowerCase().includes(q)) ||
+                (r.items || []).some(it => it.name && it.name.toLowerCase().includes(q));
+              return okSt && okQ;
+            });
+            if (rows.length === 0) {
+              tbodyEl.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:2rem; color:#94a3b8;">ไม่พบรายการคำขอเบิกพัสดุที่ตรงเงื่อนไข</td></tr>`;
+            } else {
+              tbodyEl.innerHTML = rows.map(r => buildAnalyticsReqRowHtml(r, true)).join('');
+            }
+          };
+
+          if (barEl) {
+            barEl.querySelectorAll('button[data-status]').forEach(btn => {
+              btn.addEventListener('click', () => {
+                activeSt = btn.getAttribute('data-status') || 'ALL';
+                barEl.querySelectorAll('button[data-status]').forEach(b => {
+                  b.classList.toggle('btn-primary', b === btn);
+                  b.classList.toggle('btn-outline', b !== btn);
+                });
+                renderModalRows();
+              });
+            });
+          }
+          if (searchInput) searchInput.addEventListener('input', renderModalRows);
+          renderModalRows();
+        }
+      });
+    }
+
+    function openMonthlyRequisitionDetailModal(docNo) {
+      const list = getMonthlyRequisitionsList();
+      let req = list.find(r => r.id === docNo);
+      if (!req) req = getReqsDB().find(r => r.id === docNo);
+      if (!req) return;
+
+      const meta = getAnalyticsStatusMeta(req.status);
+      const itemsArr = Array.isArray(req.items) ? req.items : [];
+      const rowsHtml = itemsArr.map((it, idx) => {
+        const reqDesc = `${Number(it.qtyBoxes || 0) > 0 ? `${Number(it.qtyBoxes).toLocaleString()} ${escapeHtml(it.unitBox || 'กล่อง')} ` : ''}${Number(it.qtyPieces || 0) > 0 ? `${Number(it.qtyPieces).toLocaleString()} ${escapeHtml(it.unitPiece || 'ชิ้น')}` : ''}`.trim() || `${Number(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unitPiece || 'ชิ้น')}`;
+        const appQty = (req.status === 'APPROVED' || req.status === 'COMPLETED')
+          ? `${Number(it.approvedPieces !== undefined ? it.approvedPieces : it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unitPiece || 'ชิ้น')}`
+          : '-';
+        return `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px; text-align: center; color: #64748b;">${idx + 1}</td>
+            <td style="padding: 8px; text-align: left; font-weight: 600; color: #0f172a;">${escapeHtml(it.name || '-')}</td>
+            <td style="padding: 8px; text-align: right; color: #1e40af; font-weight: 600;">${reqDesc} <span style="font-size:0.75rem; color:#64748b;">(${Number(it.totalPieces || 0).toLocaleString()} ${escapeHtml(it.unitPiece || 'ชิ้น')})</span></td>
+            <td style="padding: 8px; text-align: right; color: #059669; font-weight: 700;">${appQty}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const safeIdJs = String(req.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const trailParts = [];
+      if (req.verified_by) trailParts.push(`<div><strong>ผู้คัดกรอง:</strong> ${escapeHtml(req.verified_by)}${req.verified_date ? ` (${escapeHtml(req.verified_date)})` : ''}</div>`);
+      if (req.approved_by) trailParts.push(`<div><strong>ผู้อนุมัติ:</strong> ${escapeHtml(req.approved_by)}${req.approved_date ? ` (${escapeHtml(req.approved_date)})` : ''}</div>`);
+      if (req.completed_date) trailParts.push(`<div><strong>วันที่จ่ายพัสดุ:</strong> ${escapeHtml(req.completed_date)}</div>`);
+      if (req.reject_reason) trailParts.push(`<div style="color:#b91c1c;"><strong>เหตุผลไม่อนุมัติ/ยกเลิก:</strong> ${escapeHtml(req.reject_reason)}</div>`);
+
+      Swal.fire({
+        title: `รายละเอียดคำขอเบิก ${escapeHtml(req.id)}`,
+        width: '760px',
+        html: `
+          <div style="text-align: left; font-size: 0.88rem; margin-top: 0.5rem;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 14px;">
+              <div><strong>ผู้ขอเบิก:</strong> ${escapeHtml(req.requester || '-')}</div>
+              <div><strong>สถานะ:</strong> <span style="background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.border}; padding:2px 9px; border-radius:999px; font-size:0.76rem; font-weight:600;">${escapeHtml(meta.label)}</span></div>
+              <div><strong>หน่วยงาน:</strong> ${escapeHtml(req.dept || '-')}</div>
+              <div><strong>วันที่ส่งคำขอ:</strong> ${escapeHtml(req.date || req.created_at || '-')}</div>
+              ${req.phone ? `<div><strong>เบอร์ติดต่อ:</strong> ${escapeHtml(req.phone)}</div>` : ''}
+              <div style="grid-column: 1 / -1;"><strong>วัตถุประสงค์:</strong> ${escapeHtml(req.purpose || '-')}</div>
+              ${trailParts.length > 0 ? `<div style="grid-column: 1 / -1; border-top: 1px dashed #cbd5e1; padding-top: 6px; margin-top: 2px; display: flex; flex-direction: column; gap: 3px;">${trailParts.join('')}</div>` : ''}
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                <thead>
+                  <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                    <th style="padding: 8px; width: 45px; text-align: center;">#</th>
+                    <th style="padding: 8px; text-align: left;">รายการพัสดุ</th>
+                    <th style="padding: 8px; width: 195px; text-align: right;">จำนวนที่ขอเบิก</th>
+                    <th style="padding: 8px; width: 130px; text-align: right;">อนุมัติ / จ่ายจริง</th>
+                  </tr>
+                </thead>
+                <tbody>${rowsHtml || '<tr><td colspan="4" style="text-align:center; padding:1.5rem; color:#94a3b8;">ไม่มีรายการพัสดุ</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>
+        `,
+        showDenyButton: true,
+        denyButtonColor: '#059669',
+        denyButtonText: 'เปิดใบเบิก PDF',
+        confirmButtonColor: '#1e40af',
+        confirmButtonText: 'ปิดหน้าต่าง'
+      }).then((res) => {
+        if (res.isDenied) {
+          previewDocInPdf(safeIdJs);
+        }
+      });
     }
 
     function renderAnalyticsPurchaseSection() {

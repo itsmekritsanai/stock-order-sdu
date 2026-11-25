@@ -18,6 +18,22 @@
 
 ---
 
+## [3.8.0] - 2026-11-25
+### Added
+- เพิ่มความสามารถดู **"รายการคำขอเบิกทั้งหมดในเดือน"** ในหน้าสรุปยอดและสถิติรายเดือน (`staff.html`):
+  - กดที่การ์ด **"คำขอเบิกทั้งหมดในเดือน"** เพื่อเปิดหน้าต่างรายการคำขอทั้งหมดของงวดที่เลือก พร้อมปุ่มคัดกรองตามสถานะและช่องค้นหาแบบเรียลไทม์
+  - เพิ่มตาราง **"รายการคำขอเบิกทั้งหมดในเดือน"** (`#analyticsRequisitionsCard`) พร้อมตัวกรองสถานะแบบค้นหาได้, ช่องค้นหาเอกสาร/ผู้ขอเบิก/พัสดุ, ปุ่มดูรายละเอียดคำขอ (`openMonthlyRequisitionDetailModal`) และปุ่มเปิดใบเบิกทางการ PDF (`previewDocInPdf`)
+  - อัปเดต Endpoint `getMonthlyAnalytics` ใน `backend/server.py` ให้ส่งฟิลด์ `monthRequisitions` พร้อมรายการพัสดุในแต่ละคำขอครบถ้วน (รองรับทั้งโหมดฐานข้อมูล PostgreSQL และโหมดออฟไลน์ `localStorage`)
+
+---
+
+## [3.7.8] - 2026-11-25
+### Fixed
+- แก้ไขคีย์ `localStorage` ใน `index.html` (`AUTH_SESSION_KEY`) ให้ตรงกับ `staff.html` และ `syncFromMySQLAPI()` (`sdu_requester_auth_v1`) เพื่อให้ปุ่ม **"ขอเบิกพัสดุ"** (Cross-Portal SSO จากหน้า `staff.html`) และการสลับพอร์ทัลอัตโนมัติทำงานได้ทันทีโดยไม่ต้องล็อกอินซ้ำ
+- แก้ไข `handleRequesterLogin` ใน `index.html` เมื่อบัญชีหัวหน้าหน่วยงาน/เจ้าหน้าที่/ผู้ดูแลระบบ (`head`, `staff`, `admin_staff` ฯลฯ) ล็อกอินผ่านหน้าขอเบิกพัสดุ ให้เข้าสู่หน้าแคตตาล็อกเบิกพัสดุ (`index.html`) พร้อมเปิดปุ่มสลับกลับหน้าอนุมัติ/จัดการคลังแบบ 1 คลิก แทนการถูกเด้งกลับไปหน้า `staff.html`
+
+---
+
 ## [3.7.7] - 2026-11-25
 ### Fixed
 - แก้ไขคำเตือน Static Analyzer / Pylance ใน `backend/server.py` (`Optional[str]` สำหรับ `generate_staff_token` และ `# type: ignore[import-not-found]` สำหรับ fallback import `mysql.connector` / `excel_export`) พร้อมตั้งค่า workspace `.vscode/settings.json` ให้ชี้ไปที่ `.venv\Scripts\python.exe` และ `backend` path
