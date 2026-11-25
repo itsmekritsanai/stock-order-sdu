@@ -7,7 +7,7 @@
 - [x] **Phase 1: สถาปัตยกรรมหลักและการแยกระบบพอร์ทัล 100% (Completed)**
 - [x] **Phase 2: ยกระดับ UI/UX, Vector Icons, SweetAlert2 และระบบรายการคำขอ (Completed)**
 - [x] **Phase 3: ความสมบูรณ์ของระบบ, ไอคอน Favicon, ลิขสิทธิ์ และ PWA Mobile Support (Completed)**
-- [x] **Phase 4: การออกแบบฐานข้อมูล PostgreSQL 17 / Docker Compose & pgAdmin 4 (Completed)**
+- [x] **Phase 4: การออกแบบฐานข้อมูล PostgreSQL 17 / Docker Compose (Completed)**
 - [x] **Phase 5: พัฒนา Python PostgreSQL REST API Server & เชื่อมต่อ Frontend พร้อม Offline Fallback (Completed)**
 - [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
 - [x] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (Completed)**
@@ -50,7 +50,7 @@
 
 ---
 
-## Phase 4: สถาปัตยกรรมฐานข้อมูล PostgreSQL 17, Docker Compose & pgAdmin 4 (Completed)
+## Phase 4: สถาปัตยกรรมฐานข้อมูล PostgreSQL 17 และ Docker Compose (Completed)
 - [x] **Task 4.1:** ออกแบบและสร้างไฟล์ **`backend/schema_postgres.sql`** สำหรับฐานข้อมูล **PostgreSQL 17** (`sdu_inventory`) ครอบคลุม 6 ตารางหลัก:
   - `departments`: ข้อมูลกลุ่มงาน/หน่วยงานภายใน สวท. 5 หน่วยงาน
   - `users`: ข้อมูลรายชื่อบุคลากรผู้มีสิทธิ์ขอเบิก (หัวหน้าหน่วยงาน 4 ท่านจาก `รายนามบุคลากร สวท.docx`)
@@ -59,10 +59,9 @@
   - `requisition_items`: รายการพัสดุย่อยในแต่ละใบขอเบิก พร้อม Snapshot อัตราส่วนแปลงหน่วย (`pieces_per_box_snapshot`) และ FK `ON DELETE CASCADE`
   - `stock_transactions`: ประวัติความเคลื่อนไหวสต๊อก (`IN`, `OUT`, `ADJUST`) สำหรับตรวจสอบย้อนหลัง (Audit Log)
   - สร้าง Trigger PL/pgSQL อัปเดต `updated_at` อัตโนมัติ และสคริปต์ซิงค์ Sequence (`setval`)
-- [x] **Task 4.2:** สร้างไฟล์ **`docker-compose.yml`** รัน PostgreSQL 17 (`postgres:17-alpine`) บนพอร์ต `5433` พร้อมตั้งค่า Auto-init สคริปต์ SQL
-- [x] **Task 4.3:** ติดตั้งเว็บแอปพลิเคชัน **pgAdmin 4** (`dpage/pgadmin4`) บนพอร์ต `5051` พร้อมไฟล์ตั้งค่าพรีโหลดการเชื่อมต่ออัตโนมัติ **`pgadmin_servers.json`**
-- [x] **Task 4.4:** อัปเดตสคริปต์ **`backend/init_db.py`** ตรวจสอบและสร้างฐานข้อมูลพร้อมนำเข้า Schema ทั้งบน PostgreSQL 17 และ MySQL
-- [x] **Task 4.5:** อัปเดต `requirements.txt` ติดตั้ง `psycopg2-binary>=2.9.9` และกำหนดค่าสภาพแวดล้อมใน `.env` และ `.env.example`
+- [x] **Task 4.2:** สร้างไฟล์ **`docker-compose.yml`** รัน PostgreSQL 17 (`postgres:17-alpine`) บนพอร์ต `5433` พร้อมตั้งค่า Auto-init สคริปต์ SQL และคอนเทนเนอร์ Web/API (`sdu_stock_app`)
+- [x] **Task 4.3:** อัปเดตสคริปต์ **`backend/init_db.py`** ตรวจสอบและสร้างฐานข้อมูลพร้อมนำเข้า Schema ทั้งบน PostgreSQL 17 และ MySQL
+- [x] **Task 4.4:** อัปเดต `requirements.txt` ติดตั้ง `psycopg2-binary>=2.9.9` และกำหนดค่าสภาพแวดล้อมใน `.env` และ `.env.example`
 
 ---
 

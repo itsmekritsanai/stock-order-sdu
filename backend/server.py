@@ -28,7 +28,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.8.2"
+SYSTEM_VERSION = "3.8.3"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -47,9 +47,6 @@ def load_env_config():
         "DB_USER": os.environ.get("DB_USER", "postgres"),
         "DB_PASSWORD": os.environ.get("DB_PASSWORD", "postgrespassword"),
         "DB_NAME": os.environ.get("DB_NAME", "sdu_inventory"),
-        "PGADMIN_PORT": int(os.environ.get("PGADMIN_PORT", "5051")),
-        "PGADMIN_DEFAULT_EMAIL": os.environ.get("PGADMIN_DEFAULT_EMAIL", "admin@admin.com"),
-        "PGADMIN_DEFAULT_PASSWORD": os.environ.get("PGADMIN_DEFAULT_PASSWORD", "root"),
         "PORT": int(os.environ.get("PORT", "8080")),
         "HOST": os.environ.get("HOST", "127.0.0.1"),
         "BASE_URL": os.environ.get("BASE_URL", "http://localhost:8080"),
@@ -73,7 +70,7 @@ def load_env_config():
                 k, v = line.split("=", 1)
                 k = k.strip()
                 v = v.strip().strip('"').strip("'")
-                if k in ("DB_PORT", "PORT", "PGADMIN_PORT"):
+                if k in ("DB_PORT", "PORT"):
                     try:
                         config[k] = int(v)
                     except ValueError:
@@ -85,7 +82,7 @@ def load_env_config():
     for k in list(config.keys()):
         if k in os.environ and os.environ[k] != "":
             val = os.environ[k]
-            if k in ("DB_PORT", "PORT", "PGADMIN_PORT"):
+            if k in ("DB_PORT", "PORT"):
                 try:
                     config[k] = int(val)
                 except ValueError:
@@ -2991,7 +2988,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
 
         forbidden_files = {
             "docker-compose.yml", "schema_postgres.sql", "schema.sql",
-            "pgadmin_servers.json", "start.bat", ".env", ".env.example",
+            "start.bat", ".env", ".env.example",
             "agents.md", ".cursorrules", "requirements.txt"
         }
         if parts and parts[-1].lower() in forbidden_files:

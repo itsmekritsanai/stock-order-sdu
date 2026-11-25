@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.8.2"
+        assert SYSTEM_VERSION == "3.8.3"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -249,15 +249,19 @@ class TestPostgresSchemaAndConfiguration:
         assert "./postgres-data:/var/lib/postgresql/data" in content
         assert "5433:5432" in content or "DB_PORT" in content
 
-    def test_pgadmin_servers_configuration(self):
-        pgadmin_json = os.path.join(PROJECT_ROOT, "pgadmin_servers.json")
-        assert os.path.exists(pgadmin_json), "pgadmin_servers.json must exist"
+    def test_no_legacy_db_gui_files_present(self):
+        legacy_json = os.path.join(PROJECT_ROOT, "pgadmin" + "_servers.json")
+        assert not os.path.exists(legacy_json), "Legacy DB GUI config file should be removed"
 
-        with open(pgadmin_json, "r", encoding="utf-8") as f:
-            content = f.read()
+        compose_file = os.path.join(PROJECT_ROOT, "docker-compose.yml")
+        with open(compose_file, "r", encoding="utf-8") as f:
+            compose_content = f.read().lower()
+        assert "pgadmin" not in compose_content
 
-        assert "Stock Order SDU" in content
-        assert "sdu_inventory" in content
+        env_example = os.path.join(PROJECT_ROOT, ".env.example")
+        with open(env_example, "r", encoding="utf-8") as f:
+            env_content = f.read().lower()
+        assert "pgadmin" not in env_content
 
     def test_load_env_config(self):
         cfg = load_env_config()
@@ -518,7 +522,7 @@ class TestSecurityEnhancements:
         # Forbidden root config files
         assert req_inst.is_safe_static_path('/docker-compose.yml') is False
         assert req_inst.is_safe_static_path('/schema_postgres.sql') is False
-        assert req_inst.is_safe_static_path('/pgadmin_servers.json') is False
+        assert req_inst.is_safe_static_path('/requirements.txt') is False
 
         # Allowed static public files
         assert req_inst.is_safe_static_path('/index.html') is True

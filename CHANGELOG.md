@@ -18,6 +18,15 @@
 
 ---
 
+## [3.8.3] - 2026-11-25
+### Removed
+- ลบไฟล์ `pgadmin_servers.json` และการตั้งค่า `PGADMIN_PORT` / `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` ออกจาก `.env.example`, `backend/server.py`, และเอกสารทั้งหมดของโครงการ (`README.md`, `INSTALLATION.md`, `PROJECT_CONTEXT.md`, `TASKS.md`, `backend/README.md`, `.github/copilot-instructions.md`)
+
+### Changed
+- อัปเดตเอกสารทางเทคนิคใน `docs/` ทั้ง 6 ไฟล์ (`API_SPEC.md`, `SCHEMA.md`, `DATA_DICTIONARY.md`, `CODE_EXPLANATION.md`, `USER_GUIDE.md`, `system_requirements_specification.md`) ให้ตรงกับโครงสร้างระบบปัจจุบัน (PostgreSQL 17 ครบ 7 ตาราง, RBAC 4 บทบาท, โควตา `USER`/`DEPT`, ต้นทุนรับเข้าพัสดุ, Native Excel 6 ชีต, ตัวเลือกเดือนอัตโนมัติ, และบัญชี สวท. 15 ท่าน)
+
+---
+
 ## [3.8.2] - 2026-11-25
 ### Changed
 - อัปเดตข้อมูลบัญชีผู้ใช้งานตั้งต้น (Seed Data) ทั้งหมดใน `backend/schema_postgres.sql`, `backend/schema.sql`, `scripts/generate_separated_portals.py` (`index.html`, `staff.html`) และฐานข้อมูล PostgreSQL ให้ตรงกับรายชื่อบุคลากร สวท. 15 ท่านจากไฟล์ `Book1.xlsx` (คุณจิตราพร จันทรกูล `jittraporn_cha` รองผู้อำนวยการ สิทธิ์ `HEAD`, คุณจุฑาธิป ปั้นทอง `chuthathip_pan` สิทธิ์ `STAFF`, และอีก 13 ท่าน สิทธิ์ `REQUESTER` พร้อมเพิ่ม `กลุ่มงานเคาน์เตอร์บริการ` รวมเป็น 6 กลุ่มงาน สวท.)

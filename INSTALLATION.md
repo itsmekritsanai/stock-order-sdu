@@ -1,5 +1,5 @@
 # คู่มือการติดตั้งและนำระบบขึ้นใช้งาน (Installation & Deployment Guide)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.7.0)
+### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.8.3)
 
 คู่มือนี้รองรับการนำไปติดตั้งและ Deploy ได้ทั้งบนเซิร์ฟเวอร์จริง (Linux / Windows Server) และเครื่องพัฒนา
 
@@ -20,7 +20,7 @@
    cp .env.example .env
    ```
    แก้ไขค่าสำคัญใน `.env` ก่อนเปิดใช้งานจริง:
-   - `DB_PASSWORD`, `PGADMIN_DEFAULT_PASSWORD` — เปลี่ยนจากค่าเริ่มต้น
+   - `DB_PASSWORD` — เปลี่ยนรหัสผ่านฐานข้อมูลจากค่าเริ่มต้น
    - `STAFF_PASSWORD`, `DEFAULT_USER_PASSWORD` — ตั้งรหัสผ่านเจ้าหน้าที่และผู้ใช้
    - `STAFF_AUTH_SECRET`, `REQUESTER_AUTH_SECRET` — ตั้งสตริงสุ่มความยาว >= 32 ตัวอักษร
    - `AUTH_BYPASS="false"` — บังคับให้ระบบยืนยันตัวตน Login เสมอ
@@ -35,10 +35,9 @@
    ```bash
    docker compose ps
    ```
-   ระบบจะรันคอนเทนเนอร์ทั้ง 3 ตัวให้โดยอัตโนมัติ:
+   ระบบจะรันคอนเทนเนอร์ทั้ง 2 ตัวให้โดยอัตโนมัติ:
    - `sdu_stock_postgres`: ฐานข้อมูล PostgreSQL 17 (อิมพอร์ต `backend/schema_postgres.sql` + ข้อมูลตั้งต้น 34 รายการให้อัตโนมัติ)
    - `sdu_stock_app`: เว็บพอร์ทัล + REST API บนพอร์ต `8080`
-   - `sdu_stock_pgadmin`: pgAdmin 4 Web GUI บนพอร์ต `5051`
 
 5. **เข้าใช้งานผ่านเว็บเบราว์เซอร์:**
    - ศูนย์กลางพอร์ทัล: `http://localhost:8080/portal.html`
@@ -61,9 +60,9 @@
    pip install -r requirements.txt
    ```
    *(บน macOS/Linux ใช้ `source .venv/bin/activate`)*
-3. สตาร์ทเฉพาะฐานข้อมูลและ pgAdmin ด้วย Docker Compose:
+3. สตาร์ทเฉพาะฐานข้อมูล PostgreSQL ด้วย Docker Compose:
    ```powershell
-   docker compose up -d postgres pgadmin
+   docker compose up -d postgres
    ```
 4. เปิดใช้งานเว็บเซิร์ฟเวอร์:
    - บน Windows ดับเบิลคลิก `start.bat` หรือรัน:
@@ -118,8 +117,8 @@ server {
 
 ## การแก้ปัญหาที่พบบ่อย (Troubleshooting)
 
-1. **พอร์ต 8080, 5433 หรือ 5051 ชนกับบริการอื่นในเครื่อง:**
-   แก้ค่า `PORT`, `DB_PORT`, หรือ `PGADMIN_PORT` ในไฟล์ `.env` แล้วรัน `docker compose up -d` ใหม่
+1. **พอร์ต 8080 หรือ 5433 ชนกับบริการอื่นในเครื่อง:**
+   แก้ค่า `PORT` หรือ `DB_PORT` ในไฟล์ `.env` แล้วรัน `docker compose up -d` ใหม่
 2. **ต้องการอัปเดตโค้ดเวอร์ชันใหม่หลัง `git pull`:**
    ```bash
    git pull origin main

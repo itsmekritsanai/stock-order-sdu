@@ -2,7 +2,7 @@
 # Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
 
 ## Project Summary & Core Mission
-A standalone institutional web application for Suan Dusit University (SDU) backed by a PostgreSQL 17 relational database (`sdu_inventory`) managed via Docker Compose and pgAdmin 4 (with MySQL backward compatibility), served by a Python REST API (`backend/server.py`), providing a seamless, paperless supply requisition workflow with two strictly separated portals:
+A standalone institutional web application for Suan Dusit University (SDU) backed by a PostgreSQL 17 relational database (`sdu_inventory`) managed via Docker Compose (with MySQL backward compatibility), served by a Python REST API (`backend/server.py`), providing a seamless, paperless supply requisition workflow with two strictly separated portals:
 1. `index.html` (Public Requester Portal for 5 สวท. units and 4 initial department heads from `รายนามบุคลากร สวท.docx`)
 2. `staff.html` (Private Staff & Inventory Portal with E-Signature, official PDF generation, Inventory Item CRUD, and User/Department Management)
 
@@ -12,7 +12,7 @@ A standalone institutional web application for Suan Dusit University (SDU) backe
 
 ### 1. Architectural Guardrails
 - **Zero-Build Frontend:** Use Pure HTML5, Vanilla CSS3 (Custom Variables), and Modern ES6+ JavaScript. Do not suggest or install npm packages, TailwindCSS, or frontend frameworks.
-- **Relational Backend & Docker Infrastructure:** Database schema is defined in `backend/schema_postgres.sql` (PostgreSQL 17) and executed via `docker-compose.yml` (`postgres:17-alpine` on port 5433, `dpage/pgadmin4` on port 5051). Served via `backend/server.py` (`psycopg2-binary` with ACID transactions and `SELECT ... FOR UPDATE` row locking).
+- **Relational Backend & Docker Infrastructure:** Database schema is defined in `backend/schema_postgres.sql` (PostgreSQL 17) and executed via `docker-compose.yml` (`postgres:17-alpine` on port 5433, `app` on port 8080). Served via `backend/server.py` (`psycopg2-binary` with ACID transactions and `SELECT ... FOR UPDATE` row locking).
 - **Strict Boundary:** Never introduce staff actions (approvals, item deletion, on-hand adjustments) into `index.html`.
 - **Single Source of Truth:** Code for `index.html` and `staff.html` is generated through `scripts/generate_separated_portals.py`. Always reflect major structural changes in the Python generator.
 

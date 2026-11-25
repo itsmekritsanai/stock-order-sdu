@@ -53,9 +53,7 @@ graph TD
     end
 
     subgraph "Docker Compose Infrastructure"
-        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
-        PGA["pgAdmin 4 Web GUI<br/>Port 5051:80"]
-        PG <--> PGA
+        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions<br/>- quota_rules")]
     end
 
     subgraph "Persistence & API Layer"
@@ -80,7 +78,6 @@ graph TD
 * **Build & Code Generator:** Python 3.x (`scripts/generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
 * **Backend & Database Architecture:**
   * **PostgreSQL 17 (`sdu_inventory`):** รันผ่าน Docker Compose (`postgres:17-alpine`) โครงสร้างตารางเชิงสัมพันธ์ (`backend/schema_postgres.sql`) พร้อมทริกเกอร์อัปเดต timestamp อัตโนมัติ (และยังรองรับ MySQL 8.0+ ย้อนหลัง)
-  * **pgAdmin 4 (`dpage/pgadmin4`):** เครื่องมือบริหารฐานข้อมูลผ่านเว็บพอร์ต `5051` พร้อมการเชื่อมต่อที่กำหนดค่าไว้ล่วงหน้า (`pgadmin_servers.json`)
   * **Python REST API Server (`backend/server.py`):** ให้บริการทั้งไฟล์หน้าเว็บและ REST API (`/api`) ที่พอร์ต `8080` เชื่อมต่อผ่าน `psycopg2-binary` พร้อมระบบสร้างและตั้งค่าฐานข้อมูลอัตโนมัติ (`backend/init_db.py`)
   * **Offline Fallback:** Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event) รองรับการใช้งานแม้ในสภาวะออฟไลน์
 

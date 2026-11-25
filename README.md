@@ -1,11 +1,10 @@
 # ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
 ### (Suan Dusit University e-Inventory & Requisition System)
 
-[![Version: 3.0.3](https://img.shields.io/badge/version-3.0.3-blue.svg)](CHANGELOG.md)
+[![Version: 3.8.3](https://img.shields.io/badge/version-3.8.3-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
-[![pgAdmin 4](https://img.shields.io/badge/pgAdmin-4-326690?style=flat&logo=postgresql&logoColor=white)](https://www.pgadmin.org/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
@@ -14,7 +13,7 @@
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
 
 
-เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย เชื่อมต่อฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (`sdu_inventory`) รันผ่าน Docker Compose พร้อม pgAdmin 4** ผ่าน **Python REST API Server** พร้อมระบบ Offline Fallback, ลงนามรับของดิจิทัล (E-Signature), พิมพ์ใบเบิกทางการ (Official PDF) และป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
+เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย เชื่อมต่อฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (`sdu_inventory`) รันผ่าน Docker Compose** ผ่าน **Python REST API Server** พร้อมระบบ Offline Fallback, ลงนามรับของดิจิทัล (E-Signature), พิมพ์ใบเบิกทางการ (Official PDF) และป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
 
 ---
 
@@ -33,10 +32,8 @@ graph TD
         SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking Timeline)"]
     end
 
-    subgraph "Docker Compose Infrastructure (PostgreSQL 17 & pgAdmin 4)"
-        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions")]
-        PGA["pgAdmin 4 Web GUI<br/>Port 5051:80<br/>(Preloaded Connection)"]
-        PG <--> PGA
+    subgraph "Docker Compose Infrastructure (PostgreSQL 17)"
+        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions<br/>- quota_rules")]
     end
 
     subgraph "Backend & Persistence Layer (Python REST API + Hybrid Offline Sync)"
@@ -129,9 +126,8 @@ stock-order-sdu/
 ├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
 ├── LICENSE                              # สัญญาอนุญาต MIT License
 ├── requirements.txt                     # รายการไลบรารี Python (psycopg2-binary, PyMySQL, pytest)
-├── docker-compose.yml                   # คอนฟิก Docker Compose สำหรับรัน PostgreSQL 17 และ pgAdmin 4
-├── pgadmin_servers.json                 # ไฟล์พรีโหลดการเชื่อมต่อเซิร์ฟเวอร์ฐานข้อมูลเข้าสู่ pgAdmin 4
-├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ PostgreSQL / pgAdmin
+├── docker-compose.yml                   # คอนฟิก Docker Compose สำหรับรัน PostgreSQL 17 และ Web/API Server
+├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ PostgreSQL และ API Server
 ├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
 │
 ├── portal.html                          # ศูนย์กลางเชื่อมต่อพอร์ทัลกลาง (Gateway Hub)
@@ -185,17 +181,12 @@ stock-order-sdu/
 
 ## วิธีการติดตั้งและรันโครงการ (Getting Started)
 
-### 1. สตาร์ท PostgreSQL 17 และ pgAdmin 4 ด้วย Docker Compose
-1. สตาร์ทบริการฐานข้อมูลและเครื่องมือจัดการ:
+### 1. สตาร์ทระบบทั้งหมดด้วย Docker Compose (แนะนำ)
+1. สตาร์ทบริการฐานข้อมูล PostgreSQL 17 และ Web/API Server พร้อมกัน:
    ```bash
-   docker compose up -d
+   docker compose up -d --build
    ```
-   > ระบบจะเปิด **PostgreSQL 17** (พอร์ต `5433:5432`) และ **pgAdmin 4** (พอร์ต `5051:80`) พร้อมอิมพอร์ตข้อมูลตั้งต้นจาก `schema_postgres.sql` ให้อัตโนมัติ
-
-2. เข้าใช้งาน **pgAdmin 4** ผ่านเบราว์เซอร์:
-   * **URL:** [http://localhost:5051](http://localhost:5051)
-   * **อีเมล:** `admin@admin.com` | **รหัสผ่าน:** `root`
-   * การเชื่อมต่อไปยัง `Stock Order SDU (PostgreSQL 17)` ถูกตั้งค่าล่วงหน้าไว้เรียบร้อยแล้ว (รหัสผ่าน DB: `postgrespassword`)
+   > ระบบจะเปิด **PostgreSQL 17** (`127.0.0.1:5433`) พร้อมอิมพอร์ตข้อมูลตั้งต้นจาก `schema_postgres.sql` และเปิด **Web & REST API Server** (พอร์ต `8080`) ให้อัตโนมัติ
 
 ### 2. รัน Python REST API Server
 1. ติดตั้งไลบรารีใน Virtual Environment (`.venv`):
