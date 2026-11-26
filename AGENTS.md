@@ -17,23 +17,24 @@ This workspace is governed by the custom skill:
    - Never modify portals without reflecting changes in `scripts/generate_separated_portals.py`.
 
 3. **Strict 100% Portal Separation (Zero-Trust):**
-   - `index.html` (Public Requester) must **NEVER** contain staff actions (approvals, stock adjustments, user/dept management).
-   - `staff.html` (Private Staff) is protected by HMAC token authentication.
+   - `index.html` (Requester Portal) must **NEVER** contain staff actions (approvals, stock adjustments, user/dept management).
+   - `staff.html` (Private Staff/Head/Admin Portal) is protected by HMAC token authentication and RBAC (`STAFF`, `HEAD`, `ADMIN`).
 
-4. **Inventory State Machine & Deduction Integrity:**
+4. **Inventory State Machine & Deduction Integrity (Two-Tier Approval):**
    - Formula: $\text{Available} = \text{On-Hand} - \text{Reserved}$
    - Formula: $\text{Total Pieces} = (\text{Boxes} \times \text{Pieces Per Box}) + \text{Pieces}$
-   - `APPROVED` locks reserved quota (`reserved += approved`). Does NOT deduct physical `on_hand`.
-   - `COMPLETED` deducts physical stock (`on_hand -= approved`, `reserved -= approved`) upon handover.
+   - `PENDING` -> `VERIFIED` (Staff screening) -> `APPROVED` (Head final approval; locks `reserved += approved`, does NOT deduct `on_hand`).
+   - `COMPLETED` deducts physical stock (`on_hand -= approved`, `reserved -= approved`) and logs an `OUT` transaction upon handover.
 
-5. **No Native Dialogs:**
+5. **No Native Dialogs & Universal Searchable Dropdowns:**
    - Never call `alert()`, `confirm()`, or `prompt()`.
    - Always use SweetAlert2 (`Swal.fire()`) with SDU Blue theme (`#1e40af`).
+   - Every `<select>` dropdown (static and modal) must support live search via `enhanceSearchableSelect`.
 
 6. **Strict Versioning & Changelog Protocol:**
    - Every change must increment `SYSTEM_VERSION` (Semantic Versioning `MAJOR.MINOR.PATCH`).
    - Every change must be recorded in `CHANGELOG.md` under Keep a Changelog standards.
-   - Version must match across `CHANGELOG.md`, `backend/server.py`, `scripts/generate_separated_portals.py`, `tests/test_stock_logic.py`, and UI footers.
+   - Version must match across `CHANGELOG.md`, `backend/server.py`, `scripts/generate_separated_portals.py`, `tests/test_stock_logic.py`, and UI footers (`portal.html`, `index.html`, `staff.html`).
 
 7. **Zero-Build Vanilla Architecture:**
    - Pure HTML5, Vanilla CSS3, Modern ES6+. No npm, TailwindCSS, React, Vue, or Webpack.

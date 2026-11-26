@@ -12,105 +12,82 @@
 [![SweetAlert2](https://img.shields.io/badge/SweetAlert2-v11-b02a37?style=flat)](https://sweetalert2.github.io/)
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
 
-
-เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ มหาวิทยาลัยสวนดุสิต ที่ได้รับการออกแบบใหม่ให้ทันสมัย รองรับการแยกส่วนการใช้งานระหว่าง **"ผู้ขอเบิก (อาจารย์/บุคลากร)"** และ **"เจ้าหน้าที่คลังพัสดุ"** ออกจากกันโดยเด็ดขาด 100% เพื่อความปลอดภัย เชื่อมต่อฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (`sdu_inventory`) รันผ่าน Docker Compose** ผ่าน **Python REST API Server** พร้อมระบบ Offline Fallback, ลงนามรับของดิจิทัล (E-Signature), พิมพ์ใบเบิกทางการ (Official PDF) และป๊อปอัปแจ้งเตือน SweetAlert2 สวยงามระดับมืออาชีพ
+เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต ออกแบบด้วยสถาปัตยกรรม **Zero-Build Vanilla Web** แยกพอร์ทัลระหว่าง **"ผู้ขอเบิก (`index.html`)"** และ **"เจ้าหน้าที่ / หัวหน้า / ผู้ดูแลระบบ (`staff.html`)"** อย่างชัดเจน ควบคุมสิทธิ์แบบ **RBAC 4 บทบาท** พร้อม **Cross-Portal SSO 1 คลิก**, ระบบอนุมัติ **2 ขั้นตอน (Two-Tier Approval)**, โควตาหลายระดับรายบุคคล/กลุ่มงาน, บันทึกราคาจัดซื้อเข้าคลัง, ส่งออกรายงาน **Native Excel (`.xlsx`) 6 ชีต**, พิมพ์ใบเบิกทางการ **A4 PDF 4 ฝ่าย**, และ Deploy ครบชุดในคำสั่งเดียวด้วย **Docker Compose (PostgreSQL 17 + Python REST API)**
 
 ---
 
-## สถาปัตยกรรมการแยกระบบ (Architecture & Security Separation)
-
-ระบบแบ่งการเข้าถึงเป็น 2 พอร์ทัลอิสระ เชื่อมต่อกับฐานข้อมูล PostgreSQL 17 ผ่าน REST API พร้อมระบบสำรองข้อมูลแบบ Offline-First:
+## สถาปัตยกรรมระบบ (System Architecture)
 
 ```mermaid
 graph TD
-    subgraph "Public Requester Portal (index.html)"
-        REQ["ผู้ขอเบิก (หัวหน้าหน่วยงาน / บุคลากร สวท.)"] --> FORM["เลือกชื่อผู้ขอเบิก (Auto-fill กลุ่มงาน)<br/>ค้นหากลุ่มงาน สวท. (5 หน่วยงาน)"]
-        FORM --> CAT["ค้นหาพัสดุ (No SKU Search)<br/>คำนวณหน่วยนับ กล่อง/ชิ้น"]
+    subgraph "Gateway Hub (portal.html)"
+        HUB["ศูนย์กลางพอร์ทัล<br/>- ทางลัด 4 บทบาท<br/>- สถานะเซิร์ฟเวอร์เรียลไทม์ (/api?action=health)"]
+    end
+
+    subgraph "Requester Portal (index.html)"
+        REQ["ผู้ขอเบิก (Auto-Role Login + SSO)<br/>15 บัญชี สวท. / 6 กลุ่มงาน"] --> CAT["แคตตาล็อกพัสดุ 34 รายการ<br/>2 หน่วยนับ + โควตาคงเหลือเรียลไทม์"]
         CAT --> CART["ตะกร้าพัสดุ & ระบุวัตถุประสงค์"]
-        CART --> SUBMIT["ส่งคำขอเบิก (SweetAlert2 Popup)"]
-        SUBMIT --> MYREQS["รายการคำขอของฉัน (ดูสถานะ & คัดลอกรหัส)"]
-        SUBMIT --> TRACK["ติดตามสถานะคำขอ (Tracking Timeline)"]
+        CART --> SUBMIT["ส่งคำขอเบิก (ตรวจสต๊อก + โควตา USER/DEPT)"]
+        SUBMIT --> MYREQS["รายการคำขอของฉัน & พิมพ์ใบเบิก PDF 4 ฝ่าย<br/>(ตัวกรองงวดเดือนอัตโนมัติตามปฏิทินจริง)"]
     end
 
-    subgraph "Docker Compose Infrastructure (PostgreSQL 17)"
-        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions<br/>- quota_rules")]
+    subgraph "Staff & Approver Portal (staff.html)"
+        STAFF["เจ้าหน้าที่ (STAFF) / หัวหน้า (HEAD) / แอดมิน (ADMIN)"] --> VERIFY["1. คัดกรองคำขอ (PENDING -> VERIFIED)"]
+        VERIFY --> APPROVE["2. หัวหน้าอนุมัติขั้นสุดท้าย (VERIFIED -> APPROVED)<br/>ล็อกยอดจอง Reserved"]
+        APPROVE --> COMPLETE["3. จ่ายพัสดุตัดสต๊อกจริง (COMPLETED)<br/>On-Hand -= Approved, บันทึก Audit Trail"]
+        STAFF --> STOCK["บริหารคลังพัสดุ: รับเข้าพร้อมราคาซื้อ / ปรับยอด / CRUD / ประวัติสต๊อก"]
+        STAFF --> QUOTA["จัดการบุคลากร / กลุ่มงาน สวท. / กฎโควตา USER & DEPT"]
+        STAFF --> ANALYTICS["สถิติรายเดือน: Top/Least 5, รายบุคคล, ยอดซื้อเข้า, คำขอทั้งเดือน<br/>ส่งออก Excel (.xlsx) 6 ชีต & รายงานผู้บริหาร PDF"]
     end
 
-    subgraph "Backend & Persistence Layer (Python REST API + Hybrid Offline Sync)"
-        API["Python REST API (backend/server.py)<br/>ACID Transactions + Row-Level Locking (psycopg2)"]
-        LOCAL[("Browser localStorage<br/>(Offline Fallback & Cross-Tab Sync)")]
+    subgraph "Docker Compose Infrastructure (1-Command Deploy)"
+        API["Python REST API (sdu_stock_app :8080)<br/>backend/server.py + backend/excel_export.py<br/>PBKDF2 + HMAC Token + RBAC + ThreadedConnectionPool"]
+        PG[("PostgreSQL 17 (sdu_stock_postgres :5433)<br/>sdu_inventory — 7 ตาราง:<br/>departments, users, inventory_items,<br/>requisitions, requisition_items,<br/>stock_transactions, quota_rules")]
         API <--> PG
     end
 
-    subgraph "Private Staff Portal (staff.html)"
-        STAFF["เจ้าหน้าที่พัสดุ"] --> LOGIN["ระบบยืนยันตัวตน (Staff Login)"]
-        LOGIN --> DASH["คิวคำขอ & บริหารสต๊อก & จัดการบุคลากร"]
-        DASH --> APPROVE["อนุมัติคำขอ (กันยอดสต๊อก Reserved)"]
-        APPROVE --> ESIG["แท่นลงนามดิจิทัล (E-Signature) เมื่อมารับของ"]
-        ESIG --> DEDUCT["ตัดยอดสต๊อกจริง (Deduct On-Hand)"]
-        DEDUCT --> PDF["พิมพ์ใบเบิกพัสดุทางการ (PDF) พร้อมลายเซ็นจริง"]
-        DASH --> STOCK["เพิ่ม/แก้ไข/ลบรายการพัสดุ & รับพัสดุเข้าคลัง / ปรับยอด"]
-        DASH --> USERS["เพิ่ม/แก้ไข/ลบบุคลากร (User) และกลุ่มงาน สวท."]
-    end
-
-    SUBMIT -->|"POST /api (createRequisition)"| API
-    SUBMIT -.->|"Offline Fallback"| LOCAL
-    API -->|"GET /api (Items, Reqs, Users, Depts)"| DASH
-    ESIG -->|"POST /api (completeRequisition)"| API
-    API -->|"อัปเดตยอดพร้อมเบิกและสถานะ"| CAT
-    API -->|"แสดงประวัติคำขอและไทม์ไลน์"| MYREQS
-    API -->|"ตรวจสอบสถานะคำขอ"| TRACK
+    HUB --> REQ
+    HUB --> STAFF
+    REQ <-->|"Cross-Portal SSO 1 คลิก"| STAFF
+    REQ <-->|"/api (Requester/Staff Token)"| API
+    STAFF <-->|"/api (Staff Token + X-Staff-Role)"| API
 ```
 
 ---
 
 ## คุณสมบัติเด่นของระบบ (Key Features)
 
-### 1. หน้าสำหรับผู้ขอเบิก — `index.html` (Requester Portal)
-* **ไม่ต้องเข้าสู่ระบบ (Zero-Friction Access):** ผู้เบิกสามารถเปิดลิงก์และใช้งานได้ทันที
-* **Searchable Requester User Combobox:** ช่องเลือกชื่อผู้ขอเบิกเริ่มต้นด้วยรายชื่อหัวหน้าหน่วยงานทั้ง 4 ท่านจากไฟล์ `รายนามบุคลากร สวท.docx` (พร้อมรองรับรายชื่อที่เจ้าหน้าที่เพิ่มภายหลัง) เมื่อคลิกเลือกจะเติมกลุ่มงาน/หน่วยงานและเบอร์โทรให้อัตโนมัติทันที
-* **Searchable Department Combobox:** ช่องเลือกกลุ่มงาน/หน่วยงานภายในสำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) ทั้ง 5 หน่วยงานหลัก สามารถพิมพ์ค้นหาแบบเรียลไทม์ได้ทันที
-* **ค้นหาพัสดุด้วยชื่อ (No SKU Dependency):** ค้นหาด้วยชื่อพัสดุภาษาไทยแบบ Fuzzy Matching สะดวกรวดเร็ว
-* **ระบบคำนวณหลายหน่วยนับ (Multi-Unit Conversion):** สามารถเลือกเบิกเป็น "กล่อง" หรือ "ชิ้น/ซอง/แผ่น" ได้ โดยระบบจะคำนวณยอดรวมและตัดสต๊อกให้อัตโนมัติ
-* **แสดงสต๊อกคงเหลือจริง (Available Stock):** แสดงยอดสต๊อกที่เบิกได้จริงตามสูตร `Available = On-Hand - Reserved` ป้องกันการเบิกชนกัน
-* **ตะกร้าขอเบิกและสร้างเอกสาร:** เพิ่มรายการใส่ตะกร้า ระบุวัตถุประสงค์ และสร้างเลขที่คำขอ `REQ-256910-XXXX`
-* **ปุ่ม "รายการคำขอของฉัน" (My Requisitions):**
-  * ปุ่มบนเมนูด้านบนพร้อม **ตัวเลขนับจำนวนคำขอ (Count Badge)** แสดงยอดคำขอแบบเรียลไทม์
-  * หน้าต่างป๊อปอัปดูรายการคำขอทั้งหมด พร้อมช่องค้นหาเอกสาร/ผู้เบิก/พัสดุ
-  * แท็บคัดกรองสถานะ: ทั้งหมด, รออนุมัติ (Pending), อนุมัติแล้ว (Approved), รับมอบสำเร็จ (Completed), ไม่อนุมัติ (Rejected)
-  * ปุ่มคัดลอกเลขที่เอกสารในคลิกเดียว พร้อมปุ่มทางลัดเปิดดูไทม์ไลน์สถานะทันที
-* **ระบบติดตามสถานะคำขอ (Self-Service Tracking):** ผู้เบิกสามารถนำเลขที่เอกสารหรือชื่อผู้ขอเบิกมาตรวจสอบไทม์ไลน์สถานะคำขอ 3 ขั้นตอนได้ด้วยตัวเองตลอด 24 ชั่วโมง
-* **ความปลอดภัยสูง:** ตัดแท็บและสิทธิ์การเข้าถึงของเจ้าหน้าที่พัสดุออกทั้งหมด ผู้เบิกไม่สามารถเข้ามาอนุมัติหรือปรับแก้สต๊อกได้
+### 1. ระบบยืนยันตัวตนและสิทธิ์ 4 บทบาท (Auto-Role Login, RBAC & Cross-Portal SSO)
+* **Auto-Role Login:** กรอกเฉพาะ **ชื่อผู้ใช้งาน (Case-insensitive)** และ **รหัสผ่านเฉพาะบุคคล (PBKDF2-HMAC-SHA256)** ระบบตรวจสอบบทบาทจริง (`REQUESTER`, `STAFF`, `HEAD`, `ADMIN`) และนำเข้าสู่สิทธิ์ที่ตรงกับบัญชีโดยอัตโนมัติ
+* **Cross-Portal SSO (1-Click Switch):** ผู้ที่มีสิทธิ์ `HEAD`, `STAFF`, หรือ `ADMIN` สามารถสลับระหว่างหน้าขอเบิกพัสดุ (`index.html`) และหน้าอนุมัติ/จัดการคลัง (`staff.html`) ได้ทันทีในคลิกเดียวโดยไม่ต้องล็อกอินซ้ำ
+* **ข้อมูลตั้งต้น สวท. (`Book1.xlsx`):** ครอบคลุม **6 กลุ่มงาน สวท.** และ **15 บัญชีบุคลากร** (`jittraporn_cha` สิทธิ์ `HEAD`, `chuthathip_pan` สิทธิ์ `STAFF`, และ 13 บัญชี สิทธิ์ `REQUESTER`) พร้อมบัญชี `admin_staff` สำหรับผู้ดูแลระบบสูงสุด
 
-### 2. หน้าสำหรับเจ้าหน้าที่พัสดุ — `staff.html` (Staff & Admin Portal)
-* **ระบบล็อกอินรักษาความปลอดภัย (Staff Authentication):** ป้องกันไม่ให้ผู้เบิกหรือบุคคลภายนอกเข้าถึงข้อมูลคลัง
-* **แดชบอร์ดสรุปยอดสต๊อก (Dashboard Metrics):** สรุปยอดคำขอรออนุมัติ, อนุมัติแล้วรอจ่าย, จำนวนรายการคงคลัง และพัสดุใกล้หมด
-* **ระบบคิวอนุมัติคำขอ (Approval Workflow):**
-  * ตรวจสอบรายละเอียดและวัตถุประสงค์
-  * รองรับการอนุมัติเต็มจำนวนหรือปรับลดจำนวนจ่ายจริงรายรายการ (Partial Approval) เพื่อกันยอดสต๊อก (Reserved)
-  * รองรับการปฏิเสธคำขอพร้อมระบุเหตุผล และการยกเลิกใบเบิกที่อนุมัติแล้วเพื่อคืนยอดจอง (Cancel Order)
-* **แท่นลงนามดิจิทัล (E-Signature Pad):**
-  * เมื่อผู้ขอเบิกเดินทางมารับพัสดุที่ห้องคลัง เจ้าหน้าที่กดปุ่ม "ลงนามรับของ"
-  * รองรับการเซ็นชื่อผ่านหน้าจอสัมผัส (Touchscreen), ปากกาสไตลัส, หรือเมาส์ พร้อมระบบตรวจสอบลายเซ็นว่างเปล่า
-* **ตัดสต๊อกอัตโนมัติ (Automated Inventory Deduction):** เมื่อผู้รับลงนามรับของเรียบร้อย ระบบจะตัดสต๊อกจริง (On-Hand) และคืนยอดกันจอง (Reserved) ภายใต้ PostgreSQL ACID Transaction ทันที
-* **พิมพ์ใบเบิกพัสดุทางการ (Official PDF Printable Form):**
-  * แบบฟอร์มราชการมาตรฐานตามระเบียบพัสดุ
-  * ตราสัญลักษณ์มหาวิทยาลัยสวนดุสิต (Vector Seal)
-  * ประทับรูปลายเซ็นดิจิทัลของผู้รับมอบลงในเอกสารโดยอัตโนมัติ
-* **ระบบบริหารสต๊อกและรายการพัสดุ (Inventory & Item Management):**
-  * ตรวจสอบยอดสต๊อก 3 สถานะ: คงเหลือจริง (On-Hand) | ติดจอง (Reserved) | พร้อมเบิก (Available)
-  * **เพิ่ม / แก้ไข / ลบรายการพัสดุใหม่ (`+ เพิ่มรายการพัสดุใหม่`):** รองรับการตั้งค่าหน่วยนับเดี่ยวหรือ 2 หน่วยนับ (กล่อง/ชิ้น), กำหนดอัตราส่วนแปลงหน่วย, ยอดคงคลังเริ่มต้น, เกณฑ์แจ้งเตือนขั้นต่ำ และอัปโหลดรูปภาพพัสดุ (DataURL หรือ Path)
-  * ฟังก์ชันรับพัสดุเข้าคลัง (+) แบบหลายหน่วยนับ (กล่อง/ชิ้น) และฟังก์ชันปรับยอดสต๊อกจากการตรวจนับจริง (Stock Adjustment) พร้อมบันทึก Audit Log ในตาราง `stock_transactions`
-* **ระบบจัดการบุคลากรและหน่วยงาน (User & Department Management):**
-  * แท็บ **"จัดการบุคลากร / หน่วยงาน"** แสดงทำเนียบหัวหน้าหน่วยงานตั้งต้น 4 ท่านและกลุ่มงานภายใน สวท. 5 หน่วยงานจาก `รายนามบุคลากร สวท.docx`
-  * เจ้าหน้าที่สามารถกด **`+ เพิ่มรายชื่อบุคลากร (User)`**, แก้ไข, ลบ หรือกด **`+ เพิ่มกลุ่มงาน/หน่วยงาน`** เพิ่มเติมได้ตลอดเวลา พร้อมซิงค์ไปยังหน้าผู้ขอเบิก (`index.html`) ทันที
+### 2. หน้าสำหรับผู้ขอเบิก — `index.html` (Requester Portal)
+* **แคตตาล็อกพัสดุ 34 รายการ (66 ภาพจริง):** ค้นหาชื่อพัสดุภาษาไทยแบบเรียลไทม์ กรองหมวดหมู่ และสลับดูภาพหน่วยย่อย/หน่วยกล่องได้
+* **ระบบคำนวณ 2 หน่วยนับ (Multi-Unit Conversion):** คำนวณรวมเป็นหน่วยย่อยอัตโนมัติตามสูตร `(กล่อง × อัตราส่วน) + ชิ้น` พร้อมล็อก Snapshot อัตราส่วนในใบเบิก
+* **ยอดพร้อมเบิกและโควตาคงเหลือเรียลไทม์:** แสดง `Available = On-Hand - Reserved` และโควตาคงเหลือประจำเดือน (ทั้งระดับรายบุคคลและระดับกลุ่มงาน) บนการ์ดพัสดุ
+* **รายการคำขอของฉันและใบเบิกทางการ PDF:** คัดกรองตามสถานะ 5 ระดับและ**งวดเดือนอัตโนมัติตามปฏิทินจริง** พร้อมพิมพ์แบบฟอร์มใบขอเบิก A4 แสดงช่องลงนามครบ **4 ฝ่าย**
 
-### 3. มาตรฐานการออกแบบและประสบการณ์ผู้ใช้ (Design & UX)
-* **SweetAlert2 Modern Dialogs:** ป๊อปอัปแจ้งเตือนและหน้าต่างยืนยันทั้งหมดใช้ SweetAlert2 ตกแต่งในธีมสีน้ำเงิน มสด. (`#1e40af`) และเขียวมรกต (`#059669`)
-* **Offline Asset Support:** ดาวน์โหลดไฟล์ `sweetalert2.all.min.js` เก็บไว้ใน `assets/js/` เพื่อให้ระบบทำงานได้เสถียร 100% แม้ไม่มีอินเทอร์เน็ตภายนอก พร้อมระบบ CDN Fallback อัตโนมัติ
-* **100% Vector SVG Icons:** ปราศจาก Emoji โดยเปลี่ยนมาใช้ไอคอนเวกเตอร์เส้น Stroke คุณภาพสูงทั้งหมด
-* **Typography:** ใช้ฟอนต์ Google Fonts `Prompt` สำหรับหน้าจอการใช้งานทั่วไป และ `Sarabun` สำหรับแบบฟอร์มเอกสารทางการ
-* **Hybrid PostgreSQL + Cross-Tab Synchronization:** ซิงค์ข้อมูลผ่าน PostgreSQL REST API พร้อมระบบตรวจจับการเปลี่ยนแปลงข้ามแท็บเบราว์เซอร์อัตโนมัติ
+### 3. หน้าสำหรับเจ้าหน้าที่ หัวหน้า และผู้ดูแลระบบ — `staff.html` (Staff & Admin Portal)
+* **กระบวนการอนุมัติ 2 ขั้นตอน (Two-Tier Workflow):**
+  1. `STAFF` คัดกรองและเสนอจำนวน (`PENDING` -> `VERIFIED`)
+  2. `HEAD` พิจารณาอนุมัติขั้นสุดท้าย (`VERIFIED` -> `APPROVED`, ล็อกยอด `Reserved` ภายใต้ `SELECT ... FOR UPDATE`)
+  3. `STAFF` จ่ายพัสดุและตัดยอดจริง (`APPROVED` -> `COMPLETED`, ตัด `On-Hand` และบันทึก `OUT` ลง `stock_transactions`)
+* **บริหารคลังพัสดุและต้นทุนจัดซื้อ:**
+  * แจ้งเตือนพัสดุต่ำกว่าเกณฑ์สั่งซื้อใหม่ (`min_alert`)
+  * **รับพัสดุเข้าคลังพร้อมราคา (3 โหมด):** กรอกยอดเงินรวม, ราคาต่อหน่วยใหญ่, หรือราคาต่อหน่วยย่อย คำนวณราคาเฉลี่ยต่อชิ้นและยอดรวมอัตโนมัติ
+  * ปรับยอดตรวจนับสต๊อก (`ADJUST`), เพิ่ม/แก้ไข/ลบพัสดุ (บันทึก `INITIAL_STOCK` อัตโนมัติเมื่อสต๊อกตั้งต้น > 0), และหน้าต่างประวัติความเคลื่อนไหวสต๊อกรายพัสดุ
+* **จัดการบุคลากร กลุ่มงาน และโควตารายเดือน (`quota_rules`):**
+  * ตั้งโควตาได้ทั้งระดับ **รายบุคลากร (`USER`)** และ **รายกลุ่มงาน (`DEPT`)** ทั้งแบบเจาะจงรายพัสดุและทุกพัสดุในคลัง
+* **แดชบอร์ดสถิติรายเดือน & ส่งออกรายงาน:**
+  * แสดงตัวชี้วัดภาพรวม, **ยอดเงินซื้อพัสดุเข้าคลังรายเดือน**, Top 5 / Slow-Moving 5, **สรุปยอดเบิกจำแนกรายบุคคล**, และ **ตารางรายการคำขอเบิกทั้งหมดในเดือน** (กดดูรายละเอียดและเปิด PDF ได้ทันที)
+  * **ส่งออก Native Excel (`.xlsx`) 6 ชีต** (`ภาพรวมประจำเดือน`, `สรุปรายบุคคล`, `สรุปทุกพัสดุ`, `รายละเอียดคำขอเบิก`, `สรุปยอดซื้อเข้า`, `ประวัติซื้อเข้า`) โดยไม่ต้องพึ่งไลบรารีภายนอก พร้อม **รายงานสรุปผู้บริหาร PDF**
+
+### 4. มาตรฐานการออกแบบและความปลอดภัย
+* **Zero-Build Vanilla Architecture:** Pure HTML5, CSS3, ES6+ สร้าง `index.html` และ `staff.html` จาก Single Source of Truth ([scripts/generate_separated_portals.py](scripts/generate_separated_portals.py))
+* **100% Vector SVG Icons & SweetAlert2:** ปราศจาก Emoji และ Native Dialog (`alert`/`confirm`/`prompt`) ทุกจุด
+* **Universal Searchable Dropdowns:** `<select>` ทุกตัวทั้งหน้าหลักและ Modal สามารถพิมพ์ค้นหาและเลือกด้วยคีย์บอร์ดได้
+* **Security Hardening:** บังคับ Token ทุก Endpoint ภายใน (`AUTH_BYPASS="false"`), PBKDF2-HMAC-SHA256, XSS Protection (`escapeHtml`), Security Headers (`nosniff`, `DENY`, `same-origin`), Path Traversal Guard, และ non-root Docker Container
 
 ---
 
@@ -118,131 +95,86 @@ graph TD
 
 ```text
 stock-order-sdu/
-│
-├── .cursorrules                         # กฎเกณฑ์สำหรับ AI Assisted Coding (Cursor)
-├── PROJECT_CONTEXT.md                   # บริบทภาพรวม สถาปัตยกรรม ข้อกำหนด และกฎระเบียบ
-├── TASKS.md                             # รายการขั้นตอนงานและแผนการพัฒนา (Roadmap)
-├── CHANGELOG.md                         # บันทึกประวัติการเปลี่ยนแปลงของระบบตามมาตรฐาน SemVer
-├── README.md                            # คู่มือและเอกสารแนะนำโครงการ
+├── AGENTS.md                            # กฎหลักของโครงการสำหรับ AI & Developers
+├── CHANGELOG.md                         # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (v3.8.3)
+├── INSTALLATION.md                      # คู่มือการติดตั้งและ Deploy บนเซิร์ฟเวอร์จริง
+├── PROJECT_CONTEXT.md                   # บริบท สถาปัตยกรรม และกฎเกณฑ์ทางธุรกิจ
+├── README.md                            # เอกสารแนะนำโครงการ (ไฟล์นี้)
+├── TASKS.md                             # แผนงานและความคืบหน้าการพัฒนา (Phase 1–9)
 ├── LICENSE                              # สัญญาอนุญาต MIT License
-├── requirements.txt                     # รายการไลบรารี Python (psycopg2-binary, PyMySQL, pytest)
-├── docker-compose.yml                   # คอนฟิก Docker Compose สำหรับรัน PostgreSQL 17 และ Web/API Server
-├── .env.example                         # เทมเพลตตัวแปรระบบสำหรับการเชื่อมต่อ PostgreSQL และ API Server
-├── .gitignore                           # การกำหนดไฟล์ที่ไม่ต้องนำขึ้น Git
+├── Dockerfile                           # Docker Image (python:3.11-slim, non-root appuser, Healthcheck)
+├── docker-compose.yml                   # รัน PostgreSQL 17 (sdu_stock_postgres) + Web/API (sdu_stock_app)
+├── .env.example                         # เทมเพลตตัวแปรสภาพแวดล้อมและความปลอดภัย
+├── requirements.txt                     # แพ็กเกจ Python (psycopg2-binary, PyMySQL, pytest, pytest-cov)
+├── start.bat                            # สคริปต์ 1-Click เปิดระบบบน Windows
 │
-├── portal.html                          # ศูนย์กลางเชื่อมต่อพอร์ทัลกลาง (Gateway Hub)
-├── index.html                           # หน้าเว็บสำหรับผู้ขอเบิก (Public Requester Portal)
-├── staff.html                           # หน้าเว็บสำหรับเจ้าหน้าที่พัสดุ (Private Staff Portal)
-├── 404.html                             # หน้าแสดงข้อผิดพลาดเมื่อไม่พบหน้าเว็บ (Custom 404)
-├── manifest.json                        # การตั้งค่า Progressive Web App (PWA) ติดตั้งบนมือถือ
-├── favicon.ico                          # ไอคอน Favicon แบบหลายขนาด
-├── start.bat                            # สคริปต์ 1-Click เปิดระบบอัตโนมัติบน Windows
+├── portal.html                          # หน้าศูนย์กลางพอร์ทัล (Gateway Hub)
+├── index.html                           # หน้าผู้ขอเบิกพัสดุ (Generated จาก SSOT)
+├── staff.html                           # หน้าเจ้าหน้าที่ / หัวหน้า / ผู้ดูแลระบบ (Generated จาก SSOT)
+├── 404.html / manifest.json / favicon.ico
 │
-├── .github/                             # การกำหนดค่า GitHub และ CI/CD Workflow
-│   ├── copilot-instructions.md          # ข้อกำหนดสำหรับ GitHub Copilot
-│   └── workflows/ci.yml                 # Automated Testing CI Workflow ด้วย GitHub Actions
-│
-├── assets/                              # ทรัพยากรของโครงการ (Static Web Assets)
-│   ├── logo_sdu.png                     # ตราสัญลักษณ์ทางการ มหาวิทยาลัยสวนดุสิต
-│   ├── favicon.svg / favicon-*.png      # ไอคอน Favicon ขนาดต่างๆ และ Apple Touch Icon
-│   ├── icon-192.png / icon-512.png      # ไอคอนสำหรับติดตั้งเป็น PWA App
-│   ├── js/                              # ไลบรารี JavaScript ออฟไลน์
-│   │   └── sweetalert2.all.min.js       # SweetAlert2 Local Asset สำหรับการทำงานออฟไลน์
-│   └── images/                          # รูปภาพพัสดุจริงสกัดจากไฟล์สต๊อก ตั้งชื่อตรงตามพัสดุภาษาไทย (66 รูปภาพ จาก 34 รายการ)
-│
-├── backend/                             # ระบบส่วนหลังบ้าน (PostgreSQL 17 Database & REST API)
-│   ├── schema_postgres.sql              # โครงสร้างตาราง PostgreSQL 17 6 ตาราง พร้อม Trigger และ Seed Data
-│   ├── schema.sql                       # โครงสร้างตาราง MySQL สำหรับรองรับย้อนหลัง
-│   ├── server.py                        # เซิร์ฟเวอร์ Python HTTP + REST API (Port 8080)
-│   ├── init_db.py                       # สคริปต์สร้างฐานข้อมูลและนำเข้าข้อมูลตั้งต้นอัตโนมัติในคลิกเดียว
-│   └── README.md                        # คู่มือการติดตั้งและใช้งาน Backend
-│
-├── tests/                               # ชุดทดสอบอัตโนมัติ (Automated Test Suite)
-│   └── test_stock_logic.py              # ทดสอบการแปลงหน่วย, สูตรคำนวณสต๊อก, State Transitions, และ DDL
-│
-├── data/                                # ข้อมูลหลักและชุดข้อมูลตั้งต้น (Master & Seed Data)
-│   ├── รายนามบุคลากร สวท.docx            # ข้อมูลหลัก 5 กลุ่มงาน/หน่วยงาน และรายชื่อหัวหน้าหน่วยงาน สวท.
-│   ├── คณะและหน่วยงาน.txt                # ข้อมูลอ้างอิงรายชื่อคณะ/สำนัก/สถาบัน/โรงเรียน
-│   └── ยอดสต๊อก ตค.xlsx                  # ข้อมูลสต๊อกพัสดุดิบตั้งต้นจาก Excel (34 รายการ, 66 รูปภาพ)
-│
-├── docs/                                # เอกสารข้อมูลเชิงเทคนิค (Technical Specifications)
-│   ├── SCHEMA.md                        # รายละเอียดฐานข้อมูล PostgreSQL 17 Entity-Relationship & Data Types
-│   ├── API_SPEC.md                      # โครงสร้าง REST API Endpoints (Request/Response Specs)
-│   ├── system_requirements_specification.md # เอกสารวิเคราะห์ความต้องการเชิงระบบ (SRS v1.1)
-│   └── internship/                      # โฟลเดอร์จัดเก็บเอกสารรายงานฝึกงาน (ละเว้นใน .gitignore)
-│
-└── scripts/                             # สคริปต์เครื่องมือสร้างโค้ดและรันเซิร์ฟเวอร์ (Build & Dev Scripts)
-    ├── generate_separated_portals.py    # สคริปต์ Python (SSOT) สำหรับคอมไพล์ index.html และ staff.html
-    ├── launch.py                        # สคริปต์รันเซิร์ฟเวอร์ระบบ (backend/server.py) พร้อมเปิดเบราว์เซอร์
-    └── run.bat                          # ทางลัดรันสคริปต์ start.bat
+├── assets/                              # ตราสัญลักษณ์ มสด., SweetAlert2 (Offline), และภาพพัสดุ 66 ภาพ
+├── backend/                             # Python REST API (server.py), Excel Builder (excel_export.py), SQL Schema (7 ตาราง)
+├── docs/                                # คู่มือผู้ใช้และเอกสารเทคนิคครบ 6 ฉบับ (API, Schema, Data Dict, Code, User Guide, SRS)
+├── scripts/                             # SSOT Generator, Launcher, Excel Seeder, Password Migration, Security Check
+├── tests/                               # ชุดทดสอบอัตโนมัติ pytest 91 รายการ (test_stock_logic.py)
+├── .agents/skills/stock-order-rules/    # สกิลตรวจสอบกฎโครงการ (verify_rules.py)
+└── .github/workflows/ci.yml             # GitHub Actions CI (verify_rules.py + pytest + PostgreSQL 17)
 ```
 
 ---
 
 ## วิธีการติดตั้งและรันโครงการ (Getting Started)
 
-### 1. สตาร์ทระบบทั้งหมดด้วย Docker Compose (แนะนำ)
-1. สตาร์ทบริการฐานข้อมูล PostgreSQL 17 และ Web/API Server พร้อมกัน:
-   ```bash
-   docker compose up -d --build
-   ```
-   > ระบบจะเปิด **PostgreSQL 17** (`127.0.0.1:5433`) พร้อมอิมพอร์ตข้อมูลตั้งต้นจาก `schema_postgres.sql` และเปิด **Web & REST API Server** (พอร์ต `8080`) ให้อัตโนมัติ
-
-### 2. รัน Python REST API Server
-1. ติดตั้งไลบรารีใน Virtual Environment (`.venv`):
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-2. รันเซิร์ฟเวอร์ระบบ (ให้บริการทั้งหน้าเว็บและ REST API `/api` ที่พอร์ต `8080`):
-   ```bash
-   python backend/server.py
-   ```
-   *(หรือดับเบิลคลิกไฟล์ `start.bat`)*
-
-3. เปิด Web Browser เพื่อใช้งาน:
-   * **หน้าศูนย์กลางพอร์ทัล:** [http://localhost:8080/portal.html](http://localhost:8080/portal.html)
-   * **หน้าสำหรับผู้ขอเบิก:** [http://localhost:8080/index.html](http://localhost:8080/index.html)
-   * **หน้าสำหรับเจ้าหน้าที่พัสดุ:** [http://localhost:8080/staff.html](http://localhost:8080/staff.html)
-
-### 3. รันชุดทดสอบอัตโนมัติ (Automated Testing)
+### 1. รันครบทั้งระบบด้วย Docker Compose (แนะนำที่สุด)
 ```bash
-pytest tests/ -v
+cp .env.example .env
+# แก้ไขรหัสผ่านและคีย์ลับใน .env (ตรวจสอบว่า AUTH_BYPASS="false")
+docker compose up -d --build
+```
+> ระบบจะเปิด **PostgreSQL 17** (`127.0.0.1:5433`, เก็บข้อมูลใน `./postgres-data`) พร้อมอิมพอร์ต [backend/schema_postgres.sql](backend/schema_postgres.sql) และเปิด **Web & REST API Server** บนพอร์ต `8080` อัตโนมัติ
+
+### 2. รัน Python Server บนเครื่อง Host โดยตรง (สำหรับพัฒนา)
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+docker compose up -d postgres
+python backend/server.py
+```
+*(หรือดับเบิลคลิก `start.bat` บน Windows)*
+
+### 3. เข้าใช้งานผ่าน Web Browser
+* **หน้าศูนย์กลางพอร์ทัล:** http://localhost:8080/portal.html
+* **หน้าสำหรับผู้ขอเบิก:** http://localhost:8080/index.html
+* **หน้าสำหรับเจ้าหน้าที่/หัวหน้า/ผู้ดูแล:** http://localhost:8080/staff.html
+* **ตรวจสอบสถานะ API:** http://localhost:8080/api?action=health
+
+### 4. รันการตรวจสอบกฎและชุดทดสอบอัตโนมัติ (91 Tests)
+```powershell
+.venv\Scripts\python .agents/skills/stock-order-rules/scripts/verify_rules.py
+.venv\Scripts\python -m pytest tests/test_stock_logic.py -v
 ```
 
 ---
 
-## ฐานข้อมูลและการจัดเก็บข้อมูล (Data Persistence)
+## เอกสารอ้างอิงทั้งหมด (Documentation)
 
-* **ฐานข้อมูลหลัก (PostgreSQL 17 Relational Database — `sdu_inventory`):**
-  * รันผ่าน Docker Compose (`postgres:17-alpine`) บนพอร์ต `5433` บันทึกข้อมูลลง Volume `postgres-stock-data`
-  * จัดเก็บข้อมูลลงใน 6 ตารางหลัก (`departments`, `users`, `inventory_items`, `requisitions`, `requisition_items`, `stock_transactions`)
-  * ป้องกันปัญหาการเบิกชนกัน (Race Condition) ด้วย **ACID Database Transactions** และการล็อกแถวข้อมูลระดับฐานข้อมูล (`SELECT ... FOR UPDATE`)
-* **ระบบสำรองข้อมูลออฟไลน์ (Hybrid Offline Fallback):**
-  * กรณีเปิดหน้าเว็บแบบออฟไลน์หรือยังไม่ได้เปิดบริการ PostgreSQL ระบบจะสลับมาอ่านและบันทึกข้อมูลลงใน Browser **`localStorage`** (`inventory_items`, `inventory_requisitions`, `inventory_users_sdu`, `inventory_depts_sdu`) พร้อมซิงค์ข้ามแท็บอัตโนมัติ (`storage` event) โดยไม่เกิดหน้าเว็บค้างหรือ Error
-
----
-
-## แผนการพัฒนาและเอกสารสำคัญ (Roadmap & Documentation)
-
-* 🚀 **[คู่มือการติดตั้งและย้ายระบบไปเครื่องอื่น (INSTALLATION.md)](INSTALLATION.md)**
-* 🤖 **[AI Development Rules (.cursorrules)](.cursorrules)** / **[.github/copilot-instructions.md](.github/copilot-instructions.md)**
-* 🌐 **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
-* 📝 **[บันทึกประวัติการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
-* 📋 **[รายการขั้นตอนงานและแผนพัฒนา (TASKS.md)](TASKS.md)**
-* 📘 **[คู่มืออธิบายโค้ดและการทำงานของระบบอย่างละเอียด (docs/CODE_EXPLANATION.md)](docs/CODE_EXPLANATION.md)**
-* 📚 **[พจนานุกรมข้อมูล Data Dictionary (docs/DATA_DICTIONARY.md)](docs/DATA_DICTIONARY.md)**
-* 🗄️ **[รายละเอียดโครงสร้างฐานข้อมูล PostgreSQL 17 (docs/SCHEMA.md)](docs/SCHEMA.md)**
-* 🔌 **[โครงสร้าง REST API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
-* 🐘 **[คู่มือติดตั้งและใช้งาน Backend (backend/README.md)](backend/README.md)**
-* 🐳 **[การกำหนดค่า Docker Compose (docker-compose.yml)](docker-compose.yml)**
-* ⚙️ **[เทมเพลตตัวแปรระบบ (.env.example)](.env.example)**
-* 📄 **[System Requirements Specification (SRS v1.1)](docs/system_requirements_specification.md)**
+* **[คู่มือการใช้งานระบบสำหรับทุกบทบาท (docs/USER_GUIDE.md)](docs/USER_GUIDE.md)**
+* **[คู่มือการติดตั้งและ Deploy บนเซิร์ฟเวอร์ (INSTALLATION.md)](INSTALLATION.md)**
+* **[ข้อกำหนดความต้องการระบบ SRS v3.8.3 (docs/system_requirements_specification.md)](docs/system_requirements_specification.md)**
+* **[คู่มืออธิบายโค้ดและสถาปัตยกรรม (docs/CODE_EXPLANATION.md)](docs/CODE_EXPLANATION.md)**
+* **[ข้อกำหนด REST API Endpoints (docs/API_SPEC.md)](docs/API_SPEC.md)**
+* **[โครงสร้างฐานข้อมูล PostgreSQL 17 — 7 ตาราง (docs/SCHEMA.md)](docs/SCHEMA.md)**
+* **[พจนานุกรมข้อมูล Data Dictionary (docs/DATA_DICTIONARY.md)](docs/DATA_DICTIONARY.md)**
+* **[คู่มือระบบ Backend (backend/README.md)](backend/README.md)**
+* **[ภาพรวมบริบทโครงการ (PROJECT_CONTEXT.md)](PROJECT_CONTEXT.md)**
+* **[แผนงานและความคืบหน้า (TASKS.md)](TASKS.md)**
+* **[บันทึกการเปลี่ยนแปลง (CHANGELOG.md)](CHANGELOG.md)**
 
 ---
 
 ## ผู้จัดทำ (Author)
 
-* **มหาวิทยาลัยสวนดุสิต (Suan Dusit University)**
+* **มหาวิทยาลัยสวนดุสิต (Suan Dusit University)** — สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.)
 * GitHub Repository: [itsmekritsanai/stock-order-sdu](https://github.com/itsmekritsanai/stock-order-sdu)

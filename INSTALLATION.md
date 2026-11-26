@@ -124,4 +124,4 @@ server {
    git pull origin main
    docker compose up -d --build
    ```
-   *(ข้อมูลใน Volume `postgres-stock-data` จะยังคงอยู่ครบ และ `backend/server.py` จะทำ Schema Auto-Migration ให้อัตโนมัติ)*
+   *(ข้อมูลในโฟลเดอร์ `./postgres-data` จะยังคงอยู่ครบ และ `backend/server.py` จะทำ Schema Auto-Migration ให้อัตโนมัติ)*

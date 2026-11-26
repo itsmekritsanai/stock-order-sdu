@@ -24,16 +24,17 @@ Institutional rules, constraints, and standard operating procedures for the **Su
    - See [Architecture & SSOT](./references/architecture-and-ssot.md).
 
 3. **Strict 100% Portal Separation (Zero-Trust):**
-   - `index.html`: Public Requester Portal for 5 สวท. units and authorized personnel. Must **NEVER** contain staff actions (approvals, stock adjustments, restock, user CRUD, department CRUD).
-   - `staff.html`: Private Staff & Warehouse Portal protected by HMAC token authentication.
+   - `index.html`: Requester Portal for 6 สวท. units and authorized personnel (15 seeded accounts from `Book1.xlsx`). Must **NEVER** contain staff actions (verification, approvals, stock adjustments, restock, user CRUD, department CRUD, quota CRUD).
+   - `staff.html`: Private Staff/Head/Admin Warehouse Portal protected by HMAC token authentication and RBAC (`STAFF`, `HEAD`, `ADMIN`).
    - Never merge portals into a single shared file.
 
-4. **Inventory State Machine & Deduction Integrity:**
+4. **Inventory State Machine & Deduction Integrity (Two-Tier Approval):**
    - **Available Stock Formula:** $\text{Available} = \text{On-Hand} - \text{Reserved}$
    - **Multi-Unit Ratio:** $\text{Total Pieces} = (\text{Boxes} \times \text{Pieces Per Box}) + \text{Pieces}$
-   - Approval (`APPROVED`) only locks quota: $\text{Reserved} += \text{Approved Pieces}$. It **MUST NOT** deduct `On-Hand`.
-   - Physical handover (`COMPLETED`) deducts stock: $\text{On-Hand} -= \text{Approved Pieces}$ and $\text{Reserved} -= \text{Approved Pieces}$, and logs an `OUT` transaction.
-   - Prevention of state bypass: A completed order can never be re-completed, approved, or rejected.
+   - Screening (`VERIFIED` by `STAFF`/`ADMIN`) forwards the requisition to the Head without touching stock.
+   - Final approval (`APPROVED` by `HEAD`/`ADMIN`) locks quota: $\text{Reserved} += \text{Approved Pieces}$. It **MUST NOT** deduct `On-Hand`.
+   - Physical handover (`COMPLETED` by `STAFF`/`ADMIN`) deducts stock: $\text{On-Hand} -= \text{Approved Pieces}$ and $\text{Reserved} -= \text{Approved Pieces}$, and logs an `OUT` transaction.
+   - Prevention of state bypass: A completed order can never be re-completed, verified, approved, or rejected.
    - See [Business Logic & State Machine](./references/business-logic-and-state-machine.md).
 
 5. **No Native Dialogs:**
@@ -78,7 +79,7 @@ flowchart TD
     C --> D["4. Increment SYSTEM_VERSION & Sync Footers"]
     D --> E["5. Update CHANGELOG.md & Docs"]
     E --> F["6. Run Automated Verification Helper"]
-    F --> G["7. Run Pytest Suite (48+ tests)"]
+    F --> G["7. Run Pytest Suite (91 tests)"]
     G --> H["8. Verify Live Server & Git Push"]
 ```
 

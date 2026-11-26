@@ -12,6 +12,7 @@
 - [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
 - [x] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (Completed)**
 - [x] **Phase 8: การควบคุมสิทธิ์ RBAC, แบบฟอร์มใบเบิก 4 ฝ่าย, การส่งออกสถิติ และ Audit Trail (Completed)**
+- [x] **Phase 9: โควตาหลายระดับ, ต้นทุนรับเข้า, Native Excel 6 ชีต, Container Deploy, Security Hardening และบัญชี สวท. จริง (Completed — v3.8.3)**
 
 ---
 
@@ -142,3 +143,12 @@
 - [x] **Task 8.6:** ระบบแจ้งเตือนพัสดุถึงจุดสั่งซื้อใหม่ (Low Stock Reorder Point Alert):
   - เพิ่มการ์ดสรุปรายการพัสดุที่คงเหลือต่ำกว่าเกณฑ์แจ้งเตือนขั้นต่ำ (`min_alert`) บนแท็บคลังพัสดุ
   - แสดงป้ายแจ้งเตือนสถานะสต๊อกใกล้หมดเพื่อการวางแผนจัดซื้อล่วงหน้า
+
+---
+
+## Phase 9: โควตาหลายระดับ, ต้นทุนจัดซื้อ, Native Excel 6 ชีต, Container Deploy & Security Hardening (Completed — v3.3.0 – v3.8.3)
+- [x] **Task 9.1 (v3.3.0 – v3.3.4):** เพิ่มตาราง `quota_rules` (ตารางที่ 7) รองรับโควตาเฉพาะรายบุคลากร (`USER`) และรายกลุ่มงาน (`DEPT`), อัปเกรด `<select>` ทุกตัวเป็น Universal Searchable Dropdown, และปรับข้อความ UI เป็นภาษาไทยล้วน
+- [x] **Task 9.2 (v3.4.0 – v3.6.2):** เพิ่มสรุปยอดเบิกรายบุคคล (`personUsage`), โมดูลสร้างไฟล์ Excel แท้ `.xlsx` 6 ชีตแบบ Zero-Dependency (`backend/excel_export.py`), ระบบบันทึกและคำนวณราคาซื้อเข้าคลัง 3 โหมด (`unit_price`, `total_cost`, `last_unit_price`), และปรับ GitHub Actions CI ให้รัน `verify_rules.py`
+- [x] **Task 9.3 (v3.7.0 – v3.7.3):** เพิ่ม Containerized 1-Command Deploy (`Dockerfile`, `docker-compose.yml` มีทั้ง `postgres` และ `app`), Security Hardening เต็มรูปแบบ (`AUTH_BYPASS="false"`, Token Guard ทุก Endpoint ภายใน, Security Headers, `ThreadedConnectionPool`, `CHECK` constraints, `ON DELETE RESTRICT`, และ `INITIAL_STOCK` Audit Trail)
+- [x] **Task 9.4 (v3.7.4 – v3.7.8):** ปรับโฉมหน้า `portal.html` พร้อม Healthcheck เรียลไทม์, เปลี่ยนเป็น Auto-Role Login (กรอกเฉพาะ Username + Password), และเพิ่ม Cross-Portal SSO สลับระหว่าง `index.html` กับ `staff.html` ใน 1 คลิก
+- [x] **Task 9.5 (v3.8.0 – v3.8.3):** เพิ่มตาราง **"รายการคำขอเบิกทั้งหมดในเดือน"** ในหน้าสถิติ, เปลี่ยนตัวเลือกเดือนทั้งหมดเป็นงวดเดือนอัตโนมัติตามปฏิทินจริง, ซิงค์บัญชี สวท. จริง 15 ท่าน + 6 กลุ่มงานจาก `Book1.xlsx` พร้อมรหัสผ่านเฉพาะบุคคล (Case-insensitive Username), ลบ pgAdmin ทั้งหมดออกจากระบบ, และอัปเดตเอกสารทั้งหมดให้ตรงกับระบบปัจจุบัน (91 pytest cases ผ่าน 100%)

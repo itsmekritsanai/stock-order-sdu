@@ -1,188 +1,133 @@
 # Project Context: Stock Order SDU
-### ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Suan Dusit University e-Inventory System)
+### ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Suan Dusit University e-Inventory System — v3.8.3)
 
 ---
 
-## 📌 1. วัตถุประสงค์และบริบทของโครงการ (System Objectives & Vision)
+## 1. วัตถุประสงค์และบริบทของโครงการ (System Objectives & Vision)
 
-* **ชื่อระบบ:** ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต  
-  *(Suan Dusit University e-Inventory & Requisition System)*
-* **เจ้าของโครงการ:** มหาวิทยาลัยสวนดุสิต (Suan Dusit University - SDU)
+* **ชื่อระบบ:** ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต *(Suan Dusit University e-Inventory & Requisition System)*
+* **หน่วยงานใช้งาน:** สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต
 * **GitHub Repository:** [itsmekritsanai/stock-order-sdu](https://github.com/itsmekritsanai/stock-order-sdu)
 * **วัตถุประสงค์หลัก:**
-  1. **Paperless & Digital Transformation:** ยกระดับกระบวนการขอเบิกพัสดุสำนักงานของมหาวิทยาลัยจากกระดาษสู่ระบบดิจิทัล 100%
-  2. **Inventory Accuracy & Concurrency Prevention:** ป้องกันปัญหาสต๊อกติดลบหรือการเบิกชนกันด้วยระบบคำนวณยอดสต๊อก 3 ระดับ (*On-Hand, Reserved, Available*) และการล็อกแถวระดับฐานข้อมูล PostgreSQL (`SELECT ... FOR UPDATE`)
-  3. **Multi-Unit Intelligence:** คำนวณการแปลงหน่วยอัตโนมัติระหว่างหน่วยบรรจุใหญ่ (กล่อง/ห่อ) และหน่วยย่อย (ชิ้น/ซอง/ใบ/แผ่น)
-  4. **Strict Security Separation:** แยกสิทธิ์การใช้งานระหว่างผู้ขอเบิก (หัวหน้าหน่วยงานและบุคลากร 5 กลุ่มงานภายใน สวท.) และเจ้าหน้าที่คลังพัสดุออกจากกันอย่างเด็ดขาด
-  5. **Audit Trail & Digital Signatures:** มีระบบยืนยันจ่ายพัสดุตัดยอดสต๊อกจริงในคลิกเดียว, บันทึกประวัติความเคลื่อนไหวสต๊อก (`stock_transactions`) และสร้างเอกสารแบบฟอร์มขอเบิกพัสดุทางการ (Official PDF) พร้อมช่องลงนามทางการ
+  1. **Paperless & Two-Tier Governance:** ยกระดับการขอเบิกพัสดุเป็นดิจิทัล 100% พร้อมกระบวนการตรวจสอบและอนุมัติ 2 ขั้นตอน (`PENDING` -> `VERIFIED` -> `APPROVED` -> `COMPLETED`) และแบบฟอร์มใบเบิกทางการ A4 PDF ช่องลงนามครบ 4 ฝ่าย
+  2. **Inventory Accuracy & Concurrency Prevention:** ควบคุมสต๊อก 3 ระดับ (`Available = On-Hand - Reserved`) และป้องกัน Race Condition ด้วย PostgreSQL 17 ACID Transactions + `SELECT ... FOR UPDATE` (เรียงลำดับ `item_id` เพื่อกัน Deadlock)
+  3. **Multi-Unit & Multi-Tier Quota Intelligence:** แปลง 2 หน่วยนับอัตโนมัติพร้อม Snapshot และควบคุมโควตารายเดือนทั้งระดับรายบุคคล (`USER`) และระดับกลุ่มงาน (`DEPT`)
+  4. **Strict Portal Separation & RBAC 4 Roles:** แยกพอร์ทัลผู้ขอเบิก (`index.html`) และพอร์ทัลจัดการคลัง (`staff.html`) เด็ดขาด พร้อม Auto-Role Login, PBKDF2-HMAC-SHA256, HMAC Token, และ Cross-Portal SSO 1 คลิก
+  5. **Cost Traceability & Executive Analytics:** บันทึกราคา/ยอดซื้อเข้าคลัง, Audit Trail ใน `stock_transactions`, แดชบอร์ดสถิติรายเดือนพร้อมรายการคำขอทั้งเดือน, ส่งออก Native Excel `.xlsx` 6 ชีต, และรายงานผู้บริหาร PDF
 
 ---
 
-## 👥 2. กลุ่มผู้ใช้งานเป้าหมาย (Target Users & Personas)
+## 2. กลุ่มผู้ใช้งานและบทบาทสิทธิ์ (Target Users & RBAC 4 Roles)
+
+ตั้งต้นจากรายนามบุคลากร สวท. ในไฟล์ `Book1.xlsx` (**15 บัญชี สังกัด 6 กลุ่มงาน สวท.**) พร้อมบัญชีผู้ดูแลระบบสูงสุด:
 
 ```mermaid
 graph LR
-    subgraph "กลุ่มผู้ใช้งานระบบ"
-        U1["หัวหน้าหน่วยงานและบุคลากร สวท.<br/>(5 กลุ่มงาน/หน่วยงานภายใน สวท.)"]
-        U2["เจ้าหน้าที่คลังพัสดุกลาง<br/>(ผู้ดูแลการจัดจ่าย & เพิ่มรายการ)"]
-        U3["หัวหน้าฝ่ายพัสดุ / ผู้บริหาร<br/>(ตรวจสอบรายงาน & ตรวจนับ)"]
+    subgraph "บทบาทผู้ใช้งาน (Auto-Role Login)"
+        U1["ผู้ขอเบิกพัสดุ (REQUESTER)<br/>13 บัญชี สวท. / 6 กลุ่มงาน"]
+        U2["เจ้าหน้าที่พัสดุ (STAFF)<br/>คัดกรอง / จ่ายของ / บริหารสต๊อก"]
+        U3["หัวหน้าหน่วยงาน (HEAD)<br/>อนุมัติขั้นสุดท้าย / ดูรายงาน"]
+        U4["ผู้ดูแลระบบสูงสุด (ADMIN)<br/>จัดการผู้ใช้-กลุ่มงาน / สลับมุมมอง"]
     end
-    U1 -->|เข้าใช้งานผ่านลิงก์สาธารณะ| P1["index.html (Requester Portal)"]
-    U2 -->|ล็อกอินรักษาความปลอดภัย| P2["staff.html (Staff Portal)"]
-    U3 -->|ตรวจสอบรายงานสต๊อก| P2
+    U1 -->|"HMAC requester_token"| P1["index.html (Requester Portal)"]
+    U2 -->|"HMAC staff_token + SSO"| P2["staff.html (Staff Portal)"]
+    U3 -->|"HMAC staff_token + SSO"| P2
+    U4 -->|"HMAC staff_token + X-Staff-Role"| P2
+    P2 <-->|"Cross-Portal SSO 1 คลิก"| P1
 ```
 
-1. **ผู้ขอเบิก (Requester):**
-   * **ใคร:** หัวหน้าหน่วยงานทั้ง 4 ท่าน (และบุคลากรที่เจ้าหน้าที่เพิ่มภายหลัง) จาก 5 กลุ่มงานภายในสำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) ตามไฟล์ `data/รายนามบุคลากร สวท.docx`
-   * **พฤติกรรม:** ต้องการความรวดเร็ว ไม่ต้องการขั้นตอนล็อกอินที่ซับซ้อน คลิกเลือกชื่อผู้ขอเบิกเพื่อเติมกลุ่มงานและเบอร์โทรอัตโนมัติ ค้นหาพัสดุด้วยชื่อภาษาไทย (ไม่ต้องจำรหัส SKU) ตรวจสอบยอดคงเหลือได้ทันที
-   * **ช่องทางเข้าใช้งาน:** `index.html`
-2. **เจ้าหน้าที่คลังพัสดุ (Staff / Warehouse Manager):**
-   * **ใคร:** เจ้าหน้าที่ฝ่ายพัสดุและคลังพัสดุ สำนักส่งเสริมวิชาการและงานทะเบียน มหาวิทยาลัยสวนดุสิต
-   * **พฤติกรรม:** ตรวจสอบคำขอที่ส่งเข้ามา, จัดเตรียมของ, อนุมัติปรับยอด, ให้ผู้มารับเซ็นชื่อบนหน้าจอ, ตัดสต๊อกจริง, พิมพ์ใบเบิกทางการ, เพิ่ม/แก้ไข/ลบรายการพัสดุในคลัง, และจัดการรายชื่อบุคลากร (User) / กลุ่มงาน
-   * **ช่องทางเข้าใช้งาน:** `staff.html` (มีระบบรหัสผ่านยืนยันสิทธิ์)
+1. **`REQUESTER` (ผู้ขอเบิกพัสดุ):** เข้าสู่ระบบด้วย Username (ไม่คำนึงตัวพิมพ์เล็ก-ใหญ่) + รหัสผ่านเฉพาะบุคคล, ดูสต๊อกพร้อมเบิกและโควตาคงเหลือ, ส่งคำขอเบิก, ติดตามสถานะรายเดือน, และพิมพ์ใบเบิก PDF 4 ฝ่าย
+2. **`STAFF` (เจ้าหน้าที่พัสดุ):** คัดกรองคำขอ (`verifyRequisition`), จ่ายพัสดุตัดสต๊อกจริง (`completeRequisition`), รับเข้าพร้อมราคา (`restockItem`), ปรับยอด (`adjustStock`), จัดการพัสดุ/โควตา, ดูรายงาน และสลับไปเบิกพัสดุได้ (ห้ามกด `approveRequisition`, `deleteUser`, `deleteDepartment`)
+3. **`HEAD` (หัวหน้าหน่วยงาน):** เข้าสู่แท็บ `รอหัวหน้าอนุมัติ` อัตโนมัติ, อนุมัติขั้นสุดท้าย (`approveRequisition`) หรือปฏิเสธ (`rejectRequisition`), ดูสถิติ/ส่งออก Excel 6 ชีต/PDF ผู้บริหาร, และสลับไปเบิกพัสดุใน 1 คลิก
+4. **`ADMIN` (ผู้ดูแลระบบสูงสุด):** ทำได้ทุกสิทธิ์ รวมถึงลบผู้ใช้/กลุ่มงาน และสลับมุมมองสิทธิ์ผ่าน Header `X-Staff-Role`
 
 ---
 
-## 💻 3. เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)
+## 3. เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)
 
 ```mermaid
 graph TD
-    subgraph "Client Layer (Zero-Build Frontend)"
-        REQ["Requester Portal (index.html)<br/>- Searchable User Combobox (Auto-fill)<br/>- Searchable Dept Combobox (5 กลุ่มงาน สวท.)<br/>- Live Catalog & Multi-Unit Ratio<br/>- Cart Drawer<br/>- My Requisitions Modal<br/>- Tracking Timeline"]
-        STAFF["Staff Portal (staff.html)<br/>- Authentication Gate<br/>- Dashboard Metrics<br/>- Approval Queue<br/>- Touchscreen E-Signature Pad<br/>- Official PDF Print Engine<br/>- Inventory & Item CRUD Manager<br/>- User & Department Manager"]
+    subgraph "Client Layer (Zero-Build Vanilla Frontend — SSOT)"
+        HUB["portal.html<br/>Gateway Hub + /api?action=health"]
+        REQ["index.html (Requester Portal)<br/>- Auto-Role Login + Cross-Portal SSO<br/>- Live Catalog + 2 หน่วยนับ + โควตาคงเหลือ<br/>- Cart Drawer + My Requisitions + Dynamic Months"]
+        STAFF["staff.html (Staff & Approver Portal)<br/>- 2-Tier Queue (PENDING/VERIFIED/APPROVED/COMPLETED)<br/>- Stock + Restock Pricing + Audit Trail<br/>- Users/Depts/Quota Rules Manager<br/>- Monthly Analytics + All Reqs + Excel 6 ชีต + PDF"]
     end
 
-    subgraph "Docker Compose Infrastructure"
-        PG[("PostgreSQL 17 (sdu_inventory)<br/>Port 5433:5432<br/>- departments<br/>- users<br/>- inventory_items<br/>- requisitions<br/>- requisition_items<br/>- stock_transactions<br/>- quota_rules")]
+    subgraph "Docker Compose Infrastructure (1-Command Deploy)"
+        API["sdu_stock_app (:8080)<br/>backend/server.py + backend/excel_export.py<br/>ThreadedConnectionPool + RBAC + Security Headers"]
+        PG[("sdu_stock_postgres (127.0.0.1:5433)<br/>PostgreSQL 17 — sdu_inventory (7 ตาราง)<br/>departments, users, inventory_items,<br/>requisitions, requisition_items,<br/>stock_transactions, quota_rules")]
+        LOCAL[("Browser localStorage<br/>Offline Fallback & Cross-Tab Sync")]
     end
 
-    subgraph "Persistence & API Layer"
-        API["Python REST API Server (backend/server.py)<br/>- ACID Transactions<br/>- Row-Level Locking (SELECT ... FOR UPDATE)<br/>- JSON REST API (/api) via psycopg2"]
-        LOCAL[("Browser localStorage<br/>+ Cross-Tab Storage Event Sync<br/>(Offline Fallback)")]
-    end
-
+    HUB --> REQ
+    HUB --> STAFF
     REQ <-->|GET / POST /api| API
     STAFF <-->|GET / POST /api| API
     API <--> PG
-    REQ <-->|Sync & Fallback| LOCAL
-    STAFF <-->|Sync & Fallback| LOCAL
+    REQ -.-> LOCAL
+    STAFF -.-> LOCAL
 ```
 
 ### รายละเอียดส่วนประกอบทางเทคนิค:
-* **Frontend Core:** Pure HTML5 Semantic, Vanilla CSS3 (Custom Properties/Variables, Flexbox, Grid), Modern JavaScript ES6+ แบบ Zero-Runtime Dependency (ไม่ใช้ React/Vue หรือ TailwindCSS)
-* **UI & Components:**
-  * **SweetAlert2 v11:** ป๊อปอัปแจ้งเตือนและกล่องยืนยัน สไตล์ SDU Theme (`assets/js/sweetalert2.all.min.js`) พร้อม CDN Fallback
-  * **Typography:** Google Fonts `Prompt` (สำหรับ UI ทั่วไป) และ `Sarabun` (สำหรับแบบฟอร์มเอกสารทางการ)
-  * **Vector Icons:** 100% SVG Vector Icons (Stroke-based, viewBox 24x24) จากชุด `svg_icons` **(Strict No-Emoji Policy)**
-  * **Canvas API:** แท่นลงนามดิจิทัล (E-Signature Pad) รองรับ Touchscreen, ปากกาสไตลัส และเมาส์
-* **Build & Code Generator:** Python 3.x (`scripts/generate_separated_portals.py`) เป็น **Single Source of Truth (SSOT)**
-* **Backend & Database Architecture:**
-  * **PostgreSQL 17 (`sdu_inventory`):** รันผ่าน Docker Compose (`postgres:17-alpine`) โครงสร้างตารางเชิงสัมพันธ์ (`backend/schema_postgres.sql`) พร้อมทริกเกอร์อัปเดต timestamp อัตโนมัติ (และยังรองรับ MySQL 8.0+ ย้อนหลัง)
-  * **Python REST API Server (`backend/server.py`):** ให้บริการทั้งไฟล์หน้าเว็บและ REST API (`/api`) ที่พอร์ต `8080` เชื่อมต่อผ่าน `psycopg2-binary` พร้อมระบบสร้างและตั้งค่าฐานข้อมูลอัตโนมัติ (`backend/init_db.py`)
-  * **Offline Fallback:** Browser `localStorage` พร้อม Reactive Cross-Tab Sync (`storage` event) รองรับการใช้งานแม้ในสภาวะออฟไลน์
+* **Frontend Core:** Pure HTML5, Vanilla CSS3 (Custom Properties), Modern ES6+ แบบ Zero-Build (ไม่ใช้ npm, React, Vue, TailwindCSS)
+* **Single Source of Truth (SSOT):** [scripts/generate_separated_portals.py](scripts/generate_separated_portals.py) คอมไพล์ทั้ง `index.html` และ `staff.html`
+* **UI Standards:**
+  * **SweetAlert2 v11** ([assets/js/sweetalert2.all.min.js](assets/js/sweetalert2.all.min.js)) พร้อม SDU Theme (`#1e40af`, `#059669`)
+  * **100% Vector SVG Icons (`svg_icons` / `vIcons`):** Strict No-Emoji Policy
+  * **Universal Searchable Dropdowns (`enhanceSearchableSelect`):** `<select>` ทุกตัวพิมพ์ค้นหาได้
+  * **Dynamic Calendar Month Dropdowns:** สร้างงวดเดือนอัตโนมัติตามปฏิทินจริง (`v3.8.1`)
+  * **Typography:** `Prompt` (UI) และ `Sarabun` (เอกสาร PDF A4)
+* **Backend & Database:**
+  * **PostgreSQL 17 (`sdu_inventory`):** 7 ตาราง ([backend/schema_postgres.sql](backend/schema_postgres.sql)), `CHECK` constraints, Triggers `updated_at` 4 ตาราง, เก็บข้อมูลใน `./postgres-data` (รองรับ MySQL Fallback)
+  * **Python REST API ([backend/server.py](backend/server.py)):** `ThreadingHTTPServer`, `ThreadedConnectionPool`, Schema Auto-Migration, RBAC, และ Native 6-Sheet `.xlsx` Builder ([backend/excel_export.py](backend/excel_export.py))
 
 ---
 
-## 🎨 4. รูปแบบการเขียนโค้ดและมาตรฐาน (Coding Style & Guidelines)
+## 4. มาตรฐานการเขียนโค้ด (Coding Style & Design Tokens)
 
-1. **Zero-Build Runtime:** โค้ดหน้าเว็บทั้งหมดต้องสามารถเปิดทำงานผ่านเบราว์เซอร์หรือเว็บเซิร์ฟเวอร์ได้ทันทีโดยไม่ต้องผ่านกระบวนการ bundle
-2. **Indentation:**
-   * HTML, CSS, JavaScript: เว้นวรรค 2 spaces
-   * Python: เว้นวรรค 4 spaces ยึดตามมาตรฐาน **PEP 8**
-3. **Design System & CSS Tokens:**
-   * ใช้อ้างอิงตัวแปร CSS เท่านั้น:
-     * สีหลัก: `var(--primary)` (`#1e40af`), `var(--primary-hover)` (`#1d4ed8`), `var(--primary-light)` (`#eff6ff`)
-     * สีรอง/สำเร็จ: `var(--accent)` (`#059669`), `var(--accent-hover)` (`#047857`)
-     * สีเตือน/รออนุมัติ: `var(--warning)` (`#d97706`), `var(--warning-light)` (`#fef3c7`)
-     * สีข้อผิดพลาด/ปฏิเสธ: `var(--danger)` (`#dc2626`), `var(--danger-light)` (`#fee2e2`)
-     * ส่วนโค้งมน: `var(--radius)` (8px - 14px)
-4. **Nomenclature (หลักการตั้งชื่อ):**
-   * HTML Element ID: `camelCase` เช่น `itemSearchInput`, `myRequisitionsModal`, `deptComboboxControl`
-   * CSS Classes: `kebab-case` เช่น `req-card-item`, `combobox-dropdown`, `pill-pending`
-   * JavaScript Functions: `camelCase` เช่น `openMyRequisitionsModal()`, `submitRequisition()`, `updateMyReqsBadge()`
-   * Python Functions/Variables: `snake_case` เช่น `initial_items`, `dept_js_items`
-5. **No Native Dialogs Rule:**
-   * **ห้ามใช้ `alert()`, `confirm()`, หรือ `prompt()` ของเบราว์เซอร์โดยเด็ดขาด**
-   * ต้องใช้ `Swal.fire()` หรือ `Swal.mixin()` จาก SweetAlert2 เท่านั้น
-6. **Strict No-Emoji Rule in UI:**
-   * ใช้ SVG Stroke เวกเตอร์จาก `svg_icons` เท่านั้น ห้ามใส่อีโมจิในปุ่ม หัวข้อ หรือตาราง
+1. **Zero-Build Runtime:** เปิดใช้งานได้ทันทีโดยไม่ต้องใช้ Build Bundler ฝั่ง Frontend
+2. **Indentation:** HTML/CSS/JS 2 spaces | Python 4 spaces (PEP 8)
+3. **CSS Design Tokens:** `--primary: #1e40af`, `--primary-hover: #1d4ed8`, `--primary-light: #eff6ff`, `--accent: #059669`, `--warning: #d97706`, `--danger: #dc2626`
+4. **No Native Dialogs & No Emojis in UI:** ห้ามใช้ `alert()`, `confirm()`, `prompt()` และห้ามใช้ Emoji ในองค์ประกอบ UI ทุกจุด
+5. **Searchable Dropdown Standard:** `<select>` ทุกตัวต้องรองรับการพิมพ์ค้นหาผ่าน `enhanceSearchableSelect`
 
 ---
 
-## ⚙️ 5. กฎระเบียบทางธุรกิจและตรรกะระบบ (Business Logic & Rules Engine)
+## 5. กฎระเบียบทางธุรกิจและ State Machine (Business Logic)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING: ผู้เบิกส่งคำขอ (index.html)
-    PENDING --> APPROVED: เจ้าหน้าที่อนุมัติ (staff.html)<br/>[กันยอด Reserved]
-    PENDING --> REJECTED: เจ้าหน้าที่ไม่อนุมัติ (staff.html)<br/>[ระบุเหตุผล]
-    APPROVED --> COMPLETED: เจ้าหน้าที่ยืนยันจ่ายพัสดุ<br/>[ตัดยอด On-Hand จริง & คืน Reserved]
-    APPROVED --> REJECTED: เจ้าหน้าที่ยกเลิกใบเบิก<br/>[คืนยอด Reserved]
+    [*] --> PENDING: ผู้ขอเบิกส่งคำขอ (index.html)
+    PENDING --> VERIFIED: STAFF/ADMIN คัดกรองและส่งต่อ (staff.html)
+    PENDING --> REJECTED: ปฏิเสธคำขอ
+    VERIFIED --> APPROVED: HEAD/ADMIN อนุมัติขั้นสุดท้าย [Reserved += Approved]
+    VERIFIED --> REJECTED: ไม่อนุมัติ
+    APPROVED --> COMPLETED: STAFF/ADMIN จ่ายของจริง [On-Hand -= Approved, Reserved -= Approved, Log OUT]
+    APPROVED --> REJECTED: ยกเลิกก่อนรับของ [คืนยอด Reserved]
+    COMPLETED --> [*]
     REJECTED --> [*]
-    COMPLETED --> [*]: พิมพ์ใบเบิกทางการ (Official PDF)
 ```
 
-1. **สูตรการคำนวณยอดสต๊อกพร้อมเบิก (Available Stock Formula):**
-   $$\text{Available Pieces} = \text{On-Hand Pieces} - \text{Reserved Pieces}$$
-2. **ตรรกะ 2 หน่วยนับ (Multi-Unit Ratio Calculation):**
-   $$\text{Total Requested Pieces} = (\text{Requested Boxes} \times \text{Pieces Per Box}) + \text{Requested Pieces}$$
-3. **ขั้นตอนการตัดสต๊อก (Inventory Lifecycle):**
-   * **เมื่อผู้เบิกส่งคำขอ (`PENDING`):** ตรวจสอบว่า `Total Requested <= Available` หากผ่าน จะสร้างเลขที่คำขอ `REQ-YYYYMM-XXXX` ลงในตาราง `requisitions` และ `requisition_items` (ยังไม่มีการตัดสต๊อก)
-   * **เมื่อเจ้าหน้าที่อนุมัติ (`APPROVED`):** เพิ่มยอด `reserved_pieces += approved_pieces` เพื่อล็อกยอดไว้ไม่ให้ผู้อื่นเบิกซ้ำ
-   * **เมื่อลงนามรับมอบสำเร็จ (`COMPLETED`):**
-     * ลดสต๊อกจริง: `on_hand_pieces -= approved_pieces`
-     * คืนยอดกันจอง: `reserved_pieces -= approved_pieces`
-     * บันทึกประวัติการจ่ายออกลงในตาราง `stock_transactions` (`transaction_type = 'OUT'`)
-     * แนบภาพลายเซ็น Base64 เข้ากับเอกสารคำขอ
-   * **กรณีปฏิเสธคำขอหรือยกเลิก (`REJECTED`):** หากคำขอนั้นเคยถูกกันยอดไว้ จะคืนยอด `reserved_pieces` กลับสู่สต๊อกพร้อมเบิก
+1. **Available Stock:** $\text{Available} = \text{On-Hand} - \text{Reserved}$ (ห้ามติดลบ, `CHECK >= 0`)
+2. **Multi-Unit Ratio:** $\text{Total Pieces} = (\text{Boxes} \times \text{Pieces Per Box}) + \text{Pieces}$
+3. **Quota Precedence (`resolve_effective_monthly_limits`):**
+   * รายบุคคล: `USER+item_id` > `USER+all(0)` > `inventory_items.monthly_limit` (`QUOTA_EXCEEDED`)
+   * กลุ่มงาน: `DEPT+item_id` > `DEPT+all(0)` (`DEPT_QUOTA_EXCEEDED`)
+4. **Restock Pricing:** คำนวณ `unit_price` และ `total_cost` อัตโนมัติ, อัปเดต `last_unit_price` / `last_restocked_at`, และบันทึก `INITIAL_STOCK` เมื่อเพิ่มพัสดุใหม่ที่มีสต๊อกตั้งต้น > 0
 
 ---
 
-## 🧪 6. การทดสอบและการควบคุมคุณภาพ (Testing & Quality Assurance)
+## 6. การทดสอบและควบคุมคุณภาพ (Testing & QA)
 
-* **Python Scripts & Automation:**
-  * ใช้ **`pytest`** ในการทดสอบฟังก์ชันการทำงาน และกำหนดเกณฑ์ **Code Coverage >= 90%**
-* **Frontend Code Validation:**
-  * ตรวจสอบความถูกต้องของ JavaScript Syntax ผ่าน Node.js Parser:
-    ```bash
-    node -e "new Function(fs.readFileSync('index.html', 'utf8'))"
-    ```
-    ต้องผ่าน 100% โดยไม่มีข้อผิดพลาด (0 Syntax Errors)
-  * ตรวจสอบว่าไม่มีการหลงเหลือคำสั่ง `alert(`, `confirm(`, หรือ `prompt(` ในโค้ด
-* **HTTP & API Server Verification:**
-  * หน้าเว็บทั้ง `index.html` และ `staff.html` ต้องส่งคืนรหัสสถานะ `HTTP 200`
-  * API Endpoint `/api?action=health` ต้องตอบกลับสถานะระบบและฐานข้อมูล MySQL ได้อย่างถูกต้อง
-  * ตรวจสอบว่าไม่มี Asset ขาดหาย (0 Missing Assets / No 404s)
-* **Device & Responsive Testing:**
-  * รองรับการแสดงผลทุกหน้าจอตลอดช่วง Viewport (Mobile 360px จนถึง Desktop 1920px)
-  * แท่นเซ็นลายเซ็นต้องรองรับ Touch Event (`touchstart`, `touchmove`, `touchend`) ได้แม่นยำ
+* **Automated Rules Check:** รัน `.venv\Scripts\python .agents/skills/stock-order-rules/scripts/verify_rules.py` ตรวจครบ 6 ข้อ (No-Emoji, No Native Dialogs, Version Sync, SSOT Generator, Searchable Dropdowns, Pytest)
+* **Pytest Test Suite:** [tests/test_stock_logic.py](tests/test_stock_logic.py) ครอบคลุม **91 การทดสอบ (9 Test Classes)** เป้าหมาย Coverage >= 90%
+* **CI/CD:** [.github/workflows/ci.yml](.github/workflows/ci.yml) รัน `verify_rules.py` และ `pytest` ร่วมกับ PostgreSQL 17 Service Container อัตโนมัติ
 
 ---
 
-## 🚨 7. กฎเหล็กและข้อห้ามสำคัญ (Crucial Rules & Non-Negotiables)
+## 7. สถาปัตยกรรมความปลอดภัย (Security Architecture)
 
-1. **ห้ามแก้ไขไฟล์ Config หลักโดยไม่ขออนุญาต:** ห้ามดัดแปลงไฟล์ตั้งค่าระบบ หรือโครงสร้างโปรเจกต์หลักโดยไม่มีข้อกำหนดชัดเจน
-2. **รักษาการแยกพอร์ทัลเด็ดขาด 100% (Strict Portal Separation):**
-   * ห้ามรวม `index.html` และ `staff.html` เข้าด้วยกันเด็ดขาด
-   * หน้า `index.html` ต้องไม่มีโค้ด ส่วนติดต่อ หรือสิทธิ์ในการอนุมัติคำขอ การตัดสต๊อก หรือการล็อกอินเจ้าหน้าที่
-3. **Single Source of Truth (SSOT):**
-   * การแก้ไขหรือเพิ่มฟีเจอร์หลักในหน้าเว็บ ควรทำผ่านสคริปต์ `scripts/generate_separated_portals.py` แล้วสั่งคอมไพล์ เพื่อป้องกันปัญหาโค้ดของทั้งสองหน้าไม่ตรงกัน
-4. **ป้องกันข้อมูลสูญหาย (Accidental Data Loss Prevention):**
-   * ห้ามสั่งรันคำสั่งที่ลบฐานข้อมูล ล้างข้อมูลพัสดุตั้งต้น หรือทำลายไฟล์รูปภาพโดยเด็ดขาด
-5. **ห้ามตัดยอดสต๊อก On-Hand ก่อนการลงนามรับของจริง:**
-   * สต๊อกจริงจะถูกตัดเมื่อผู้รับลงลายมือชื่อในหน้า `staff.html` เท่านั้น
-6. **การควบคุมเวอร์ชันและบันทึกประวัติ (Strict Versioning & CHANGELOG Protocol):**
-   * ทุกครั้งที่มีการพัฒนา เพิ่มฟีเจอร์ หรือแก้ไขโค้ด จะต้องปรับเพิ่มเลขเวอร์ชันตามมาตรฐาน Semantic Versioning (`MAJOR.MINOR.PATCH`)
-   * บันทึกรายละเอียดการเปลี่ยนแปลงทั้งหมดลงในไฟล์ `CHANGELOG.md` ทุกครั้ง
-   * ซิงก์ตัวเลขเวอร์ชัน (`SYSTEM_VERSION` ใน `scripts/generate_separated_portals.py`, Footer, และ `SYSTEM_VERSION` ใน `backend/server.py`) ให้ตรงกันเสมอ
-
----
-
-## 🔒 8. สถาปัตยกรรมความปลอดภัยขั้นสูง (Security Architecture - v3.0.5)
-
-ระบบผ่านการตรวจสอบความปลอดภัยระดับ Full Security Audit (Cloudflare Methodology) และได้รับการแพตช์ยกระดับความปลอดภัยครบถ้วน:
-1. **Static Web Root Boundary Enforcement:** ป้องกันการเข้าถึงไฟล์ข้อมูลสำคัญ (.env, .git) และซอร์สโค้ดหลังบ้านอย่างเด็ดขาด ตอบกลับ HTTP 404
-2. **Server-Side Administrative Authentication:** คำสั่งดัดแปลงสต๊อกและข้อมูลระบบทั้งหมดต้องยืนยันสิทธิ์ด้วย HMAC-SHA256 Token (`Authorization: Bearer <token>`)
-3. **Stored XSS Neutralization:** มีฟังก์ชัน `escapeHtml()` ป้องกันการรันโค้ด JavaScript แปลกปลอมในทุกหน้าจอพอร์ทัล
-4. **PBKDF2 Password Storage:** จัดเก็บรหัสผ่านผู้ใช้ด้วยการแฮชแบบ PBKDF2-HMAC-SHA256 (Salt 16 bytes, 600,000 rounds)
-5. **CORS Origin Whitelisting:** จำกัดการเรียกใช้ API ข้ามโดเมนเฉพาะ Origin ที่ได้รับอนุญาตเท่านั้น
+1. **Strict Backend Token & RBAC Enforcement:** บังคับ `AUTH_BYPASS="false"`, ตรวจ HMAC-SHA256 Token (อายุ 12 ชม.) และ `check_staff_role_permission()` ทุก Endpoint ภายใน
+2. **PBKDF2 Password Security:** แฮชรหัสผ่านด้วย PBKDF2-HMAC-SHA256 (Salt 16 ไบต์, 600,000 รอบ), ไม่ฝังรหัสผ่านลง HTML สาธารณะ, บังคับตรวจรหัสผ่านเฉพาะบุคคลอย่างเคร่งครัด
+3. **Static Path Traversal Guard & HTTP Headers:** ถอดรหัส URL ซ้ำ (`unquote` loop) + ตรวจ Canonical `realpath` ปิดกั้นไฟล์ลับ, ส่ง `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, จำกัดขนาด Body 10 MB, และไม่เปิดเผย Raw DB Exception
+4. **XSS & Container Hardening:** ใช้ `escapeHtml()`, `isSafeSignatureDataUrl()`, รัน Docker ด้วย non-root `appuser`, และผูกพอร์ต PostgreSQL ไว้ที่ `127.0.0.1` เท่านั้น
