@@ -28,7 +28,22 @@ has_error = False
 # ----------------------------------------------------------------------
 print("\n[1/6] Checking Strict No-Emoji Policy...")
 emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]|[\u2600-\u27bf]|[\u2300-\u23ff]|[\u2b50-\u2b55]|[\u3030\u303d\u3297\u3299]')
-target_files = ['staff.html', 'index.html', 'portal.html', 'backend/server.py', 'scripts/generate_separated_portals.py']
+target_files = [
+    'staff.html', 'index.html', 'portal.html',
+    'backend/server.py', 'backend/config.py', 'backend/database.py', 'backend/auth.py',
+    'backend/inventory_handlers.py', 'backend/requisition_handlers.py',
+    'backend/org_quota_handlers.py', 'backend/analytics_handlers.py',
+    'scripts/generate_separated_portals.py',
+    'scripts/portal_parts/seed_data.py', 'scripts/portal_parts/shared_ui.py',
+    'scripts/portal_parts/requester_head_and_layout.py',
+    'scripts/portal_parts/requester_catalog_and_cart_js.py',
+    'scripts/portal_parts/requester_history_and_auth_js.py',
+    'scripts/portal_parts/staff_head_and_layout.py',
+    'scripts/portal_parts/staff_auth_and_requisitions_js.py',
+    'scripts/portal_parts/staff_stock_and_inventory_js.py',
+    'scripts/portal_parts/staff_analytics_and_reports_js.py',
+    'scripts/portal_parts/staff_admin_crud_js.py',
+]
 
 emoji_found = False
 for fname in target_files:

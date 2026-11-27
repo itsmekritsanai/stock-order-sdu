@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.8.4"
+        assert SYSTEM_VERSION == "3.9.0"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1946,6 +1946,45 @@ class TestPhase8ExtendedRequirements:
             assert new_system_name in txt, f"{fname} missing unified system name '{new_system_name}'"
             for old_name in legacy_names:
                 assert old_name not in txt, f"{fname} still contains legacy system name '{old_name}'"
+
+    def test_modular_backend_and_portal_generator_v390(self):
+        """Verify extracted backend modules and portal_parts generator modules import cleanly and preserve SSOT."""
+        import config
+        import database
+        import auth
+        import inventory_handlers
+        import requisition_handlers
+        import org_quota_handlers
+        import analytics_handlers
+        import server
+
+        assert config.SYSTEM_VERSION == "3.9.0"
+        assert server.SYSTEM_VERSION == "3.9.0"
+        assert callable(database.get_db_connection)
+        assert callable(auth.hash_password)
+        assert callable(auth.verify_staff_token)
+        assert callable(inventory_handlers.handle_restock_item)
+        assert callable(requisition_handlers.handle_create_requisition)
+        assert callable(org_quota_handlers.handle_save_quota)
+        assert callable(analytics_handlers.handle_get_monthly_analytics)
+
+        expected_portal_parts = [
+            "__init__.py",
+            "seed_data.py",
+            "shared_ui.py",
+            "requester_head_and_layout.py",
+            "requester_catalog_and_cart_js.py",
+            "requester_history_and_auth_js.py",
+            "staff_head_and_layout.py",
+            "staff_auth_and_requisitions_js.py",
+            "staff_stock_and_inventory_js.py",
+            "staff_analytics_and_reports_js.py",
+            "staff_admin_crud_js.py",
+        ]
+        for part_file in expected_portal_parts:
+            full_path = os.path.join(PROJECT_ROOT, "scripts", "portal_parts", part_file)
+            assert os.path.exists(full_path), f"Missing modular portal component: {part_file}"
+
 
 
 

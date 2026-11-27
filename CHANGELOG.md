@@ -18,6 +18,20 @@
 
 ---
 
+## [3.9.0] - 2026-11-27
+### Changed
+- **แยกโมดูลและฟังก์ชันออกจากไฟล์หลักฝั่ง Backend (`backend/server.py`):** ลดขนาดไฟล์ `backend/server.py` จาก 3,329 บรรทัด เหลือเพียงไฟล์ Entry Point & HTTP Router (~410 บรรทัด) โดยแยกฟังก์ชันตามหน้าที่รับผิดชอบออกเป็น 7 โมดูลย่อยภายใต้ `backend/` ได้แก่:
+  - `backend/config.py`: การโหลดค่าคอนฟิก `.env`, ค่าคงที่ระบบ, ตัวแปลงวันที่ภาษาไทย พ.ศ., ตัวสร้างเลขที่ใบเบิก `REQ-YYYYMM-XXXX`, และการแปลงช่วงวันที่รายเดือนแบบ SARGable
+  - `backend/database.py`: ระบบ Connection Pool (`_PooledPgConnection`, `_get_pg_pool`, `get_db_connection`, `dict_cursor`) และการตรวจสอบ/อัปเกรดโครงสร้างตารางฐานข้อมูลอัตโนมัติ (`ensure_database_schema`)
+  - `backend/auth.py`: การเข้ารหัสรหัสผ่าน `PBKDF2-HMAC-SHA256`, การสร้างและตรวจสอบ HMAC Session Token, การตรวจสอบสิทธิ์ RBAC 4 บทบาท (`REQUESTER`, `STAFF`, `HEAD`, `ADMIN`), และระบบล็อกอินพร้อม Cross-Portal SSO
+  - `backend/inventory_handlers.py`: ฟังก์ชันจัดการรายการพัสดุ การรับพัสดุเข้าคลังพร้อมราคา (`handle_restock_item`) การปรับยอดสต๊อก (`handle_adjust_stock`) และประวัติความเคลื่อนไหวสต๊อก
+  - `backend/requisition_handlers.py`: ฟังก์ชันคำนวณโควตารายเดือน (`resolve_effective_monthly_limits`) และกระบวนการใบเบิกครบวงจรแบบ 2 ขั้นตอน (`PENDING` -> `VERIFIED` -> `APPROVED` -> `COMPLETED` / `REJECTED`) ภายใต้ ACID Row-Level Locking
+  - `backend/org_quota_handlers.py`: ฟังก์ชันจัดการข้อมูลบุคลากร (`users`), กลุ่มงาน/หน่วยงาน (`departments`), และกฎโควตา (`quota_rules`)
+  - `backend/analytics_handlers.py`: ฟังก์ชันประมวลผลแดชบอร์ดสถิติรายเดือน (`handle_get_monthly_analytics`) และการส่งออกไฟล์ Native Excel (`.xlsx`) 6 ชีต (`handle_export_monthly_analytics_excel`)
+- **แยกโมดูลและเทมเพลตออกจากสคริปต์สร้างพอร์ทัล SSOT (`scripts/generate_separated_portals.py`):** ลดขนาดไฟล์ `scripts/generate_separated_portals.py` จาก 9,761 บรรทัด เหลือเพียงสคริปต์ประกอบพอร์ทัลหลัก (~145 บรรทัด) โดยแยกส่วนประกอบออกเป็นแพ็กเกจ `scripts/portal_parts/` จำนวน 10 โมดูลย่อย (`seed_data.py`, `shared_ui.py`, `requester_head_and_layout.py`, `requester_catalog_and_cart_js.py`, `requester_history_and_auth_js.py`, `staff_head_and_layout.py`, `staff_auth_and_requisitions_js.py`, `staff_stock_and_inventory_js.py`, `staff_analytics_and_reports_js.py`, `staff_admin_crud_js.py`) เพื่อให้ง่ายต่อการดูแลและแก้ไขแยกตามส่วนงาน
+
+---
+
 ## [3.8.4] - 2026-11-27
 ### Changed
 - เปลี่ยนชื่อระบบทั้งหมดของโครงการเป็น **"ระบบจัดการวัสดุสำนักงานออนไลน์"** ครอบคลุมทั้งตัวสร้างพอร์ทัล SSOT (`scripts/generate_separated_portals.py`), หน้าเว็บพอร์ทัลทั้งหมด (`portal.html`, `index.html`, `staff.html`, `404.html`), PWA Manifest (`manifest.json`), เซิร์ฟเวอร์และสคริปต์ฐานข้อมูล (`backend/server.py`, `backend/init_db.py`, `backend/schema_postgres.sql`, `backend/schema.sql`, `scripts/launch.py`, `scripts/seed_from_excel.py`, `start.bat`), เอกสารโครงการและคู่มือเทคนิคทั้งหมด (`README.md`, `PROJECT_CONTEXT.md`, `INSTALLATION.md`, `TASKS.md`, `AGENTS.md`, `.cursorrules`, `.env.example`, `backend/README.md`, `docs/*`, `.agents/skills/stock-order-rules/*`), และชุดทดสอบอัตโนมัติ (`tests/test_stock_logic.py`) โดยไม่มีชื่อระบบเก่าตกค้าง
