@@ -1,6 +1,6 @@
 # ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
-[![Version: 3.8.4](https://img.shields.io/badge/version-3.8.4-blue.svg)](CHANGELOG.md)
+[![Version: 3.9.0](https://img.shields.io/badge/version-3.9.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -95,7 +95,7 @@ graph TD
 ```text
 stock-order-sdu/
 ├── AGENTS.md                            # กฎหลักของโครงการสำหรับ AI & Developers
-├── CHANGELOG.md                         # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (v3.8.4)
+├── CHANGELOG.md                         # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (v3.9.0)
 ├── INSTALLATION.md                      # คู่มือการติดตั้งและ Deploy บนเซิร์ฟเวอร์จริง
 ├── PROJECT_CONTEXT.md                   # บริบท สถาปัตยกรรม และกฎเกณฑ์ทางธุรกิจ
 ├── README.md                            # เอกสารแนะนำโครงการ (ไฟล์นี้)
@@ -113,10 +113,10 @@ stock-order-sdu/
 ├── 404.html / manifest.json / favicon.ico
 │
 ├── assets/                              # ตราสัญลักษณ์ มสด., SweetAlert2 (Offline), และภาพพัสดุ 66 ภาพ
-├── backend/                             # Python REST API (server.py), Excel Builder (excel_export.py), SQL Schema (7 ตาราง)
+├── backend/                             # Modular Python REST API (server.py, config.py, database.py, auth.py, *_handlers.py, excel_export.py)
 ├── docs/                                # คู่มือผู้ใช้และเอกสารเทคนิคครบ 6 ฉบับ (API, Schema, Data Dict, Code, User Guide, SRS)
-├── scripts/                             # SSOT Generator, Launcher, Excel Seeder, Password Migration, Security Check
-├── tests/                               # ชุดทดสอบอัตโนมัติ pytest 91 รายการ (test_stock_logic.py)
+├── scripts/                             # SSOT Generator (generate_separated_portals.py + portal_parts/), Launcher, Seeder
+├── tests/                               # ชุดทดสอบอัตโนมัติ pytest (test_stock_logic.py)
 ├── .agents/skills/stock-order-rules/    # สกิลตรวจสอบกฎโครงการ (verify_rules.py)
 └── .github/workflows/ci.yml             # GitHub Actions CI (verify_rules.py + pytest + PostgreSQL 17)
 ```
