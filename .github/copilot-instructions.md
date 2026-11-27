@@ -1,5 +1,5 @@
 # GitHub Copilot Instructions (copilot-instructions.md)
-# Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU — v3.8.3)
+# Project: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.8.4)
 
 ## Project Summary & Core Mission
 A standalone institutional web application for Suan Dusit University (SDU) backed by a PostgreSQL 17 relational database (`sdu_inventory`, 7 tables) managed via Docker Compose (with MySQL backward compatibility), served by a Python REST API (`backend/server.py` + zero-dependency Excel exporter `backend/excel_export.py`), providing a paperless two-tier supply requisition workflow with two strictly separated portals:

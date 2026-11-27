@@ -1,7 +1,7 @@
 """
 Unified Web & REST API Server (backend/server.py)
-Project: Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
-Version: 3.0.0
+Project: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
+Version: 3.8.4
 
 Features:
 - Serves Frontend Static Portals (index.html, staff.html, portal.html, assets/)
@@ -28,7 +28,7 @@ try:
 except ImportError:
     from backend.excel_export import build_monthly_analytics_xlsx
 
-SYSTEM_VERSION = "3.8.3"
+SYSTEM_VERSION = "3.8.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema_postgres.sql")
 
@@ -3147,7 +3147,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     return self.send_json({
                         "status": "success",
                         "healthy": db_connected,
-                        "message": f"SDU Stock Order {db_label} REST API is operational.",
+                        "message": f"ระบบจัดการวัสดุสำนักงานออนไลน์ ({db_label}) REST API is operational.",
                         "version": SYSTEM_VERSION,
                         "database": db_label,
                         "db_name": CONFIG["DB_NAME"],
@@ -3157,7 +3157,7 @@ class SDUInventoryRequestHandler(SimpleHTTPRequestHandler):
                     db_label = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
                     return self.send_json({
                         "status": "success",
-                        "message": f"SDU Stock Order {db_label} REST API is operational.",
+                        "message": f"ระบบจัดการวัสดุสำนักงานออนไลน์ ({db_label}) REST API is operational.",
                         "version": SYSTEM_VERSION,
                         "database": db_label,
                         "db_name": CONFIG["DB_NAME"],
@@ -3311,7 +3311,7 @@ def run_server(port=None):
     ensure_database_schema()
     server = ThreadingHTTPServer((host, port), SDUInventoryRequestHandler)
     print("=" * 70)
-    print(f"  SDU Stock Order & e-Inventory Server (v{SYSTEM_VERSION}) - PostgreSQL 17 Edition")
+    print(f"  ระบบจัดการวัสดุสำนักงานออนไลน์ Server (v{SYSTEM_VERSION}) - PostgreSQL 17 Edition")
     print(f"  Bind Addr  : http://{host}:{port}")
     print(f"  Web Portal : http://localhost:{port}/portal.html")
     print(f"  Requester  : http://localhost:{port}/index.html")

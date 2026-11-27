@@ -1,6 +1,6 @@
 """
 Seed & Reset SDU Inventory Database from Excel (Option A)
-Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
+ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 """
 import os
 import sys

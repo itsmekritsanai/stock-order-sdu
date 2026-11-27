@@ -1,4 +1,4 @@
-name: Stock Order SDU CI
+name: ระบบจัดการวัสดุสำนักงานออนไลน์ CI
 
 on:
   push:

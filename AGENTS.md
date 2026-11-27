@@ -1,5 +1,5 @@
 # Project Guidelines & Rules (AGENTS.md)
-# Suan Dusit University e-Inventory & Requisition System (Stock Order SDU)
+# ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
 This workspace is governed by the custom skill:
 👉 **[stock-order-rules](.agents/skills/stock-order-rules/SKILL.md)**

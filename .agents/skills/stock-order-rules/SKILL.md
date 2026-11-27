@@ -1,13 +1,13 @@
 ---
 name: stock-order-rules
 description: >-
-  Enforce institutional design, architectural constraints, strict no-emoji policy, single source of truth (SSOT), state machine rules, versioning protocols, and test verification standards for the Suan Dusit University (SDU) e-Inventory and Requisition System (Stock Order SDU). Activate whenever planning, creating, modifying, debugging, testing, or reviewing code or UI components in this repository.
+  Enforce institutional design, architectural constraints, strict no-emoji policy, single source of truth (SSOT), state machine rules, versioning protocols, and test verification standards for ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต. Activate whenever planning, creating, modifying, debugging, testing, or reviewing code or UI components in this repository.
 license: MIT
 ---
 
-# SDU Stock Order Rules & Architectural Guidelines
+# ระบบจัดการวัสดุสำนักงานออนไลน์ — Rules & Architectural Guidelines
 
-Institutional rules, constraints, and standard operating procedures for the **Suan Dusit University (SDU) e-Inventory & Requisition System**.
+Institutional rules, constraints, and standard operating procedures for **ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต**.
 
 ---
 

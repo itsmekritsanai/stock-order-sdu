@@ -1,7 +1,7 @@
-# Architecture & Threat Model: Suan Dusit University Stock System
+# Architecture & Threat Model: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
 ## 1. System Overview
-The **Digital Stock & Requisition System for Suan Dusit University (SDU)** is a single-node web application designed to facilitate inventory tracking, supply requisitioning, approval workflows, and staff management for university staff and personnel.
+**ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต** is a single-node web application designed to facilitate inventory tracking, supply requisitioning, approval workflows, and staff management for university staff and personnel.
 
 ### Technology Stack
 - **Backend:** Python 3.13 (`http.server.HTTPServer` with `SimpleHTTPRequestHandler`) in `backend/server.py`

@@ -1,5 +1,5 @@
 # คู่มืออธิบายโค้ดและการทำงานของระบบ (Codebase Architecture & Explanation)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (SDU Stock Order & e-Inventory v3.8.3)
+### ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.8.4)
 
 ---
 
@@ -31,7 +31,7 @@ stock-order-sdu/
 ├── .dockerignore                     # ไฟล์ที่ละเว้นตอน Build Docker Image
 ├── requirements.txt                  # แพ็กเกจ Python (psycopg2-binary, PyMySQL, pytest, pytest-cov)
 ├── start.bat                         # สคริปต์ 1-Click เปิดระบบบน Windows
-├── CHANGELOG.md                      # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (ปัจจุบัน v3.8.3)
+├── CHANGELOG.md                      # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (ปัจจุบัน v3.8.4)
 ├── INSTALLATION.md                   # คู่มือการติดตั้งและ Deploy บนเซิร์ฟเวอร์จริง (Docker / Host / HTTPS)
 │
 ├── portal.html                       # [Frontend] ศูนย์กลางพอร์ทัล (Gateway Hub + Real-time Health Check)

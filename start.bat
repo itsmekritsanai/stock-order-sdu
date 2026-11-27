@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title SDU Stock Order Server (Port 8080)
+title Online Office Supplies Management Server (Port 8080)
 
 if exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" scripts\launch.py

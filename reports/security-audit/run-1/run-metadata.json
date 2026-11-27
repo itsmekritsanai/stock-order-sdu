@@ -1,7 +1,7 @@
 {
   "run_id": "run-1",
   "repo": "stock-order-sdu",
-  "target": "Digital Stock & Requisition System for Suan Dusit University",
+  "target": "ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต",
   "source_ref": "HEAD",
   "profile": "standard",
   "scope_paths": [

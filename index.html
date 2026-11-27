@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบขอเบิกพัสดุออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
+  <title>ระบบจัดการวัสดุสำนักงานออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
   
   <!-- PWA & Mobile Icons -->
   <meta name="theme-color" content="#1e40af">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
+  <meta name="apple-mobile-web-app-title" content="ระบบจัดการวัสดุสำนักงานออนไลน์">
   <!-- University Brand Logo Tab Favicon -->
   <link rel="icon" type="image/png" href="assets/logo_sdu.png">
   <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
@@ -880,7 +880,7 @@
     <div class="login-card" style="max-width: 440px;">
       <div class="login-header" style="padding: 1.85rem 1.75rem 1.25rem 1.75rem;">
         <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 62px; margin-bottom: 0.65rem; object-fit: contain;">
-        <h2 id="loginRoleTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบขอเบิกพัสดุ</h2>
+        <h2 id="loginRoleTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบจัดการวัสดุสำนักงานออนไลน์</h2>
         <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
         <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
           <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
@@ -929,7 +929,7 @@
         <div class="brand">
           <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
           <div class="brand-text">
-            <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
+            <h1>ระบบจัดการวัสดุสำนักงานออนไลน์</h1>
             <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
           </div>
         </div>
@@ -1135,7 +1135,7 @@
 
       <div class="modal-footer" style="justify-content: space-between; align-items: center;">
         <span style="font-size: 0.8rem; color: var(--neutral-400); display: flex; align-items: center; gap: 4px;">
-          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> ข้อมูลอัปเดตแบบเรียลไทม์ ซิงค์กับระบบคลังพัสดุ
+          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> ข้อมูลอัปเดตแบบเรียลไทม์ ซิงค์กับระบบจัดการวัสดุสำนักงานออนไลน์
         </span>
         <button class="btn btn-outline" onclick="closeMyRequisitionsModal()">ปิดหน้าต่าง</button>
       </div>
@@ -1248,14 +1248,14 @@
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v3.8.3 | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต v3.8.4 | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
 
   <!-- Scripts -->
   <script>
-    const APP_VERSION = '3.8.3';
+    const APP_VERSION = '3.8.4';
     const MYSQL_API_URL = '/api';
     const AUTH_BYPASS = false;
     const defaultDepts = [
@@ -3359,7 +3359,7 @@
     function logoutRequester() {
       Swal.fire({
         title: 'ยืนยันออกจากระบบ?',
-        text: 'ต้องการออกจากระบบขอเบิกพัสดุใช่หรือไม่',
+        text: 'ต้องการออกจากระบบจัดการวัสดุสำนักงานออนไลน์ใช่หรือไม่',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',

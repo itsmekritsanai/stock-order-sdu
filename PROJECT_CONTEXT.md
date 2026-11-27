@@ -1,11 +1,11 @@
-# Project Context: Stock Order SDU
-### ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Suan Dusit University e-Inventory System — v3.8.3)
+# Project Context: ระบบจัดการวัสดุสำนักงานออนไลน์
+### ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.8.4)
 
 ---
 
 ## 1. วัตถุประสงค์และบริบทของโครงการ (System Objectives & Vision)
 
-* **ชื่อระบบ:** ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต *(Suan Dusit University e-Inventory & Requisition System)*
+* **ชื่อระบบ:** ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 * **หน่วยงานใช้งาน:** สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต
 * **GitHub Repository:** [itsmekritsanai/stock-order-sdu](https://github.com/itsmekritsanai/stock-order-sdu)
 * **วัตถุประสงค์หลัก:**

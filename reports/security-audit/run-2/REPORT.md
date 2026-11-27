@@ -1,6 +1,6 @@
-# Security Audit Report: Suan Dusit University Stock System (v3.0.6)
+# Security Audit Report: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.0.6)
 
-**Target:** Digital Stock & Requisition System for Suan Dusit University (`stock-order-sdu`)  
+**Target:** ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (`stock-order-sdu`)  
 **Audit Run:** `run-2`  
 **Profile:** `standard`  
 **Execution Policy:** Sandboxed Source-and-Local-Only  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Security Posture
 
-A comprehensive second-wave security audit was performed on the SDU Stock Order & e-Inventory System (`v3.0.6`). This audit evaluated the durability of past mitigations from Run 1, analyzed new functionality (department CRUD, threshold adjustments, searchable restock), and conducted deep vulnerability research into data integrity, parser behaviors, and boundary isolation.
+A comprehensive second-wave security audit was performed on ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (`v3.0.6`). This audit evaluated the durability of past mitigations from Run 1, analyzed new functionality (department CRUD, threshold adjustments, searchable restock), and conducted deep vulnerability research into data integrity, parser behaviors, and boundary isolation.
 
 ### Key Audit Findings:
 1. **Critical Bypass Discovered in Static File Protection (sdu-sec-006):** While `is_safe_static_path` was added to block sensitive files (`.env`, source code), the check did not decode percent-encoded (URL-encoded) paths. Sending `GET /%2eenv` completely bypassed the dotfile filter, allowing unauthenticated remote clients to download `.env` and `backend/server.py`.

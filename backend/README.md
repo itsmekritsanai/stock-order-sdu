@@ -1,11 +1,11 @@
 # Database & REST API Backend (`backend/`)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.8.3)
+### ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.8.4)
 
 ---
 
 ## ภาพรวมระบบส่วนหลังบ้าน (Backend Overview)
 
-ระบบส่วนหลังบ้านของ **Stock Order SDU** ใช้ฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (รันผ่าน Docker Compose)** และรองรับ MySQL/MariaDB เป็นทางเลือก โดยเชื่อมต่อกับ **Python REST API Server ([`backend/server.py`](server.py))** ผ่าน `ThreadedConnectionPool` รองรับ **ACID Transactions** พร้อมการล็อกแถวข้อมูลระดับฐานข้อมูล (**`SELECT ... FOR UPDATE`**) เพื่อป้องกันปัญหาการเบิกพัสดุชนกัน (Concurrency / Race Condition)
+ระบบส่วนหลังบ้านของ **ระบบจัดการวัสดุสำนักงานออนไลน์** ใช้ฐานข้อมูลเชิงสัมพันธ์ **PostgreSQL 17 (รันผ่าน Docker Compose)** และรองรับ MySQL/MariaDB เป็นทางเลือก โดยเชื่อมต่อกับ **Python REST API Server ([`backend/server.py`](server.py))** ผ่าน `ThreadedConnectionPool` รองรับ **ACID Transactions** พร้อมการล็อกแถวข้อมูลระดับฐานข้อมูล (**`SELECT ... FOR UPDATE`**) เพื่อป้องกันปัญหาการเบิกพัสดุชนกัน (Concurrency / Race Condition)
 
 ### ไฟล์สำคัญในโฟลเดอร์ `backend/` และรากโปรเจกต์:
 1. **[`docker-compose.yml`](../docker-compose.yml):** ไฟล์ Compose สำหรับรันคอนเทนเนอร์ PostgreSQL 17 (`postgres:17-alpine`) และ Web/API Server (`app`)

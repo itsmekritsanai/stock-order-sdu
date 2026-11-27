@@ -18,6 +18,12 @@
 
 ---
 
+## [3.8.4] - 2026-11-27
+### Changed
+- เปลี่ยนชื่อระบบทั้งหมดของโครงการเป็น **"ระบบจัดการวัสดุสำนักงานออนไลน์"** ครอบคลุมทั้งตัวสร้างพอร์ทัล SSOT (`scripts/generate_separated_portals.py`), หน้าเว็บพอร์ทัลทั้งหมด (`portal.html`, `index.html`, `staff.html`, `404.html`), PWA Manifest (`manifest.json`), เซิร์ฟเวอร์และสคริปต์ฐานข้อมูล (`backend/server.py`, `backend/init_db.py`, `backend/schema_postgres.sql`, `backend/schema.sql`, `scripts/launch.py`, `scripts/seed_from_excel.py`, `start.bat`), เอกสารโครงการและคู่มือเทคนิคทั้งหมด (`README.md`, `PROJECT_CONTEXT.md`, `INSTALLATION.md`, `TASKS.md`, `AGENTS.md`, `.cursorrules`, `.env.example`, `backend/README.md`, `docs/*`, `.agents/skills/stock-order-rules/*`), และชุดทดสอบอัตโนมัติ (`tests/test_stock_logic.py`) โดยไม่มีชื่อระบบเก่าตกค้าง
+
+---
+
 ## [3.8.3] - 2026-11-25
 ### Removed
 - ลบไฟล์ `pgadmin_servers.json` และการตั้งค่า `PGADMIN_PORT` / `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` ออกจาก `.env.example`, `backend/server.py`, และเอกสารทั้งหมดของโครงการ (`README.md`, `INSTALLATION.md`, `PROJECT_CONTEXT.md`, `TASKS.md`, `backend/README.md`, `.github/copilot-instructions.md`)
@@ -428,5 +434,5 @@
 
 ## [1.0.0] - 2026-10-21
 ### Added
-- เปิดตัวระบบเบิกพัสดุและคลังดิจิทัล มสด. สถาปัตยกรรมแยก 2 พอร์ทัล (ผู้ขอเบิก และ เจ้าหน้าที่)
+- เปิดตัวระบบจัดการวัสดุสำนักงานออนไลน์ มสด. สถาปัตยกรรมแยก 2 พอร์ทัล (ผู้ขอเบิก และ เจ้าหน้าที่)
 - ระบบแปลง 2 หน่วยนับ, สูตรคำนวณสต๊อกคงเหลือจริง และแบบฟอร์มพิมพ์ใบเบิกพัสดุทางการ (PDF)

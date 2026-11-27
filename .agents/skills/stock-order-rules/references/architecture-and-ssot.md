@@ -1,6 +1,6 @@
 # Architecture & Single Source of Truth (references/architecture-and-ssot.md)
 
-This reference outlines the system architecture, dual-portal segregation, backend design, and Single Source of Truth (SSOT) protocols (v3.8.3).
+This reference outlines the system architecture, dual-portal segregation, backend design, and Single Source of Truth (SSOT) protocols (v3.8.4).
 
 ---
 

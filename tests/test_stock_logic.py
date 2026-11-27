@@ -1,6 +1,6 @@
 """
-Unit & Integration Tests for Stock Order SDU (tests/test_stock_logic.py)
-Project: Suan Dusit University e-Inventory & Requisition System (PostgreSQL 17 Edition)
+Unit & Integration Tests for ระบบจัดการวัสดุสำนักงานออนไลน์ (tests/test_stock_logic.py)
+Project: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (PostgreSQL 17 Edition)
 """
 
 import os
@@ -215,7 +215,7 @@ class TestThaiFormattersAndHelpers:
         assert THAI_MONTHS[11] == "ธ.ค."
 
     def test_system_version_format(self):
-        assert SYSTEM_VERSION == "3.8.3"
+        assert SYSTEM_VERSION == "3.8.4"
 
 
 class TestPostgresSchemaAndConfiguration:
@@ -1925,6 +1925,27 @@ class TestPhase8ExtendedRequirements:
             "CONSTRAINT `fk_tx_inventory` FOREIGN KEY (`item_id`) REFERENCES `inventory_items` (`id`) ON DELETE RESTRICT",
         ):
             assert token in my_sql, f"schema.sql missing {token}"
+
+    def test_system_name_unified_across_project_v384(self):
+        """Verify all portals, manifest, and server use 'ระบบจัดการวัสดุสำนักงานออนไลน์' with zero legacy system names remaining."""
+        new_system_name = "ระบบจัดการวัสดุสำนักงานออนไลน์"
+        legacy_names = [
+            "ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล",
+            "ระบบเบิกพัสดุและคลังพัสดุดิจิทัล",
+            "ระบบขอเบิกพัสดุและคลังดิจิทัล",
+            "ระบบคลังพัสดุดิจิทัล",
+            "ศูนย์กลางระบบคลังพัสดุดิจิทัล",
+            "ศูนย์กลางระบบคลังพัสดุ",
+            "ระบบขอเบิกพัสดุออนไลน์",
+            "ระบบบริหารคลังพัสดุ",
+            "คลังพัสดุ มสด.",
+        ]
+        for fname in ("index.html", "staff.html", "portal.html", "404.html", "manifest.json", "scripts/generate_separated_portals.py", "backend/server.py"):
+            with open(os.path.join(PROJECT_ROOT, fname), "r", encoding="utf-8") as f:
+                txt = f.read()
+            assert new_system_name in txt, f"{fname} missing unified system name '{new_system_name}'"
+            for old_name in legacy_names:
+                assert old_name not in txt, f"{fname} still contains legacy system name '{old_name}'"
 
 
 

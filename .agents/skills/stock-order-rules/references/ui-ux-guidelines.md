@@ -7,7 +7,7 @@ This reference outlines the institutional visual style, icon usage, dialog patte
 ## 1. Strict No-Emoji Policy
 
 * **Rule:** No Unicode emoji characters may appear in HTML markup, JavaScript string literals, placeholders, SweetAlert dialogs, table cells, or status badges.
-* **Why:** The SDU e-Inventory system is an official university administrative platform. Emojis render inconsistently across operating systems and undermine the institutional identity.
+* **Why:** ระบบจัดการวัสดุสำนักงานออนไลน์ is an official university administrative platform. Emojis render inconsistently across operating systems and undermine the institutional identity.
 * **Prohibited vs Allowed Replacements:**
 
 | Prohibited Emoji | Prohibited Example | Permitted Replacement |

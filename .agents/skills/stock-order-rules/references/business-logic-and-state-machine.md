@@ -1,6 +1,6 @@
 # Business Logic & State Machine (references/business-logic-and-state-machine.md)
 
-This reference outlines the inventory calculation formulas, multi-unit conversions, two-tier requisition lifecycle state machine, multi-tier monthly quotas, and restock pricing rules (v3.8.3).
+This reference outlines the inventory calculation formulas, multi-unit conversions, two-tier requisition lifecycle state machine, multi-tier monthly quotas, and restock pricing rules (v3.8.4).
 
 ---
 

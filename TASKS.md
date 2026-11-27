@@ -1,5 +1,5 @@
 # แผนงานและรายการขั้นตอนการพัฒนา (TASKS.md / ROADMAP)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU)
+### ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
 ---
 
@@ -12,7 +12,7 @@
 - [x] **Phase 6: การทดสอบอัตโนมัติ (pytest Unit & Integration Tests) & CI/CD Workflow (Completed)**
 - [x] **Phase 7: ระบบอนุมัติ 2 ขั้นตอน, โควตาการเบิกรายเดือน และการวิเคราะห์ข้อมูลระยะยาว (Completed)**
 - [x] **Phase 8: การควบคุมสิทธิ์ RBAC, แบบฟอร์มใบเบิก 4 ฝ่าย, การส่งออกสถิติ และ Audit Trail (Completed)**
-- [x] **Phase 9: โควตาหลายระดับ, ต้นทุนรับเข้า, Native Excel 6 ชีต, Container Deploy, Security Hardening และบัญชี สวท. จริง (Completed — v3.8.3)**
+- [x] **Phase 9: โควตาหลายระดับ, ต้นทุนรับเข้า, Native Excel 6 ชีต, Container Deploy, Security Hardening และบัญชี สวท. จริง (Completed — v3.8.4)**
 
 ---
 

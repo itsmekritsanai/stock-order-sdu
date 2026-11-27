@@ -14,7 +14,7 @@ from server import CONFIG, SCHEMA_SQL_PATH, IS_POSTGRES, get_db_connection, hash
 def init_database_schema():
     db_engine = "PostgreSQL 17" if IS_POSTGRES else "MySQL"
     print("=" * 65)
-    print(f"  ติดตั้งฐานข้อมูล {db_engine}: ระบบคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต")
+    print(f"  ติดตั้งฐานข้อมูล {db_engine}: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต")
     print(f"  Target: {CONFIG['DB_USER']}@{CONFIG['DB_HOST']}:{CONFIG['DB_PORT']}/{CONFIG['DB_NAME']}")
     print("=" * 65)
 

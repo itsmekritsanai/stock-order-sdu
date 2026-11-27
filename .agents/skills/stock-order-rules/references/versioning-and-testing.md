@@ -1,6 +1,6 @@
 # Versioning & Testing Protocol (references/versioning-and-testing.md)
 
-This reference outlines the Semantic Versioning protocol, Keep a Changelog documentation rules, and automated test execution (v3.8.3).
+This reference outlines the Semantic Versioning protocol, Keep a Changelog documentation rules, and automated test execution (v3.8.4).
 
 ---
 
@@ -22,7 +22,7 @@ When bumping the version, all 7 locations must be updated simultaneously:
 2. [`backend/server.py`](../../../../backend/server.py) — `SYSTEM_VERSION = "X.Y.Z"`
 3. [`scripts/generate_separated_portals.py`](../../../../scripts/generate_separated_portals.py) — `SYSTEM_VERSION = "X.Y.Z"`
 4. [`tests/test_stock_logic.py`](../../../../tests/test_stock_logic.py) — `assert SYSTEM_VERSION == "X.Y.Z"`
-5. [`portal.html`](../../../../portal.html) — Header badge & Footer (`Stock Order SDU vX.Y.Z`)
+5. [`portal.html`](../../../../portal.html) — Header badge & Footer (`ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต vX.Y.Z`)
 6. [`index.html`](../../../../index.html) — Regenerated via SSOT (`vX.Y.Z`)
 7. [`staff.html`](../../../../staff.html) — Regenerated via SSOT (`vX.Y.Z`)
 

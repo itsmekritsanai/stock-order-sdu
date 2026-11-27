@@ -1,5 +1,5 @@
 """
-Launch Script for Suan Dusit University - Digital Stock & Requisition System
+Launch Script for ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 Starts Unified Web & PostgreSQL REST API Server (backend/server.py) on port 8080 and opens browser.
 """
 
@@ -22,8 +22,8 @@ def is_port_in_use(port):
 
 def main():
     print("=" * 65)
-    print("  ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต")
-    print("  Suan Dusit University - Stock Order SDU (PostgreSQL 17 Edition)")
+    print("  ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต")
+    print("  Suan Dusit University (PostgreSQL 17 Edition)")
     print("=" * 65)
 
     if is_port_in_use(PORT):

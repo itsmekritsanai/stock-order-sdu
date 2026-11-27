@@ -1,6 +1,6 @@
-# Architecture & Threat Model: SDU Stock Order System (v3.0.6)
+# Architecture & Threat Model: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.0.6)
 
-**Target:** Suan Dusit University e-Inventory & Requisition System  
+**Target:** ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต  
 **Audit Run:** `run-2`  
 **Date:** 2026-11-05  
 

@@ -17,7 +17,7 @@ PROJECT_ROOT = d
 os.chdir(PROJECT_ROOT)
 
 print("=" * 70)
-print(f" SDU Stock Order - Project Rules & Integrity Verification")
+print(f" ระบบจัดการวัสดุสำนักงานออนไลน์ - Project Rules & Integrity Verification")
 print(f" Project Root: {PROJECT_ROOT}")
 print("=" * 70)
 

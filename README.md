@@ -1,7 +1,6 @@
-# ระบบเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต
-### (Suan Dusit University e-Inventory & Requisition System)
+# ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
-[![Version: 3.8.3](https://img.shields.io/badge/version-3.8.3-blue.svg)](CHANGELOG.md)
+[![Version: 3.8.4](https://img.shields.io/badge/version-3.8.4-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -12,7 +11,7 @@
 [![SweetAlert2](https://img.shields.io/badge/SweetAlert2-v11-b02a37?style=flat)](https://sweetalert2.github.io/)
 [![University](https://img.shields.io/badge/University-Suan%20Dusit%20University-1e40af)](https://www.dusit.ac.th/)
 
-เว็บแอปพลิเคชันระบบบริหารจัดการคลังพัสดุกลางและขอเบิกพัสดุออนไลน์ สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต ออกแบบด้วยสถาปัตยกรรม **Zero-Build Vanilla Web** แยกพอร์ทัลระหว่าง **"ผู้ขอเบิก (`index.html`)"** และ **"เจ้าหน้าที่ / หัวหน้า / ผู้ดูแลระบบ (`staff.html`)"** อย่างชัดเจน ควบคุมสิทธิ์แบบ **RBAC 4 บทบาท** พร้อม **Cross-Portal SSO 1 คลิก**, ระบบอนุมัติ **2 ขั้นตอน (Two-Tier Approval)**, โควตาหลายระดับรายบุคคล/กลุ่มงาน, บันทึกราคาจัดซื้อเข้าคลัง, ส่งออกรายงาน **Native Excel (`.xlsx`) 6 ชีต**, พิมพ์ใบเบิกทางการ **A4 PDF 4 ฝ่าย**, และ Deploy ครบชุดในคำสั่งเดียวด้วย **Docker Compose (PostgreSQL 17 + Python REST API)**
+เว็บแอปพลิเคชัน **ระบบจัดการวัสดุสำนักงานออนไลน์** สำนักส่งเสริมวิชาการและงานทะเบียน (สวท.) มหาวิทยาลัยสวนดุสิต ออกแบบด้วยสถาปัตยกรรม **Zero-Build Vanilla Web** แยกพอร์ทัลระหว่าง **"ผู้ขอเบิก (`index.html`)"** และ **"เจ้าหน้าที่ / หัวหน้า / ผู้ดูแลระบบ (`staff.html`)"** อย่างชัดเจน ควบคุมสิทธิ์แบบ **RBAC 4 บทบาท** พร้อม **Cross-Portal SSO 1 คลิก**, ระบบอนุมัติ **2 ขั้นตอน (Two-Tier Approval)**, โควตาหลายระดับรายบุคคล/กลุ่มงาน, บันทึกราคาจัดซื้อเข้าคลัง, ส่งออกรายงาน **Native Excel (`.xlsx`) 6 ชีต**, พิมพ์ใบเบิกทางการ **A4 PDF 4 ฝ่าย**, และ Deploy ครบชุดในคำสั่งเดียวด้วย **Docker Compose (PostgreSQL 17 + Python REST API)**
 
 ---
 
@@ -96,7 +95,7 @@ graph TD
 ```text
 stock-order-sdu/
 ├── AGENTS.md                            # กฎหลักของโครงการสำหรับ AI & Developers
-├── CHANGELOG.md                         # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (v3.8.3)
+├── CHANGELOG.md                         # ประวัติการเปลี่ยนแปลงตามมาตรฐาน SemVer (v3.8.4)
 ├── INSTALLATION.md                      # คู่มือการติดตั้งและ Deploy บนเซิร์ฟเวอร์จริง
 ├── PROJECT_CONTEXT.md                   # บริบท สถาปัตยกรรม และกฎเกณฑ์ทางธุรกิจ
 ├── README.md                            # เอกสารแนะนำโครงการ (ไฟล์นี้)

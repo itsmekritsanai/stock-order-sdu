@@ -1,6 +1,6 @@
-# Security Audit Report: Suan Dusit University Stock System
+# Security Audit Report: ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต
 
-**Target:** Digital Stock & Requisition System for Suan Dusit University (`stock-order-sdu`)  
+**Target:** ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (`stock-order-sdu`)  
 **Audit Run:** `run-1`  
 **Profile:** `standard`  
 **Execution Policy:** Sandboxed Source-and-Local-Only  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary & Security Posture
 
-A comprehensive source-first security assessment was conducted on the Digital Stock & Requisition System for Suan Dusit University. The audit mapped all HTTP endpoints, database interactions, authentication mechanisms, file-serving routines, and client-side rendering pathways.
+A comprehensive source-first security assessment was conducted on ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต. The audit mapped all HTTP endpoints, database interactions, authentication mechanisms, file-serving routines, and client-side rendering pathways.
 
 ### Key Takeaways
 - **Strong Foundation in Database Security:** All SQL operations in `backend/server.py` use parameterized queries with tuple binding (`%s`). No SQL Injection vulnerabilities were discovered.

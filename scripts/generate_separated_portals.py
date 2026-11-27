@@ -1,7 +1,7 @@
 import json
 import os
 
-SYSTEM_VERSION = "3.8.3"
+SYSTEM_VERSION = "3.8.4"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEPT_DOCX_PATH = os.path.join(PROJECT_ROOT, 'data', 'รายนามบุคลากร สวท.docx')
 
@@ -810,13 +810,13 @@ requester_template = r'''<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบขอเบิกพัสดุออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
+  <title>ระบบจัดการวัสดุสำนักงานออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
   
   <!-- PWA & Mobile Icons -->
   <meta name="theme-color" content="#1e40af">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
+  <meta name="apple-mobile-web-app-title" content="ระบบจัดการวัสดุสำนักงานออนไลน์">
   <!-- University Brand Logo Tab Favicon -->
   <link rel="icon" type="image/png" href="assets/logo_sdu.png">
   <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
@@ -1563,7 +1563,7 @@ __SEARCHABLE_SELECT_CSS__
     <div class="login-card" style="max-width: 440px;">
       <div class="login-header" style="padding: 1.85rem 1.75rem 1.25rem 1.75rem;">
         <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 62px; margin-bottom: 0.65rem; object-fit: contain;">
-        <h2 id="loginRoleTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบขอเบิกพัสดุ</h2>
+        <h2 id="loginRoleTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900); margin-bottom: 0.25rem;">เข้าสู่ระบบจัดการวัสดุสำนักงานออนไลน์</h2>
         <p style="font-size: 0.825rem; color: var(--neutral-500);">มหาวิทยาลัยสวนดุสิต | สำนักส่งเสริมวิชาการและงานทะเบียน</p>
         <div id="loginRoleBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
           <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
@@ -1612,7 +1612,7 @@ __SEARCHABLE_SELECT_CSS__
         <div class="brand">
           <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
           <div class="brand-text">
-            <h1>ระบบขอเบิกพัสดุออนไลน์</h1>
+            <h1>ระบบจัดการวัสดุสำนักงานออนไลน์</h1>
             <p>มหาวิทยาลัยสวนดุสิต (สำหรับอาจารย์และเจ้าหน้าที่หน่วยงาน)</p>
           </div>
         </div>
@@ -1818,7 +1818,7 @@ __SEARCHABLE_SELECT_CSS__
 
       <div class="modal-footer" style="justify-content: space-between; align-items: center;">
         <span style="font-size: 0.8rem; color: var(--neutral-400); display: flex; align-items: center; gap: 4px;">
-          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> ข้อมูลอัปเดตแบบเรียลไทม์ ซิงค์กับระบบคลังพัสดุ
+          <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg> ข้อมูลอัปเดตแบบเรียลไทม์ ซิงค์กับระบบจัดการวัสดุสำนักงานออนไลน์
         </span>
         <button class="btn btn-outline" onclick="closeMyRequisitionsModal()">ปิดหน้าต่าง</button>
       </div>
@@ -1931,7 +1931,7 @@ __SEARCHABLE_SELECT_CSS__
   <!-- Footer -->
   <footer>
     <div>
-      © 2569 ระบบขอเบิกพัสดุและคลังดิจิทัล มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
   </div>
@@ -3870,7 +3870,7 @@ __SEARCHABLE_SELECT_CSS__
     function logoutRequester() {
       Swal.fire({
         title: 'ยืนยันออกจากระบบ?',
-        text: 'ต้องการออกจากระบบขอเบิกพัสดุใช่หรือไม่',
+        text: 'ต้องการออกจากระบบจัดการวัสดุสำนักงานออนไลน์ใช่หรือไม่',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
@@ -3982,13 +3982,13 @@ staff_template = r'''<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบบริหารคลังพัสดุ | มหาวิทยาลัยสวนดุสิต</title>
+  <title>ระบบจัดการวัสดุสำนักงานออนไลน์ | มหาวิทยาลัยสวนดุสิต</title>
   
   <!-- PWA & Mobile Icons -->
   <meta name="theme-color" content="#1e40af">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="คลังพัสดุ มสด.">
+  <meta name="apple-mobile-web-app-title" content="ระบบจัดการวัสดุสำนักงานออนไลน์">
   <!-- University Brand Logo Tab Favicon -->
   <link rel="icon" type="image/png" href="assets/logo_sdu.png">
   <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
@@ -4435,7 +4435,7 @@ __SEARCHABLE_SELECT_CSS__
   <div id="loginScreen" class="login-container" style="display: none;">
     <div style="text-align: center; margin-bottom: 1.4rem;">
       <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.65rem; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.1));">
-      <h2 id="staffLoginTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบบริหารคลังพัสดุ</h2>
+      <h2 id="staffLoginTitle" style="font-size: 1.22rem; font-weight: 700; color: var(--neutral-900);">เข้าสู่ระบบจัดการวัสดุสำนักงานออนไลน์</h2>
       <p style="font-size: 0.825rem; color: var(--neutral-600); margin-top: 4px;">ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
       <div id="staffLoginBadge" style="margin-top: 0.65rem; display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 4px 12px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
         <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
@@ -4482,7 +4482,7 @@ __SEARCHABLE_SELECT_CSS__
         <div class="brand">
           <img src="assets/logo_sdu.png" alt="มหาวิทยาลัยสวนดุสิต" class="brand-logo-img">
           <div class="brand-text">
-            <h1>ระบบบริหารคลังพัสดุ</h1>
+            <h1>ระบบจัดการวัสดุสำนักงานออนไลน์</h1>
             <p>ฝ่ายพัสดุและคลังสินค้ากลาง มหาวิทยาลัยสวนดุสิต</p>
           </div>
         </div>
@@ -5141,7 +5141,7 @@ __SEARCHABLE_SELECT_CSS__
   <!-- Footer -->
   <footer style="text-align: center; padding: 2rem 1rem; color: var(--neutral-400); font-size: 0.85rem; border-top: 1px solid var(--neutral-200); margin-top: 3rem; background: white;">
     <div>
-      © 2569 ระบบบริหารคลังพัสดุ มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
+      © 2569 ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต v__SYSTEM_VERSION__ | ใช้งานเฉพาะภายในสถาบัน
     </div>
   </footer>
 
@@ -5769,7 +5769,7 @@ __SEARCHABLE_SELECT_CSS__
     function logoutStaff() {
       Swal.fire({
         title: 'ยืนยันออกจากระบบ?',
-        text: 'คุณต้องการออกจากระบบเจ้าหน้าที่พัสดุใช่หรือไม่',
+        text: 'คุณต้องการออกจากระบบจัดการวัสดุสำนักงานออนไลน์ใช่หรือไม่',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
@@ -9043,7 +9043,7 @@ __SEARCHABLE_SELECT_CSS__
         Swal.fire({
           icon: 'success',
           title: existing ? 'อัปเดตข้อมูลบุคลากรสำเร็จ' : 'เพิ่มรายชื่อบุคลากรสำเร็จ',
-          text: `${val.name} (${val.dept}) พร้อมให้ใช้ชื่อ ${val.username} เข้าสู่ระบบขอเบิกพัสดุทันที`,
+          text: `${val.name} (${val.dept}) พร้อมให้ใช้ชื่อ ${val.username} เข้าสู่ระบบจัดการวัสดุสำนักงานออนไลน์ทันที`,
           timer: 2000,
           showConfirmButton: false
         });
@@ -9746,8 +9746,8 @@ if os.path.exists(portal_path):
     with open(portal_path, 'r', encoding='utf-8') as f:
         portal_content = f.read()
     updated_portal = _re.sub(
-        r'Stock Order SDU v[0-9]+\.[0-9]+\.[0-9]+',
-        f'Stock Order SDU v{SYSTEM_VERSION}',
+        r'(ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต\s*)v[0-9]+\.[0-9]+\.[0-9]+',
+        rf'\g<1>v{SYSTEM_VERSION}',
         portal_content
     )
     updated_portal = _re.sub(

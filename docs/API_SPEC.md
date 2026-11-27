@@ -1,5 +1,5 @@
 # API Specification (docs/API_SPEC.md)
-### ระบบขอเบิกพัสดุและคลังพัสดุดิจิทัล มหาวิทยาลัยสวนดุสิต (Stock Order SDU v3.8.3)
+### ระบบจัดการวัสดุสำนักงานออนไลน์ มหาวิทยาลัยสวนดุสิต (v3.8.4)
 
 ---
 
@@ -73,8 +73,8 @@
 {
   "status": "success",
   "healthy": true,
-  "message": "SDU Stock Order PostgreSQL 17 REST API is operational.",
-  "version": "3.8.3",
+  "message": "ระบบจัดการวัสดุสำนักงานออนไลน์ (PostgreSQL 17) REST API is operational.",
+  "version": "3.8.4",
   "database": "PostgreSQL 17",
   "db_name": "sdu_inventory",
   "authBypass": false
